@@ -21,14 +21,15 @@ import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff } from 'lucide-react';
 
 const createNewFloorEntry = (): InspectionData => {
   const newId = (typeof window !== 'undefined')
-    ? Date.now().toString() + Math.random().toString(36).substring(2, 15)
-    : 'server-temp-id-' + Math.random().toString(36).substring(2,9);
+    ? `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`
+    : `server-temp-id-${Math.random().toString(36).substring(2,9)}`;
 
   return {
     id: newId,
     ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)),
     floor: '',
     timestamp: undefined,
+    categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)),
   };
 };
 
@@ -36,7 +37,7 @@ const createNewFloorEntry = (): InspectionData => {
 const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOverallStatus => {
   if (category.type === 'standard' && category.subItems) {
     const relevantSubItems = category.subItems.filter(subItem => !subItem.isRegistry);
-    if (relevantSubItems.length === 0) { // If only registry subitems or no subitems, consider it selected.
+    if (relevantSubItems.length === 0) {
       return 'all-items-selected';
     }
     const allSelected = relevantSubItems.every(subItem => subItem.status !== undefined);
@@ -68,8 +69,6 @@ export default function FireCheckPage() {
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client, after initial hydration.
-    // Populate activeFloorsData here to ensure unique IDs are generated client-side.
     setActiveFloorsData([createNewFloorEntry()]);
     setIsClientInitialized(true);
   }, []);
@@ -126,12 +125,23 @@ export default function FireCheckPage() {
               if (cat.subItems && update.subItemId) {
                 updatedCatData.subItems = cat.subItems.map(sub => {
                   if (sub.id !== update.subItemId) return sub;
+                  
                   let changed = false;
-                  if (update.field === 'subItemStatus' && sub.status !== (update.value as StatusOption | undefined)) { sub.status = update.value as StatusOption | undefined; changed = true; }
-                  else if (update.field === 'subItemObservation' && sub.observation !== (update.value as string)) { sub.observation = update.value as string; changed = true; }
-                  else if (update.field === 'subItemShowObservation' && sub.showObservation !== (update.value as boolean)) { sub.showObservation = update.value as boolean; changed = true; }
+                  const newSubItemState = { ...sub };
+
+                  if (update.field === 'subItemStatus' && newSubItemState.status !== (update.value as StatusOption | undefined)) { 
+                    newSubItemState.status = update.value as StatusOption | undefined; 
+                    changed = true; 
+                  } else if (update.field === 'subItemObservation' && newSubItemState.observation !== (update.value as string)) { 
+                    newSubItemState.observation = update.value as string; 
+                    changed = true; 
+                  } else if (update.field === 'subItemShowObservation' && newSubItemState.showObservation !== (update.value as boolean)) { 
+                    newSubItemState.showObservation = update.value as boolean; 
+                    changed = true; 
+                  }
+                  
                   if (changed) categoryStructurallyChanged = true;
-                  return sub;
+                  return changed ? newSubItemState : sub;
                 });
               }
               break;
@@ -141,11 +151,14 @@ export default function FireCheckPage() {
                   if (sub.id !== update.subItemId || !sub.isRegistry) return sub;
                   const newExtinguisher: RegisteredExtinguisher = {
                     ...update.value,
-                    id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+                    id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 11)}`,
                   };
-                  sub.registeredExtinguishers = [...(sub.registeredExtinguishers || []), newExtinguisher];
+                  const newExtinguishersArray = [...(sub.registeredExtinguishers || []), newExtinguisher];
                   categoryStructurallyChanged = true;
-                  return sub;
+                  if (typeof window !== 'undefined') {
+                    console.log('[ADD EXT]', JSON.stringify(newExtinguisher), 'Current items in array for this subitem:', newExtinguishersArray.length, 'Existing items before add:', (sub.registeredExtinguishers || []).length);
+                  }
+                  return { ...sub, registeredExtinguishers: newExtinguishersArray };
                 });
               }
               break;
@@ -153,9 +166,9 @@ export default function FireCheckPage() {
               if (cat.subItems && update.subItemId) {
                 updatedCatData.subItems = cat.subItems.map(sub => {
                   if (sub.id !== update.subItemId || !sub.isRegistry || !sub.registeredExtinguishers) return sub;
-                  sub.registeredExtinguishers = sub.registeredExtinguishers.filter(ext => ext.id !== update.extinguisherId);
+                  const newExtinguishersArray = sub.registeredExtinguishers.filter(ext => ext.id !== update.extinguisherId);
                   categoryStructurallyChanged = true;
-                  return sub;
+                  return { ...sub, registeredExtinguishers: newExtinguishersArray };
                 });
               }
               break;
@@ -210,7 +223,7 @@ export default function FireCheckPage() {
       toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE e LOCAL são obrigatórios.", variant: "destructive" });
       return;
     }
-    if (!clientInfo.inspectionDate) {
+     if (!clientInfo.inspectionDate) {
       toast({ title: "Erro ao Salvar", description: "DATA DA VISTORIA é obrigatória.", variant: "destructive" });
       return;
     }
@@ -225,7 +238,7 @@ export default function FireCheckPage() {
 
       const now = Date.now();
       const inspectionToSave: InspectionData = {
-        ...floorData,
+        ...floorData, 
         clientLocation: clientInfo.clientLocation,
         clientCode: clientInfo.clientCode,
         inspectionNumber: clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`,
@@ -245,6 +258,7 @@ export default function FireCheckPage() {
          toast({ title: "Nada para Salvar", description: "Nenhum andar com nome preenchido para salvar.", variant: "default" });
          return;
     }
+
 
     setSavedInspections(prevSaved => {
       let newSavedList = [...prevSaved];
@@ -278,10 +292,25 @@ export default function FireCheckPage() {
         inspectionDate: inspectionToLoad.inspectionDate || new Date().toISOString().split('T')[0],
       });
 
-      let loadedFloorData = { ...JSON.parse(JSON.stringify(inspectionToLoad))};
-      // Ensure client-side unique ID if it's missing or looks like a server temp ID
+      let loadedFloorData = JSON.parse(JSON.stringify(inspectionToLoad));
+      
       if (typeof window !== 'undefined' && (!loadedFloorData.id || typeof loadedFloorData.id !== 'string' || loadedFloorData.id.startsWith('server-temp-id-'))) {
-         loadedFloorData.id = Date.now().toString() + Math.random().toString(36).substring(2, 15);
+         loadedFloorData.id = `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
+      }
+      
+      if (loadedFloorData.categories) {
+        loadedFloorData.categories.forEach((cat: InspectionCategoryState) => {
+          if (cat.subItems) {
+            cat.subItems.forEach(sub => {
+              if (sub.isRegistry && sub.registeredExtinguishers) {
+                sub.registeredExtinguishers = sub.registeredExtinguishers.map(ext => ({
+                  ...ext,
+                  id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}`
+                }));
+              }
+            });
+          }
+        });
       }
 
 
@@ -461,5 +490,6 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
     
+        
+        
