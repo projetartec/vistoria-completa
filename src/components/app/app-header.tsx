@@ -34,8 +34,12 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
               Nenhum logo
             </div>
           )}
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-            <UploadCloud className="mr-2 h-4 w-4" />
+          <Button 
+            variant="outline" 
+            onClick={() => fileInputRef.current?.click()}
+            className="h-8 px-2 text-xs" // Diminuído o tamanho aqui
+          >
+            <UploadCloud className="mr-2 h-3 w-3" /> {/* Ícone um pouco menor também */}
             Carregar Logo
           </Button>
           <input
@@ -75,5 +79,3 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
     </header>
   );
 }
-
-    
