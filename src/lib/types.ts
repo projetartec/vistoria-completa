@@ -67,6 +67,7 @@ export interface FullInspectionData {
   clientInfo: ClientInfo;
   floors: InspectionData[];
   timestamp: number;
+  uploadedLogoDataUrl?: string | null; // Added to store uploaded logo
 }
 
 
@@ -93,3 +94,5 @@ export type CategoryUpdatePayload =
   | { field: 'removeRegisteredHose'; subItemId: string; hoseId: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';
+
+    

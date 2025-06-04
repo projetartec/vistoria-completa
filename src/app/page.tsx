@@ -67,11 +67,24 @@ export default function FireCheckPage() {
 
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
+  const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveFloorsData([createNewFloorEntry()]);
     setIsClientInitialized(true);
   }, []);
+
+  const handleLogoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadedLogoDataUrl(reader.result as string);
+        toast({ title: "Logo Carregado", description: "O logo foi carregado com sucesso." });
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [toast]);
 
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
@@ -226,7 +239,8 @@ export default function FireCheckPage() {
     };
     setClientInfo(defaultClientInfo);
     setActiveFloorsData([createNewFloorEntry()]);
-    setBlockAutoSaveOnce(true); // Prevent auto-saving an empty form right after reset
+    setUploadedLogoDataUrl(null); // Reset uploaded logo
+    setBlockAutoSaveOnce(true); 
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -287,6 +301,7 @@ export default function FireCheckPage() {
         categories: JSON.parse(JSON.stringify(floor.categories))
       })),
       timestamp: Date.now(),
+      uploadedLogoDataUrl: uploadedLogoDataUrl // Save uploaded logo
     };
 
     setSavedInspections(prevSaved => {
@@ -301,13 +316,6 @@ export default function FireCheckPage() {
     });
 
     if (isAutoSave) {
-      // Do not show toast for auto-save success to avoid being too noisy.
-      // User will see the data persisted if they refresh or come back.
-      // Alternatively, a very subtle, short-lived toast:
-      // toast({
-      //   title: "Progresso Salvo",
-      //   duration: 1500,
-      // });
       console.log(`Auto-save: Vistoria ${fullInspectionToSave.id} atualizada.`);
     } else {
       toast({
@@ -315,12 +323,12 @@ export default function FireCheckPage() {
         description: `A vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.`
       });
     }
-  }, [clientInfo, activeFloorsData, setSavedInspections, toast]);
+  }, [clientInfo, activeFloorsData, setSavedInspections, toast, uploadedLogoDataUrl]);
 
 
   useEffect(() => {
     if (blockAutoSaveOnce) {
-      setBlockAutoSaveOnce(false); // Reset the flag and skip this auto-save cycle
+      setBlockAutoSaveOnce(false); 
       return;
     }
 
@@ -330,8 +338,8 @@ export default function FireCheckPage() {
       }
       debounceTimeoutRef.current = setTimeout(() => {
         console.log('Attempting auto-save...');
-        handleSaveInspection(true); // Pass true for auto-save
-      }, 2500); // Auto-save after 2.5 seconds of inactivity
+        handleSaveInspection(true); 
+      }, 2500); 
     }
 
     return () => {
@@ -339,14 +347,15 @@ export default function FireCheckPage() {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [clientInfo, activeFloorsData, isClientInitialized, handleSaveInspection, blockAutoSaveOnce]);
+  }, [clientInfo, activeFloorsData, isClientInitialized, handleSaveInspection, blockAutoSaveOnce, uploadedLogoDataUrl]);
 
 
   const handleLoadInspection = (fullInspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
-      setBlockAutoSaveOnce(true); // Prevent auto-save right after loading
+      setBlockAutoSaveOnce(true); 
       setClientInfo({ ...inspectionToLoad.clientInfo });
+      setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null); // Load uploaded logo
 
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
         ...floor,
@@ -401,8 +410,8 @@ export default function FireCheckPage() {
         toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para gerar o PDF.", variant: "destructive" });
         return;
     }
-    generateInspectionPdf(clientInfo, floorsToPrint);
-  }, [clientInfo, activeFloorsData, toast]);
+    generateInspectionPdf(clientInfo, floorsToPrint, uploadedLogoDataUrl);
+  }, [clientInfo, activeFloorsData, toast, uploadedLogoDataUrl]);
 
   const handlePrintPage = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -446,7 +455,10 @@ export default function FireCheckPage() {
   return (
     <ScrollArea className="h-screen bg-background">
       <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <AppHeader />
+        <AppHeader 
+          uploadedLogoDataUrl={uploadedLogoDataUrl}
+          onLogoUpload={handleLogoUpload}
+        />
 
         <ClientDataForm
           clientInfoData={clientInfo}
@@ -522,7 +534,7 @@ export default function FireCheckPage() {
         </div>
         
         <ActionButtonsPanel
-          onSave={() => handleSaveInspection(false)} // Explicitly call with false for manual save
+          onSave={() => handleSaveInspection(false)}
           onNewInspection={resetInspectionForm}
           onNewFloor={handleNewFloorInspection}
           onToggleSavedInspections={toggleSavedInspections}
@@ -547,3 +559,4 @@ export default function FireCheckPage() {
   );
 }
 
+    

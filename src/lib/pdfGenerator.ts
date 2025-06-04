@@ -47,7 +47,7 @@ const xCircleSvg = `
 `;
 
 
-export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: InspectionData[]): void {
+export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
   if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
     alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o PDF.");
     return;
@@ -57,7 +57,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     return;
   }
 
-  const logoUrl = '/brazil-extintores-logo.png';
+  const defaultLogoUrl = '/brazil-extintores-logo.png'; // Fallback if no logo is uploaded
+  const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
+  const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
   let pdfHtml = `
     <html>
@@ -70,45 +72,79 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             margin: 0;
             padding: 20px;
             line-height: 1.6;
-            font-size: 10pt; /* Adjusted base font size for PDF */
+            font-size: 10pt; 
             background-color: #FFFFFF;
             color: #1A1A1A;
           }
           .pdf-container { max-width: 850px; margin: 0 auto; background-color: #FFFFFF; padding: 25px; border: 1px solid #DDD; }
 
           .pdf-header-main {
-            text-align: center;
+            display: flex; /* Use flexbox for side-by-side layout */
+            align-items: center; /* Vertically align items */
+            justify-content: space-between; /* Space out logo and text */
             border-bottom: 2px solid #D1D5DB;
             padding-bottom: 15px;
             margin-bottom: 25px;
           }
+
+          .pdf-logo-container {
+            flex-shrink: 0; /* Prevent logo from shrinking */
+            margin-right: 20px; /* Space between logo and text */
+          }
+
+          .pdf-logo-container img {
+            max-height: 70px; /* Max height for the logo */
+            width: auto; /* Maintain aspect ratio */
+            display: block;
+          }
+          
+          .pdf-company-info-container {
+             flex-grow: 1; /* Allow text to take available space */
+             text-align: left; /* Align text to the left if side-by-side */
+          }
+
           .pdf-header-main .company-name {
-            font-size: 18pt; /* Adjusted for PDF */
+            font-size: 18pt; 
             font-weight: 700;
             color: #2563EB;
             margin-bottom: 5px;
           }
           .pdf-header-main .company-details p {
-            font-size: 9pt; /* Adjusted for PDF */
+            font-size: 9pt; 
             color: #374151;
             margin: 2px 0;
             line-height: 1.3;
           }
+           /* If logo is not present or on very small viewports, center company details */
+          @media (max-width: 400px) { /* Example breakpoint */
+            .pdf-header-main {
+              flex-direction: column;
+              align-items: center; /* Center items when stacked */
+            }
+            .pdf-logo-container {
+              margin-right: 0;
+              margin-bottom: 10px; /* Space below logo when stacked */
+            }
+            .pdf-company-info-container {
+              text-align: center; /* Center text when stacked */
+            }
+          }
+
 
           .pdf-client-info {
             border: 1px solid #D1D5DB;
             border-radius: 8px;
-            padding: 20px; /* Adjusted padding */
+            padding: 20px; 
             margin-bottom: 30px;
             background-color: #F9FAFB;
           }
           .pdf-client-info h2 {
-            font-size: 16pt; /* Adjusted */
+            font-size: 16pt; 
             color: #1D4ED8;
             margin-top: 0;
-            margin-bottom: 15px; /* Adjusted margin */
+            margin-bottom: 15px; 
             border-bottom: 1px solid #E5E7EB;
-            padding-bottom: 10px; /* Adjusted padding */
+            padding-bottom: 10px; 
           }
           .pdf-client-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size: 10pt; }
           .pdf-client-info-grid div { padding: 3px 0; }
@@ -116,12 +152,12 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           .pdf-floor-section { margin-bottom: 30px; }
           .pdf-floor-title {
-            font-size: 18pt; /* Adjusted */
+            font-size: 18pt; 
             font-weight: 700;
             color: #1F2937;
-            margin-top: 25px; /* Adjusted margin */
-            margin-bottom: 20px; /* Adjusted margin */
-            padding-bottom: 8px; /* Adjusted padding */
+            margin-top: 25px; 
+            margin-bottom: 20px; 
+            padding-bottom: 8px; 
             border-bottom: 3px solid #2563EB;
           }
           .pdf-floor-section:first-of-type .pdf-floor-title { margin-top: 10px; }
@@ -130,14 +166,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             background-color: #FFFFFF;
             border: 1px solid #E5E7EB;
             border-radius: 8px;
-            margin-bottom: 20px; /* Adjusted margin */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Adjusted shadow */
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
             page-break-inside: avoid;
           }
           .pdf-category-header {
             display: flex;
             align-items: center;
-            padding: 12px 15px; /* Adjusted padding */
+            padding: 12px 15px; 
             background-color: #F3F4F6;
             border-bottom: 1px solid #E5E7EB;
             border-top-left-radius: 8px;
@@ -147,13 +183,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           .icon-status-completed { stroke: #059669; }
           .icon-status-incomplete { stroke: #DC2626; }
           .pdf-category-title-text {
-            font-size: 14pt; /* Adjusted */
+            font-size: 14pt; 
             font-weight: 600;
             color: #111827;
             flex-grow: 1;
           }
 
-          .pdf-category-content { padding: 15px; font-size: 10pt; } /* Adjusted padding */
+          .pdf-category-content { padding: 15px; font-size: 10pt; } 
 
           .pdf-subitem-wrapper {
              margin-bottom: 10px;
@@ -232,14 +268,19 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
       <body>
         <div class="pdf-container">
           <header class="pdf-header-main">
-            <div class="company-name">BRAZIL EXTINTORES - SP</div>
-            <div class="company-details">
-              <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
-              <p>OSORIO MACHADO DE PAIVA, 915</p>
-              <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
-              <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
-              <p>Registro Inmetro N°: 001459/2018</p>
-              <p>e-mail: comercial@brazilexintores.com.br</p>
+            <div class="pdf-logo-container">
+              <img src="${isDataUrl ? logoToUse : (typeof window !== 'undefined' ? window.location.origin + logoToUse : logoToUse) }" alt="Brazil Extintores Logo" />
+            </div>
+            <div class="pdf-company-info-container">
+              <div class="company-name">BRAZIL EXTINTORES - SP</div>
+              <div class="company-details">
+                <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
+                <p>OSORIO MACHADO DE PAIVA, 915</p>
+                <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
+                <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
+                <p>Registro Inmetro N°: 001459/2018</p>
+                <p>e-mail: comercial@brazilexintores.com.br</p>
+              </div>
             </div>
           </header>
 
@@ -272,7 +313,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
       if (category.type === 'standard' && category.subItems) {
         category.subItems.forEach(subItem => {
-          pdfHtml += `<div class="pdf-subitem-wrapper">`; // Wrapper for subitem + observation
+          pdfHtml += `<div class="pdf-subitem-wrapper">`; 
           if (subItem.isRegistry) {
              pdfHtml += `<div class="pdf-registry-container">`;
             if (subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers && subItem.registeredExtinguishers.length > 0) {
@@ -289,8 +330,8 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 pdfHtml += `<li>${hose.quantity}x - ${hose.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
               });
               pdfHtml += `</ul>`;
-            } else if (subItem.isRegistry) { // Catch-all for empty registries
-                 pdfHtml += `<div class="pdf-subitem">`; // Use pdf-subitem for consistent styling if needed
+            } else if (subItem.isRegistry) { 
+                 pdfHtml += `<div class="pdf-subitem">`; 
                  pdfHtml += `  <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span> <span style="color: #6B7280; font-style: italic;">Nenhum item cadastrado.</span>`;
                  pdfHtml += `</div>`;
             }
@@ -304,17 +345,17 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
               pdfHtml += `<div class="pdf-observation">${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
             }
           }
-          pdfHtml += `</div>`; // End of pdf-subitem-wrapper
+          pdfHtml += `</div>`; 
         });
       } else if (category.type === 'special') {
-        pdfHtml += `<div class="pdf-special-details pdf-subitem-wrapper">`; // Added wrapper
+        pdfHtml += `<div class="pdf-special-details pdf-subitem-wrapper">`; 
         pdfHtml += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
         if (category.showObservation && category.observation) {
           pdfHtml += `<div class="pdf-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
         }
         pdfHtml += `</div>`;
       } else if (category.type === 'pressure') {
-        pdfHtml += `<div class="pdf-pressure-details pdf-subitem-wrapper">`; // Added wrapper
+        pdfHtml += `<div class="pdf-pressure-details pdf-subitem-wrapper">`; 
         pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
         if (category.showObservation && category.observation) {
           pdfHtml += `<div class="pdf-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
@@ -354,3 +395,5 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
+    
