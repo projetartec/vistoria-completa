@@ -7,11 +7,10 @@ export function AppHeader() {
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Image
-            src="https://placehold.co/120x40.png" // Adjusted height for better balance
+            src="/brazil-extintores-logo.png"
             alt="Brazil Extintores Logo"
-            width={120}
-            height={40}
-            data-ai-hint="company logo"
+            width={150} // Ajustado para a proporção do logo
+            height={78}  // Ajustado para a proporção do logo
             className="rounded"
           />
           <div>
