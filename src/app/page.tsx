@@ -314,14 +314,6 @@ export default function FireCheckPage() {
           onClientInfoChange={handleClientInfoChange}
         />
 
-        {isSavedInspectionsVisible && (
-          <SavedInspectionsList
-            savedInspections={savedInspections}
-            onLoadInspection={handleLoadInspection}
-            onDeleteInspection={handleDeleteInspection}
-          />
-        )}
-
         <div className="my-6 p-4 bg-card shadow-lg rounded-lg">
           <Button
             onClick={() => setIsChecklistVisible(!isChecklistVisible)}
@@ -379,6 +371,14 @@ export default function FireCheckPage() {
           isSavedInspectionsVisible={isSavedInspectionsVisible}
         />
 
+        {isSavedInspectionsVisible && (
+          <SavedInspectionsList
+            savedInspections={savedInspections}
+            onLoadInspection={handleLoadInspection}
+            onDeleteInspection={handleDeleteInspection}
+          />
+        )}
+
         <footer className="text-center text-sm text-muted-foreground mt-12 pb-8">
           FireCheck Brazil &copy; {new Date().getFullYear()} - BRAZIL EXTINTORES
         </footer>
@@ -386,3 +386,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
