@@ -54,10 +54,9 @@ const calculateNextInspectionNumber = (
   const trimmedClientLocation = clientLocation.trim();
 
   if (!trimmedClientCode || !trimmedClientLocation) {
-    return ''; // Retorna vazio se algum campo essencial não estiver preenchido
+    return '';
   }
 
-  // Gera um número aleatório entre 100000 e 999999
   const randomNumber = Math.floor(100000 + Math.random() * 900000);
   return randomNumber.toString();
 };
@@ -71,7 +70,7 @@ export default function FireCheckPage() {
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
     clientCode: '',
-    inspectionNumber: '', // Inicialmente vazio
+    inspectionNumber: '',
     inspectionDate: new Date().toISOString().split('T')[0],
   });
 
@@ -255,6 +254,7 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
     setBlockAutoSaveOnce(true); 
+    // uploadedLogoDataUrl is intentionally not reset here
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -403,7 +403,7 @@ export default function FireCheckPage() {
     }
   };
 
-  const handleDeleteInspection = (fullInspectionId: string) => {
+  const handleDeleteInspection = useCallback((fullInspectionId: string) => {
     if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja excluir esta vistoria salva? Esta ação não pode ser desfeita.')) {
       setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
@@ -412,7 +412,22 @@ export default function FireCheckPage() {
         resetInspectionForm();
       }
     }
-  };
+  }, [setSavedInspections, toast, clientInfo.inspectionNumber, resetInspectionForm]);
+
+  const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
+    // A confirmação já é feita no componente SavedInspectionsList
+    setSavedInspections(prev => prev.filter(insp => !inspectionIds.includes(insp.id)));
+    toast({
+      title: "Vistorias Excluídas",
+      description: `${inspectionIds.length} vistoria(s) foram excluídas com sucesso.`,
+      variant: "destructive"
+    });
+
+    if (clientInfo.inspectionNumber && inspectionIds.includes(clientInfo.inspectionNumber)) {
+      resetInspectionForm();
+    }
+  }, [setSavedInspections, toast, clientInfo.inspectionNumber, resetInspectionForm]);
+
 
   const handleGeneratePdf = useCallback(() => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
@@ -562,6 +577,7 @@ export default function FireCheckPage() {
             savedInspections={savedInspections}
             onLoadInspection={handleLoadInspection}
             onDeleteInspection={handleDeleteInspection}
+            onDeleteMultipleInspections={handleDeleteMultipleInspections}
           />
         )}
 
