@@ -16,17 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 import type { InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { generateInspectionPdf } from '@/lib/pdfGenerator'; // Import PDF generator
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 const createNewFloorEntry = (): InspectionData => {
-  // INITIAL_INSPECTION_DATA already has clientCode, clientLocation, inspectionNumber as empty strings.
-  // These will be effectively overridden by global clientInfo when saving or can be ignored if not used directly from floor entry.
   return {
-    // Ensure ID generation happens client-side or is stable if SSR'd
     id: typeof window !== 'undefined' ? Date.now().toString() + Math.random().toString(36).substring(2, 15) : 'ssr-initial-id-' + Math.random(),
-    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Deep clone categories and other defaults
-    floor: '', // Ensure floor is empty for a new entry
-    timestamp: undefined, // No timestamp until saved
+    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), 
+    floor: '', 
+    timestamp: undefined, 
   };
 };
 
@@ -40,28 +38,26 @@ export default function FireCheckPage() {
     inspectionNumber: ''
   });
 
-  // Initialize activeFloorsData as empty; will be populated client-side in useEffect
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
   
   const initialSavedInspections = useMemo(() => [], []);
   const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', initialSavedInspections);
 
-  const [isChecklistVisible, setIsChecklistVisible] = useState(true); // For the main checklist toggle
+  const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
 
-  // Populate initial floor entry on client-side to avoid hydration mismatch from IDs
   useEffect(() => {
     if (activeFloorsData.length === 0 && typeof window !== 'undefined') {
       setActiveFloorsData([createNewFloorEntry()]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
+  }, []); 
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prev => {
       const newState = { ...prev, [field]: value };
       if (field === 'clientCode') {
-        newState.inspectionNumber = value ? `${value}-01` : ''; // Simplified inspection number generation
+        newState.inspectionNumber = value ? `${value}-01` : ''; 
       }
       return newState;
     });
@@ -81,8 +77,6 @@ export default function FireCheckPage() {
         if (index !== floorIndex) {
           return currentFloorData;
         }
-
-        // Logic from old handleCategoryItemUpdate, adapted for a single floor's categories
         let inspectionChangedOverall = false;
         const newCategories = currentFloorData.categories.map(cat => {
           if (cat.id !== categoryId) {
@@ -177,13 +171,11 @@ export default function FireCheckPage() {
 
   const resetInspectionForm = useCallback(() => {
     setClientInfo({ clientLocation: '', clientCode: '', inspectionNumber: '' });
-    // Reset with a client-side generated ID
     setActiveFloorsData(typeof window !== 'undefined' ? [createNewFloorEntry()] : []);
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
   const handleNewFloorInspection = useCallback(() => {
-    // No longer saves previous floor implicitly here. Saving is explicit via "Salvar Vistoria".
     setActiveFloorsData(prev => [...prev, createNewFloorEntry()]);
     toast({
       title: "Novo Andar Adicionado",
@@ -214,17 +206,16 @@ export default function FireCheckPage() {
 
     activeFloorsData.forEach(floorData => {
       if (!floorData.floor) {
-        // Optionally, prompt or skip saving this floor
         console.warn(`Andar ${floorData.id} sem nome, não será salvo individualmente agora.`);
-        return; // Skip saving this floor if its name is empty
+        return; 
       }
 
       const now = Date.now();
       const inspectionToSave: InspectionData = {
-        ...floorData, // Contains id, categories, floor
+        ...floorData, 
         clientLocation: clientInfo.clientLocation,
         clientCode: clientInfo.clientCode,
-        inspectionNumber: clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`, // Ensure inspection number
+        inspectionNumber: clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`,
         timestamp: now,
       };
       inspectionsToUpdateInStorage.push(inspectionToSave);
@@ -240,7 +231,6 @@ export default function FireCheckPage() {
          toast({ title: "Nada para Salvar", description: "Nenhum andar com nome preenchido para salvar.", variant: "default" });
          return;
     }
-
 
     setSavedInspections(prevSaved => {
       let newSavedList = [...prevSaved];
@@ -268,7 +258,6 @@ export default function FireCheckPage() {
         clientCode: inspectionToLoad.clientCode,
         inspectionNumber: inspectionToLoad.inspectionNumber,
       });
-      // Deep clone to avoid state mutation issues if inspectionToLoad is directly from localStorage state
       const loadedFloorData = JSON.parse(JSON.stringify(inspectionToLoad));
       setActiveFloorsData([loadedFloorData]); 
       setIsSavedInspectionsVisible(false);
@@ -281,20 +270,30 @@ export default function FireCheckPage() {
       setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
       
-      // If the deleted inspection was one of the active floors, remove it from activeFloorsData
       setActiveFloorsData(prevActive => {
         const newActive = prevActive.filter(af => af.id !== inspectionId);
-        // If all active floors are removed (e.g. if only one was active and it was deleted), reset to a new single entry
         return newActive.length > 0 ? newActive : (typeof window !== 'undefined' ? [createNewFloorEntry()] : []);
       });
     }
   };
 
+  const handleGeneratePdf = useCallback(() => {
+    if (!clientInfo.clientCode || !clientInfo.clientLocation) {
+      toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE e LOCAL são obrigatórios para gerar o PDF.", variant: "destructive" });
+      return;
+    }
+    const floorsToPrint = activeFloorsData.filter(floor => floor.floor);
+    if (floorsToPrint.length === 0) {
+        toast({ title: "Nenhum Andar", description: "Adicione e nomeie pelo menos um andar para gerar o PDF.", variant: "destructive" });
+        return;
+    }
+    generateInspectionPdf(clientInfo, floorsToPrint);
+  }, [clientInfo, activeFloorsData, toast]);
+
   const toggleSavedInspections = () => {
     setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
   };
   
-  // Loading state until activeFloorsData is populated client-side
   if (activeFloorsData.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
@@ -302,7 +301,6 @@ export default function FireCheckPage() {
       </div>
     );
   }
-
 
   return (
     <ScrollArea className="h-screen bg-background">
@@ -353,7 +351,7 @@ export default function FireCheckPage() {
                 
                 {floorData.categories.map(category => (
                   <InspectionCategoryItem
-                    key={`${floorData.id}-${category.id}`} // Ensure unique key across floors for categories
+                    key={`${floorData.id}-${category.id}`} 
                     category={category}
                     onCategoryItemUpdate={(categoryId, update) => handleCategoryItemUpdateForFloor(floorIndex, categoryId, update)}
                   />
@@ -369,6 +367,7 @@ export default function FireCheckPage() {
           onNewFloor={handleNewFloorInspection}
           onToggleSavedInspections={toggleSavedInspections}
           isSavedInspectionsVisible={isSavedInspectionsVisible}
+          onGeneratePdf={handleGeneratePdf} // Pass PDF handler
         />
 
         {isSavedInspectionsVisible && (
@@ -386,5 +385,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
