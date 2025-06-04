@@ -46,6 +46,43 @@ const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOv
   return 'some-items-pending';
 };
 
+const calculateNextInspectionNumber = (
+  clientCode: string,
+  clientLocation: string,
+  currentSavedInspections: FullInspectionData[]
+): string => {
+  const trimmedClientCode = clientCode.trim();
+  const trimmedClientLocation = clientLocation.trim();
+
+  if (!trimmedClientCode || !trimmedClientLocation) {
+    return ''; // Retorna vazio se algum campo essencial não estiver preenchido
+  }
+
+  const codePart = trimmedClientCode;
+  // Garante que locationPart seja gerado mesmo para localizações curtas
+  const locationPart = trimmedClientLocation.length > 0 
+    ? trimmedClientLocation.substring(0, 3).toUpperCase() 
+    : 'LOC'; // Default se a localização for vazia após trim, embora a condição acima já pegue isso.
+
+  const prefix = `${codePart}-${locationPart}-`;
+
+  let maxSuffix = 0;
+  currentSavedInspections.forEach(inspection => {
+    if (inspection.id.startsWith(prefix)) {
+      const idSuffixPart = inspection.id.substring(prefix.length);
+      const suffixNum = parseInt(idSuffixPart, 10);
+      if (!isNaN(suffixNum) && suffixNum > maxSuffix) {
+        maxSuffix = suffixNum;
+      }
+    }
+  });
+
+  const nextSuffix = maxSuffix + 1;
+  const formattedSuffix = nextSuffix.toString().padStart(2, '0');
+
+  return `${prefix}${formattedSuffix}`;
+};
+
 
 export default function FireCheckPage() {
   const { toast } = useToast();
@@ -55,7 +92,7 @@ export default function FireCheckPage() {
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
     clientCode: '',
-    inspectionNumber: '',
+    inspectionNumber: '', // Inicialmente vazio
     inspectionDate: new Date().toISOString().split('T')[0],
   });
 
@@ -88,19 +125,19 @@ export default function FireCheckPage() {
 
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
-    setClientInfo(prev => {
-      const newState = { ...prev, [field]: value };
+    setClientInfo(prevClientInfo => {
+      const newClientInfoState = { ...prevClientInfo, [field]: value };
+      
       if (field === 'clientCode' || field === 'clientLocation') {
-        const codePart = newState.clientCode || 'SC';
-        const locationPart = newState.clientLocation.substring(0,3).toUpperCase() || 'LOC';
-        newState.inspectionNumber = `${codePart}-${locationPart}-01`;
+        newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
+          newClientInfoState.clientCode,
+          newClientInfoState.clientLocation,
+          savedInspections // Passa o estado atual de savedInspections
+        );
       }
-      if (field === 'clientCode' && !value && newState.inspectionNumber.startsWith('SC-')) {
-        newState.inspectionNumber = '';
-      }
-      return newState;
+      return newClientInfoState;
     });
-  }, []);
+  }, [savedInspections]); // savedInspections é a dependência chave aqui.
 
   const handleFloorSpecificFieldChange = useCallback((floorIndex: number, field: keyof Pick<InspectionData, 'floor'>, value: string) => {
     setActiveFloorsData(prevFloors =>
@@ -234,12 +271,12 @@ export default function FireCheckPage() {
     const defaultClientInfo: ClientInfo = {
       clientLocation: '',
       clientCode: '',
-      inspectionNumber: '',
+      inspectionNumber: '', // Será recalculado ou vazio se clientCode/Location estiverem vazios
       inspectionDate: defaultInspectionDate,
     };
-    setClientInfo(defaultClientInfo);
+    setClientInfo(defaultClientInfo); // Isso acionará handleClientInfoChange indiretamente se os campos forem relevantes
     setActiveFloorsData([createNewFloorEntry()]);
-    // setUploadedLogoDataUrl(null); // Do not reset uploaded logo
+    // uploadedLogoDataUrl é mantido intencionalmente
     setBlockAutoSaveOnce(true); 
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
@@ -269,7 +306,7 @@ export default function FireCheckPage() {
       if (!isAutoSave) {
         toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.", variant: "destructive" });
       } else {
-        console.log("Auto-save: Client info incomplete, not saving.");
+        console.log("Auto-save: Client info/Inspection Number incomplete, not saving.");
       }
       return;
     }
@@ -293,7 +330,7 @@ export default function FireCheckPage() {
     }
 
     const fullInspectionToSave: FullInspectionData = {
-      id: clientInfo.inspectionNumber,
+      id: clientInfo.inspectionNumber, // Usa o número de vistoria gerado/carregado
       clientInfo: { ...clientInfo },
       floors: namedFloors.map(floor => ({
         id: floor.id,
@@ -354,7 +391,7 @@ export default function FireCheckPage() {
     const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
       setBlockAutoSaveOnce(true); 
-      setClientInfo({ ...inspectionToLoad.clientInfo });
+      setClientInfo({ ...inspectionToLoad.clientInfo }); // Carrega clientInfo completo, incluindo inspectionNumber
       setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
@@ -558,7 +595,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
-
-    

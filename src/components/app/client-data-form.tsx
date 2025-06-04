@@ -1,6 +1,6 @@
 
 import type React from 'react';
-import { useEffect } from 'react';
+// import { useEffect } from 'react'; // Removido pois a lógica foi centralizada
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,19 +13,8 @@ interface ClientDataFormProps {
 
 export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDataFormProps) {
   
-  useEffect(() => {
-    if (clientInfoData.clientCode) {
-      const newInspectionNumber = `${clientInfoData.clientCode}-01`; 
-      if (clientInfoData.inspectionNumber !== newInspectionNumber) {
-        onClientInfoChange('inspectionNumber', newInspectionNumber);
-      }
-    } else {
-      if (clientInfoData.inspectionNumber !== '') {
-        onClientInfoChange('inspectionNumber', '');
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [clientInfoData.clientCode]);
+  // Removido o useEffect que tentava controlar inspectionNumber.
+  // Essa lógica agora é tratada centralmente em page.tsx
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -73,7 +62,7 @@ export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDat
                   value={clientInfoData.inspectionNumber}
                   readOnly
                   className="bg-muted cursor-not-allowed"
-                  placeholder="Gerado automaticamente"
+                  placeholder="Preencha Cliente/Local"
                 />
               </div>
               <div>
