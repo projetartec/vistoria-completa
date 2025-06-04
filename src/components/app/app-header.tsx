@@ -4,18 +4,9 @@ import Image from 'next/image';
 export function AppHeader() {
   return (
     <header className="bg-card p-4 shadow-md rounded-lg mb-6">
-      <div className="container mx-auto flex flex-col md:flex-row items-center justify-center">
-        <div className="mb-3 md:mb-0 md:mr-6 flex-shrink-0">
-          <Image
-            src="/brazil-extintores-logo.png"
-            alt="Brazil Extintores Logo"
-            width={180} 
-            height={60} 
-            priority
-            data-ai-hint="company logo"
-          />
-        </div>
-        <div className="text-center md:text-left">
+      <div className="container mx-auto flex flex-col items-center justify-center">
+        {/* Logo removed from here */}
+        <div className="text-center"> {/* Ensure text remains centered */}
           <h1 className="text-xl sm:text-2xl font-bold text-primary font-headline mb-2">
             BRAZIL EXTINTORES - SP
           </h1>
