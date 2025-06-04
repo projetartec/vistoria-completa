@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import type { InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState } from '@/lib/types';
+import type { InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
@@ -34,39 +34,18 @@ const createNewFloorEntry = (): InspectionData => {
   };
 };
 
-type CategoryOverallStatus = 'completed' | 'incomplete' | 'pending' | 'not-applicable';
 
 const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOverallStatus => {
   if (category.type === 'standard' && category.subItems) {
-    const totalSubItems = category.subItems.length;
-    if (totalSubItems === 0) return 'not-applicable';
-
-    let okCount = 0;
-    let ncCount = 0;
-    let naCount = 0;
-    let pendingCount = 0;
-
-    for (const subItem of category.subItems) {
-      if (subItem.status === 'OK') okCount++;
-      else if (subItem.status === 'N/C') ncCount++;
-      else if (subItem.status === 'N/A') naCount++;
-      else pendingCount++;
+    if (category.subItems.length === 0) {
+      return 'all-items-selected'; // If no subitems, all (zero) are considered selected.
     }
-
-    if (ncCount > 0) return 'incomplete';
-    if (pendingCount > 0) return 'pending';
-    
-    if (okCount > 0) return 'completed'; // At least one OK, and no N/C or pending
-    if (naCount === totalSubItems) return 'not-applicable'; // All are N/A
-
-    return 'pending'; 
+    const allSelected = category.subItems.every(subItem => subItem.status !== undefined);
+    return allSelected ? 'all-items-selected' : 'some-items-pending';
   } else if (category.type === 'special' || category.type === 'pressure') {
-    if (category.status === 'OK') return 'completed';
-    if (category.status === 'N/C') return 'incomplete';
-    if (category.status === 'N/A') return 'not-applicable';
-    return 'pending'; // Undefined status
+    return category.status !== undefined ? 'all-items-selected' : 'some-items-pending';
   }
-  return 'pending';
+  return 'some-items-pending'; // Default fallback
 };
 
 
@@ -91,10 +70,14 @@ export default function FireCheckPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      if (activeFloorsData.length === 0) {
-        setActiveFloorsData([createNewFloorEntry()]);
-      }
-      setIsClientInitialized(true); 
+      // Initialize activeFloorsData only on the client side
+      setActiveFloorsData(prevData => {
+        if (prevData.length === 0) {
+          return [createNewFloorEntry()];
+        }
+        return prevData;
+      });
+      setIsClientInitialized(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -328,7 +311,7 @@ export default function FireCheckPage() {
 
       setActiveFloorsData([loadedFloorData]); 
       setIsSavedInspectionsVisible(false); 
-      setIsClientInitialized(true); 
+      setIsClientInitialized(true); // Ensure form is ready to be displayed
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} (Andar: ${inspectionToLoad.floor || 'N/I'}) carregada.` });
     }
   };
@@ -498,4 +481,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-

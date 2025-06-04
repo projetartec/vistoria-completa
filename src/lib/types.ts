@@ -62,3 +62,5 @@ export type CategoryUpdatePayload =
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean };
 
+// Defines the status for icon display next to category titles
+export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';

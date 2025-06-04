@@ -9,11 +9,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
-import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload } from '@/lib/types';
+import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
 
-type CategoryOverallStatus = 'completed' | 'incomplete' | 'pending' | 'not-applicable';
 
 interface InspectionCategoryItemProps {
   category: InspectionCategoryState;
@@ -77,10 +76,9 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
       <AccordionItem value={category.id} className="border-b-0">
         <AccordionTrigger className="px-4 py-3 hover:no-underline">
           <div className="flex items-center flex-1">
-            {overallStatus === 'completed' && (
+            {overallStatus === 'all-items-selected' ? (
               <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
-            )}
-            {overallStatus === 'incomplete' && (
+            ) : (
               <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
             )}
             <h3 className="text-lg font-semibold font-headline text-left flex-1">{category.title}</h3>
@@ -235,4 +233,3 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
-
