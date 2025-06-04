@@ -48,8 +48,7 @@ const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOv
 
 const calculateNextInspectionNumber = (
   clientCode: string,
-  clientLocation: string,
-  currentSavedInspections: FullInspectionData[]
+  clientLocation: string
 ): string => {
   const trimmedClientCode = clientCode.trim();
   const trimmedClientLocation = clientLocation.trim();
@@ -58,29 +57,9 @@ const calculateNextInspectionNumber = (
     return ''; // Retorna vazio se algum campo essencial não estiver preenchido
   }
 
-  const codePart = trimmedClientCode;
-  // Garante que locationPart seja gerado mesmo para localizações curtas
-  const locationPart = trimmedClientLocation.length > 0 
-    ? trimmedClientLocation.substring(0, 3).toUpperCase() 
-    : 'LOC'; // Default se a localização for vazia após trim, embora a condição acima já pegue isso.
-
-  const prefix = `${codePart}-${locationPart}-`;
-
-  let maxSuffix = 0;
-  currentSavedInspections.forEach(inspection => {
-    if (inspection.id.startsWith(prefix)) {
-      const idSuffixPart = inspection.id.substring(prefix.length);
-      const suffixNum = parseInt(idSuffixPart, 10);
-      if (!isNaN(suffixNum) && suffixNum > maxSuffix) {
-        maxSuffix = suffixNum;
-      }
-    }
-  });
-
-  const nextSuffix = maxSuffix + 1;
-  const formattedSuffix = nextSuffix.toString().padStart(2, '0');
-
-  return `${prefix}${formattedSuffix}`;
+  // Gera um número aleatório entre 100000 e 999999
+  const randomNumber = Math.floor(100000 + Math.random() * 900000);
+  return randomNumber.toString();
 };
 
 
@@ -131,13 +110,12 @@ export default function FireCheckPage() {
       if (field === 'clientCode' || field === 'clientLocation') {
         newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
           newClientInfoState.clientCode,
-          newClientInfoState.clientLocation,
-          savedInspections // Passa o estado atual de savedInspections
+          newClientInfoState.clientLocation
         );
       }
       return newClientInfoState;
     });
-  }, [savedInspections]); // savedInspections é a dependência chave aqui.
+  }, []);
 
   const handleFloorSpecificFieldChange = useCallback((floorIndex: number, field: keyof Pick<InspectionData, 'floor'>, value: string) => {
     setActiveFloorsData(prevFloors =>
@@ -271,12 +249,11 @@ export default function FireCheckPage() {
     const defaultClientInfo: ClientInfo = {
       clientLocation: '',
       clientCode: '',
-      inspectionNumber: '', // Será recalculado ou vazio se clientCode/Location estiverem vazios
+      inspectionNumber: '', 
       inspectionDate: defaultInspectionDate,
     };
-    setClientInfo(defaultClientInfo); // Isso acionará handleClientInfoChange indiretamente se os campos forem relevantes
+    setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
-    // uploadedLogoDataUrl é mantido intencionalmente
     setBlockAutoSaveOnce(true); 
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
@@ -330,7 +307,7 @@ export default function FireCheckPage() {
     }
 
     const fullInspectionToSave: FullInspectionData = {
-      id: clientInfo.inspectionNumber, // Usa o número de vistoria gerado/carregado
+      id: clientInfo.inspectionNumber, 
       clientInfo: { ...clientInfo },
       floors: namedFloors.map(floor => ({
         id: floor.id,
@@ -391,7 +368,7 @@ export default function FireCheckPage() {
     const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
       setBlockAutoSaveOnce(true); 
-      setClientInfo({ ...inspectionToLoad.clientInfo }); // Carrega clientInfo completo, incluindo inspectionNumber
+      setClientInfo({ ...inspectionToLoad.clientInfo }); 
       setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
