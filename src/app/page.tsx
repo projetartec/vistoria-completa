@@ -1,3 +1,4 @@
+
 'use client';
 
 import type React from 'react';
@@ -15,72 +16,133 @@ import { useToast } from "@/hooks/use-toast";
 import type { InspectionData, InspectionCategoryState, HoseEntry, ExtinguisherEntry, CategoryUpdatePayload, StatusOption } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { generateInspectionPdf } from '@/lib/pdfGenerator'; 
+import { generateInspectionPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function FireCheckPage() {
   const { toast } = useToast();
-  const [currentInspection, setCurrentInspection] = useState<InspectionData>({
+  const [currentInspection, setCurrentInspection] = useState<InspectionData>(() => ({
     id: Date.now().toString(),
-    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) 
-  });
+    ...(typeof window !== 'undefined' ? JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) : INITIAL_INSPECTION_DATA)
+  }));
   const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections', []);
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
 
   const handleClientDataChange = useCallback((field: keyof InspectionData, value: string) => {
-    setCurrentInspection(prev => ({ ...prev, [field]: value }));
+    setCurrentInspection(prev => {
+      if (prev[field] === value) return prev;
+      return ({ ...prev, [field]: value });
+    });
   }, []);
 
   const handleCategoryItemUpdate = useCallback(
     (categoryId: string, update: CategoryUpdatePayload) => {
       setCurrentInspection(prevInspection => {
+        let inspectionChangedOverall = false;
+
         const newCategories = prevInspection.categories.map(cat => {
-          if (cat.id === categoryId) {
-            let newCat = { ...cat };
-            switch (update.field) {
-              case 'isExpanded':
-                newCat.isExpanded = update.value;
-                break;
-              case 'status':
-                newCat.status = update.value;
-                break;
-              case 'observation':
-                newCat.observation = update.value;
-                break;
-              case 'showObservation':
-                newCat.showObservation = update.value;
-                break;
-              case 'pressureValue':
-                newCat.pressureValue = update.value;
-                break;
-              case 'pressureUnit':
-                newCat.pressureUnit = update.value as InspectionCategoryState['pressureUnit'];
-                break;
-              case 'subItemStatus':
-                newCat.subItems = newCat.subItems?.map(sub =>
-                  sub.id === update.subItemId ? { ...sub, status: update.value } : sub
-                );
-                break;
-              case 'subItemObservation':
-                newCat.subItems = newCat.subItems?.map(sub =>
-                  sub.id === update.subItemId ? { ...sub, observation: update.value } : sub
-                );
-                break;
-              case 'subItemShowObservation':
-                newCat.subItems = newCat.subItems?.map(sub =>
-                  sub.id === update.subItemId ? { ...sub, showObservation: update.value } : sub
-                );
-                break;
-            }
-            return newCat;
+          if (cat.id !== categoryId) {
+            return cat; // Not the category we're updating, return original reference
           }
-          return cat;
+
+          // This is the target category
+          let categoryStructurallyChanged = false;
+          let updatedCatData = { ...cat }; // Start with a shallow copy of category data
+
+          switch (update.field) {
+            case 'isExpanded':
+              if (updatedCatData.isExpanded !== update.value) {
+                updatedCatData.isExpanded = update.value;
+                categoryStructurallyChanged = true;
+              }
+              break;
+            case 'status': // For special type
+              if (updatedCatData.status !== update.value) {
+                updatedCatData.status = update.value;
+                categoryStructurallyChanged = true;
+              }
+              break;
+            case 'observation': // For special type
+              if (updatedCatData.observation !== update.value) {
+                updatedCatData.observation = update.value;
+                categoryStructurallyChanged = true;
+              }
+              break;
+            case 'showObservation': // For special type
+              if (updatedCatData.showObservation !== update.value) {
+                updatedCatData.showObservation = update.value;
+                categoryStructurallyChanged = true;
+              }
+              break;
+            case 'pressureValue':
+              if (updatedCatData.pressureValue !== update.value) {
+                updatedCatData.pressureValue = update.value;
+                categoryStructurallyChanged = true;
+              }
+              break;
+            case 'pressureUnit':
+              if (updatedCatData.pressureUnit !== (update.value as InspectionCategoryState['pressureUnit'])) {
+                updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit'];
+                categoryStructurallyChanged = true;
+              }
+              break;
+            case 'subItemStatus':
+            case 'subItemObservation':
+            case 'subItemShowObservation':
+              if (updatedCatData.subItems) {
+                let subItemsArrayChangedInternally = false;
+                const newSubItems = updatedCatData.subItems.map(sub => {
+                  if (sub.id !== update.subItemId) {
+                    return sub; // Not the sub-item we're updating, return original reference
+                  }
+
+                  let subItemStructurallyChanged = false;
+                  const updatedSubData = { ...sub }; // Shallow copy of sub-item data
+
+                  if (update.field === 'subItemStatus' && updatedSubData.status !== (update.value as StatusOption)) {
+                    updatedSubData.status = update.value as StatusOption;
+                    subItemStructurallyChanged = true;
+                  } else if (update.field === 'subItemObservation' && updatedSubData.observation !== update.value) {
+                    updatedSubData.observation = update.value as string;
+                    subItemStructurallyChanged = true;
+                  } else if (update.field === 'subItemShowObservation' && updatedSubData.showObservation !== update.value) {
+                    updatedSubData.showObservation = update.value as boolean;
+                    subItemStructurallyChanged = true;
+                  }
+
+                  if (subItemStructurallyChanged) {
+                    subItemsArrayChangedInternally = true;
+                    return updatedSubData; // Return new sub-item object
+                  }
+                  return sub; // Return original sub-item object reference
+                });
+
+                if (subItemsArrayChangedInternally) {
+                  updatedCatData.subItems = newSubItems; // Assign new array of subItems
+                  categoryStructurallyChanged = true;
+                }
+              }
+              break;
+            default:
+              // Should not happen with defined CategoryUpdatePayload
+              break;
+          }
+
+          if (categoryStructurallyChanged) {
+            inspectionChangedOverall = true;
+            return updatedCatData; // Return new category object
+          }
+          return cat; // Return original category object reference
         });
-        return { ...prevInspection, categories: newCategories };
+
+        if (inspectionChangedOverall) {
+          return { ...prevInspection, categories: newCategories };
+        }
+        return prevInspection; // No effective change, return original inspection state
       });
     },
-    [] 
+    []
   );
 
 
@@ -95,7 +157,7 @@ export default function FireCheckPage() {
   const resetInspectionForm = useCallback(() => {
     setCurrentInspection({
       id: Date.now().toString(),
-      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) 
+      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA))
     });
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
@@ -105,7 +167,7 @@ export default function FireCheckPage() {
       toast({ title: "Erro ao Salvar", description: "Código do Cliente e Local são obrigatórios.", variant: "destructive" });
       return;
     }
-    
+
     const now = Date.now();
     const inspectionToSave = { ...currentInspection, timestamp: now };
 
@@ -114,9 +176,9 @@ export default function FireCheckPage() {
       if (existingIndex > -1) {
         const updated = [...prev];
         updated[existingIndex] = inspectionToSave;
-        return updated;
+        return updated.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       }
-      return [...prev, inspectionToSave];
+      return [...prev, inspectionToSave].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
     toast({ title: "Vistoria Salva", description: `Vistoria ${inspectionToSave.inspectionNumber} salva com sucesso.` });
   };
@@ -124,7 +186,7 @@ export default function FireCheckPage() {
   const handleLoadInspection = (inspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === inspectionId);
     if (inspectionToLoad) {
-      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad))); 
+      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad)));
       setIsSavedInspectionsVisible(false);
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber} carregada.` });
     }
@@ -152,16 +214,25 @@ export default function FireCheckPage() {
       toast({ title: "Erro no PDF", description: "Falha ao gerar o PDF.", variant: "destructive" });
     }
   };
-  
+
   const toggleSavedInspections = () => {
     setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
   };
+  
+  // Effect to initialize currentInspection on client-side only to avoid hydration mismatch with Date.now()
+  useEffect(() => {
+    setCurrentInspection({
+      id: Date.now().toString(),
+      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA))
+    });
+  }, []);
+
 
   return (
     <ScrollArea className="h-screen">
       <div className="container mx-auto p-4 md:p-8 max-w-4xl">
         <AppHeader />
-        
+
         <ClientDataForm
           inspectionData={currentInspection}
           onFieldChange={handleClientDataChange}
@@ -215,3 +286,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+    
