@@ -239,7 +239,7 @@ export default function FireCheckPage() {
     };
     setClientInfo(defaultClientInfo);
     setActiveFloorsData([createNewFloorEntry()]);
-    setUploadedLogoDataUrl(null); // Reset uploaded logo
+    // setUploadedLogoDataUrl(null); // Do not reset uploaded logo
     setBlockAutoSaveOnce(true); 
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
@@ -301,7 +301,7 @@ export default function FireCheckPage() {
         categories: JSON.parse(JSON.stringify(floor.categories))
       })),
       timestamp: Date.now(),
-      uploadedLogoDataUrl: uploadedLogoDataUrl // Save uploaded logo
+      uploadedLogoDataUrl: uploadedLogoDataUrl
     };
 
     setSavedInspections(prevSaved => {
@@ -355,7 +355,7 @@ export default function FireCheckPage() {
     if (inspectionToLoad) {
       setBlockAutoSaveOnce(true); 
       setClientInfo({ ...inspectionToLoad.clientInfo });
-      setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null); // Load uploaded logo
+      setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
         ...floor,
@@ -558,5 +558,7 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
 
     
