@@ -80,26 +80,30 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           .pdf-header-main {
             display: flex;
-            flex-direction: column; /* Stack logo and company info */
-            align-items: center; /* Center items horizontally */
+            flex-direction: row; /* Align logo and company info side-by-side */
+            justify-content: space-between; /* Push logo to left, info to right */
+            align-items: center; /* Vertically center align items */
             border-bottom: 2px solid #D1D5DB;
             padding-bottom: 15px;
             margin-bottom: 25px;
           }
 
           .pdf-logo-container {
-            margin-bottom: 15px; /* Space between logo and company info */
+            /* margin-bottom: 15px; /* Removed, not needed for horizontal layout */
+            margin-right: 20px; /* Space between logo and company info */
+            flex-shrink: 0; /* Prevent logo container from shrinking */
           }
 
           .pdf-logo-container img {
-            max-height: 112px; 
+            max-height: 112px; /* From app-header max-h-28 (7rem * 16px) */
             width: auto; 
-            max-width: 224px;
+            max-width: 224px; /* From app-header w-56 (224px) */
             display: block; 
           }
           
           .pdf-company-info-container {
-             text-align: center; 
+             text-align: left; /* Align company info text to the left, like in app */
+             flex-grow: 1; /* Allow company info to take up remaining space */
           }
 
           .pdf-header-main .company-name {
@@ -107,12 +111,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             font-weight: 700;
             color: #2563EB; /* Primary color from theme */
             margin-bottom: 5px;
+            /* text-align will be inherited from .pdf-company-info-container or can be set to left if needed */
           }
           .pdf-header-main .company-details p {
             font-size: 9pt; 
             color: #374151; /* Muted foreground-like */
             margin: 2px 0;
             line-height: 1.3;
+            /* text-align will be inherited */
           }
 
           .pdf-client-info {
