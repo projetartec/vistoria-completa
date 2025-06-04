@@ -83,7 +83,7 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> =
     id: category.id,
     title: category.title,
     type: category.type,
-    isExpanded: true, // All categories start expanded by default
+    isExpanded: false, // All categories start collapsed by default
     ...(category.type === 'standard' && {
       subItems: category.subItems!.map(subItem => ({
         id: subItem.id,
