@@ -38,14 +38,14 @@ const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOv
   if (category.type === 'standard' && category.subItems) {
     const relevantSubItems = category.subItems.filter(subItem => !subItem.isRegistry);
     if (relevantSubItems.length === 0) {
-      return 'all-items-selected';
+      return 'all-items-selected'; // Consider it selected if no relevant items to check
     }
     const allSelected = relevantSubItems.every(subItem => subItem.status !== undefined);
     return allSelected ? 'all-items-selected' : 'some-items-pending';
   } else if (category.type === 'special' || category.type === 'pressure') {
     return category.status !== undefined ? 'all-items-selected' : 'some-items-pending';
   }
-  return 'some-items-pending';
+  return 'some-items-pending'; // Default for any other unexpected case
 };
 
 
@@ -156,7 +156,7 @@ export default function FireCheckPage() {
                   const newExtinguishersArray = [...(sub.registeredExtinguishers || []), newExtinguisher];
                   categoryStructurallyChanged = true;
                   if (typeof window !== 'undefined') {
-                    console.log('[ADD EXT]', JSON.stringify(newExtinguisher), 'Current items in array for this subitem:', newExtinguishersArray.length, 'Existing items before add:', (sub.registeredExtinguishers || []).length);
+                     console.log('[ADD EXT]', JSON.stringify(newExtinguisher), 'Current items in array for this subitem:', newExtinguishersArray.length, 'Existing items before add:', (sub.registeredExtinguishers || []).length);
                   }
                   return { ...sub, registeredExtinguishers: newExtinguishersArray };
                 });
@@ -423,30 +423,32 @@ export default function FireCheckPage() {
               {activeFloorsData.map((floorData, floorIndex) => (
                 <Card key={floorData.id} className="mb-6 shadow-md overflow-hidden">
                   <CardContent className="p-4 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor={`floorName-${floorData.id}`} className="text-lg font-medium">
-                        ANDAR (Formulário {floorIndex + 1})
-                      </Label>
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center gap-x-3 flex-grow mr-2">
+                        <Label htmlFor={`floorName-${floorData.id}`} className="text-lg font-medium whitespace-nowrap">
+                          ANDAR:
+                        </Label>
+                        <Input
+                          id={`floorName-${floorData.id}`}
+                          value={floorData.floor}
+                          onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
+                          placeholder="Ex: Térreo, 1A, Subsolo"
+                          className="flex-grow"
+                        />
+                      </div>
                       {activeFloorsData.length > 1 && (
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveFloor(floorIndex)}
-                          className="text-destructive hover:bg-destructive/10"
+                          className="text-destructive hover:bg-destructive/10 flex-shrink-0"
                           title="Remover este andar"
                         >
                           <Trash2 className="h-5 w-5" />
                         </Button>
                       )}
                     </div>
-                    <Input
-                      id={`floorName-${floorData.id}`}
-                      value={floorData.floor}
-                      onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
-                      placeholder="Ex: Térreo, 1A, Subsolo"
-                      className="mt-1"
-                    />
-
+                    
                     {floorData.categories.map(category => {
                       const overallStatus = getCategoryOverallStatus(category);
                       return (
@@ -464,7 +466,7 @@ export default function FireCheckPage() {
             </>
           )}
         </div>
-
+        
         <ActionButtonsPanel
           onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
