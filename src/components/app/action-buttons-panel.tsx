@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { Save, FolderOpen, PlusSquare, ListChecks, CopyPlus, FileText } from 'lucide-react';
+import { Save, FolderOpen, PlusSquare, ListChecks, CopyPlus, FileText, Printer } from 'lucide-react';
 
 interface ActionButtonsPanelProps {
   onSave: () => void;
@@ -9,6 +9,7 @@ interface ActionButtonsPanelProps {
   onToggleSavedInspections: () => void;
   isSavedInspectionsVisible: boolean;
   onGeneratePdf: () => void;
+  onPrint: () => void;
 }
 
 export function ActionButtonsPanel({
@@ -18,6 +19,7 @@ export function ActionButtonsPanel({
   onToggleSavedInspections,
   isSavedInspectionsVisible,
   onGeneratePdf,
+  onPrint,
 }: ActionButtonsPanelProps) {
   return (
     <div className="my-8 p-4 bg-card shadow-lg rounded-lg">
@@ -26,28 +28,33 @@ export function ActionButtonsPanel({
         <Button onClick={onSave} >
           <Save className="mr-2 h-4 w-4" /> Salvar Vistoria
         </Button>
-        <Button 
-          onClick={onNewFloor} 
+        <Button
+          onClick={onNewFloor}
           className="bg-green-500 hover:bg-green-600 text-white"
         >
           <CopyPlus className="mr-2 h-4 w-4" /> Novo Andar
         </Button>
-        <Button 
-          onClick={onGeneratePdf} 
+        <Button
+          onClick={onGeneratePdf}
           className="bg-orange-500 hover:bg-orange-600 text-white"
         >
           <FileText className="mr-2 h-4 w-4" /> Gerar PDF
         </Button>
-        <Button 
-          onClick={onToggleSavedInspections} 
+        <Button
+          onClick={onPrint}
+          variant="secondary"
+        >
+          <Printer className="mr-2 h-4 w-4" /> Imprimir Vistoria
+        </Button>
+        <Button
+          onClick={onToggleSavedInspections}
           className="bg-yellow-500 hover:bg-yellow-600 text-black"
         >
           <ListChecks className="mr-2 h-4 w-4" /> {isSavedInspectionsVisible ? 'Ocultar Salvas' : 'Ver Salvas'}
         </Button>
-        <Button 
-          onClick={onNewInspection} 
-          variant="destructive" 
-          className="sm:col-span-2 md:col-span-1"
+        <Button
+          onClick={onNewInspection}
+          variant="destructive"
         >
           <PlusSquare className="mr-2 h-4 w-4" /> Nova Vistoria (Limpar Tudo)
         </Button>
