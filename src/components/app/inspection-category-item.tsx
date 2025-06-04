@@ -9,8 +9,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2 } from 'lucide-react';
-import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption } from '@/lib/types';
-import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS } from '@/constants/inspection.config';
+import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
+import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
@@ -60,9 +60,9 @@ const ExtinguisherRegistrySubItem: React.FC<{
       <CardContent className="px-3 pb-3 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
           <div>
-            <Label htmlFor={`${subItem.id}-qty`} className="text-xs">Quantidade</Label>
+            <Label htmlFor={`${subItem.id}-ext-qty`} className="text-xs">Quantidade</Label>
             <Input
-              id={`${subItem.id}-qty`}
+              id={`${subItem.id}-ext-qty`}
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
@@ -71,9 +71,9 @@ const ExtinguisherRegistrySubItem: React.FC<{
             />
           </div>
           <div>
-            <Label htmlFor={`${subItem.id}-type`} className="text-xs">Tipo</Label>
+            <Label htmlFor={`${subItem.id}-ext-type`} className="text-xs">Tipo</Label>
             <Select value={type} onValueChange={(val) => setType(val as ExtinguisherTypeOption)}>
-              <SelectTrigger id={`${subItem.id}-type`} className="h-9 text-sm">
+              <SelectTrigger id={`${subItem.id}-ext-type`} className="h-9 text-sm">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
@@ -82,9 +82,9 @@ const ExtinguisherRegistrySubItem: React.FC<{
             </Select>
           </div>
           <div>
-            <Label htmlFor={`${subItem.id}-weight`} className="text-xs">Peso</Label>
+            <Label htmlFor={`${subItem.id}-ext-weight`} className="text-xs">Peso</Label>
             <Select value={weight} onValueChange={(val) => setWeight(val as ExtinguisherWeightOption)}>
-              <SelectTrigger id={`${subItem.id}-weight`} className="h-9 text-sm">
+              <SelectTrigger id={`${subItem.id}-ext-weight`} className="h-9 text-sm">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
@@ -117,17 +117,128 @@ const ExtinguisherRegistrySubItem: React.FC<{
   );
 };
 
+const HoseRegistrySubItem: React.FC<{
+  subItem: SubItemState;
+  onUpdate: (update: CategoryUpdatePayload) => void;
+}> = ({ subItem, onUpdate }) => {
+  const [quantity, setQuantity] = useState<number | ''>(1);
+  const [length, setLength] = useState<HoseLengthOption | ''>('');
+  const [diameter, setDiameter] = useState<HoseDiameterOption | ''>('');
+  const [type, setType] = useState<HoseTypeOption | ''>('');
+
+  const handleAddHose = () => {
+    if (!quantity || !length || !diameter || !type) {
+      alert('Por favor, preencha Quantidade, Medida, Diâmetro e Tipo da mangueira.');
+      return;
+    }
+    onUpdate({
+      field: 'addRegisteredHose',
+      subItemId: subItem.id,
+      value: { quantity: Number(quantity), length, diameter, type },
+    });
+    setQuantity(1);
+    setLength('');
+    setDiameter('');
+    setType('');
+  };
+
+  const handleRemoveHose = (hoseId: string) => {
+    onUpdate({
+      field: 'removeRegisteredHose',
+      subItemId: subItem.id,
+      hoseId,
+    });
+  };
+
+  return (
+    <Card className="mt-2 mb-1 bg-muted/30">
+      <CardHeader className="pb-2 pt-3 px-3">
+        <CardTitle className="text-md font-semibold">{subItem.name}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
+          <div>
+            <Label htmlFor={`${subItem.id}-hose-qty`} className="text-xs">Quantidade</Label>
+            <Input
+              id={`${subItem.id}-hose-qty`}
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+              min="1"
+              className="h-9 text-sm"
+            />
+          </div>
+          <div>
+            <Label htmlFor={`${subItem.id}-hose-length`} className="text-xs">Medida</Label>
+            <Select value={length} onValueChange={(val) => setLength(val as HoseLengthOption)}>
+              <SelectTrigger id={`${subItem.id}-hose-length`} className="h-9 text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {HOSE_LENGTHS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor={`${subItem.id}-hose-diameter`} className="text-xs">Diâmetro</Label>
+            <Select value={diameter} onValueChange={(val) => setDiameter(val as HoseDiameterOption)}>
+              <SelectTrigger id={`${subItem.id}-hose-diameter`} className="h-9 text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {HOSE_DIAMETERS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor={`${subItem.id}-hose-type`} className="text-xs">Tipo</Label>
+            <Select value={type} onValueChange={(val) => setType(val as HoseTypeOption)}>
+              <SelectTrigger id={`${subItem.id}-hose-type`} className="h-9 text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {HOSE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={handleAddHose} size="sm" className="h-9">
+            <PlusCircle className="mr-1 h-4 w-4" /> Adicionar
+          </Button>
+        </div>
+
+        {subItem.registeredHoses && subItem.registeredHoses.length > 0 && (
+          <div className="space-y-1 pt-2 border-t">
+            <h4 className="text-sm font-medium text-muted-foreground">Mangueiras Cadastradas:</h4>
+            <ul className="list-disc list-inside pl-1 space-y-0.5 text-sm">
+              {subItem.registeredHoses.map((hose) => (
+                <li key={hose.id} className="flex justify-between items-center">
+                  <span>{hose.quantity}x - {hose.length} - {hose.diameter} - {hose.type}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveHose(hose.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 
 const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overallStatus }: InspectionCategoryItemProps) => {
 
-  const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value: any, subItemId?: string, extinguisherId?: string) => {
+  const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value: any, subItemId?: string, itemId?: string) => { // itemId for extinguisherId or hoseId
     let payload: CategoryUpdatePayload;
     if (subItemId) {
       if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
       else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
       else if (field === 'subItemShowObservation') payload = { field, subItemId, value: value as boolean };
       else if (field === 'addRegisteredExtinguisher') payload = { field, subItemId, value: value as Omit<RegisteredExtinguisher, 'id'> };
-      else if (field === 'removeRegisteredExtinguisher' && extinguisherId) payload = { field, subItemId, extinguisherId };
+      else if (field === 'removeRegisteredExtinguisher' && itemId) payload = { field, subItemId, extinguisherId: itemId };
+      else if (field === 'addRegisteredHose') payload = { field, subItemId, value: value as Omit<RegisteredHose, 'id'> };
+      else if (field === 'removeRegisteredHose' && itemId) payload = { field, subItemId, hoseId: itemId };
       else return;
     } else {
       if (field === 'status') payload = { field, value: value as StatusOption | undefined };
@@ -175,13 +286,24 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && category.subItems?.map((subItem) => {
             if (subItem.isRegistry) {
-              return (
-                <ExtinguisherRegistrySubItem
-                  key={subItem.id}
-                  subItem={subItem}
-                  onUpdate={(updatePayload) => onCategoryItemUpdate(category.id, updatePayload)}
-                />
-              );
+              if (subItem.id === 'extintor_cadastro') {
+                return (
+                  <ExtinguisherRegistrySubItem
+                    key={subItem.id}
+                    subItem={subItem}
+                    onUpdate={(updatePayload) => onCategoryItemUpdate(category.id, updatePayload)}
+                  />
+                );
+              } else if (subItem.id === 'hidrantes_cadastro_mangueiras') {
+                return (
+                  <HoseRegistrySubItem
+                    key={subItem.id}
+                    subItem={subItem}
+                    onUpdate={(updatePayload) => onCategoryItemUpdate(category.id, updatePayload)}
+                  />
+                );
+              }
+              return null;
             }
             return (
               <div key={subItem.id} className="py-2 border-t first:border-t-0">

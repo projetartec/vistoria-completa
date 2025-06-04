@@ -1,8 +1,12 @@
 
-import type { InspectionData, InspectionCategoryState, InspectionCategoryConfig, StatusOption, ExtinguisherTypeOption, ExtinguisherWeightOption } from '@/lib/types';
+import type { InspectionData, InspectionCategoryState, InspectionCategoryConfig, StatusOption, ExtinguisherTypeOption, ExtinguisherWeightOption, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 
 export const EXTINGUISHER_TYPES: ExtinguisherTypeOption[] = ['AP', 'ABC', 'BC', 'EPM', 'CO²'];
 export const EXTINGUISHER_WEIGHTS: ExtinguisherWeightOption[] = ['4kg', '6kg', '8kg', '10kg', '12kg', '20kg', '50kg', '75kg'];
+
+export const HOSE_LENGTHS: HoseLengthOption[] = ['15 metros', '20 metros', '30 metros'];
+export const HOSE_DIAMETERS: HoseDiameterOption[] = ['1½"', '2½"'];
+export const HOSE_TYPES: HoseTypeOption[] = ['Tipo 1', 'Tipo 2', 'Tipo 3', 'Tipo 4', 'Tipo 5', 'Tipo 6'];
 
 
 export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
@@ -66,6 +70,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
       { id: 'hidrantes_placa_sinalizacao', name: 'Placa De Sinalização' },
       { id: 'hidrantes_vazamento', name: 'Vazamento' },
       { id: 'hidrantes_teste_hidrostatico', name: 'Teste Hidrostático' },
+      { id: 'hidrantes_cadastro_mangueiras', name: 'Cadastro de Mangueiras', isRegistry: true },
     ],
   },
   { id: 'bomba_principal_spk', title: 'Bomba Principal SPK', type: 'special' },
@@ -95,7 +100,8 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id'> = {
         observation: '',
         showObservation: false,
         isRegistry: subItem.isRegistry || false,
-        ...(subItem.isRegistry && { registeredExtinguishers: [] }),
+        ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
+        ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
       })),
     }),
     ...(category.type === 'special' && {

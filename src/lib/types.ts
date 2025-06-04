@@ -11,6 +11,18 @@ export interface RegisteredExtinguisher {
   weight: ExtinguisherWeightOption | '';
 }
 
+export type HoseLengthOption = '15 metros' | '20 metros' | '30 metros';
+export type HoseDiameterOption = '1½"' | '2½"';
+export type HoseTypeOption = 'Tipo 1' | 'Tipo 2' | 'Tipo 3' | 'Tipo 4' | 'Tipo 5' | 'Tipo 6';
+
+export interface RegisteredHose {
+  id: string;
+  quantity: number;
+  length: HoseLengthOption | '';
+  diameter: HoseDiameterOption | '';
+  type: HoseTypeOption | '';
+}
+
 export interface SubItemState {
   id: string;
   name: string;
@@ -19,6 +31,7 @@ export interface SubItemState {
   showObservation?: boolean;
   isRegistry?: boolean;
   registeredExtinguishers?: RegisteredExtinguisher[];
+  registeredHoses?: RegisteredHose[];
 }
 
 export interface InspectionCategoryState {
@@ -75,6 +88,8 @@ export type CategoryUpdatePayload =
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean }
   | { field: 'addRegisteredExtinguisher'; subItemId: string; value: Omit<RegisteredExtinguisher, 'id'> }
-  | { field: 'removeRegisteredExtinguisher'; subItemId: string; extinguisherId: string };
+  | { field: 'removeRegisteredExtinguisher'; subItemId: string; extinguisherId: string }
+  | { field: 'addRegisteredHose'; subItemId: string; value: Omit<RegisteredHose, 'id'> }
+  | { field: 'removeRegisteredHose'; subItemId: string; hoseId: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';

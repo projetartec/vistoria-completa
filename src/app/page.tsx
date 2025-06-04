@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher } from '@/lib/types';
+import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
@@ -62,7 +62,7 @@ export default function FireCheckPage() {
 
   // SavedInspections now stores FullInspectionData array
   const initialSavedFullInspections = useMemo(() => [], []);
-  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v1', initialSavedFullInspections);
+  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v2', initialSavedFullInspections); // V2 for new structure
 
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
@@ -76,14 +76,13 @@ export default function FireCheckPage() {
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prev => {
       const newState = { ...prev, [field]: value };
-      if (field === 'clientCode' || field === 'clientLocation') { // Update inspection number if client code or location changes to ensure uniqueness if desired
-        const codePart = newState.clientCode || 'SC'; // SC for Sem Código
+      if (field === 'clientCode' || field === 'clientLocation') { 
+        const codePart = newState.clientCode || 'SC'; 
         const locationPart = newState.clientLocation.substring(0,3).toUpperCase() || 'LOC';
-        // This is a simple way to generate an inspection number. You might want a more robust system.
         newState.inspectionNumber = `${codePart}-${locationPart}-01`;
       }
       if (field === 'clientCode' && !value && newState.inspectionNumber.startsWith('SC-')) {
-        newState.inspectionNumber = ''; // Clear if client code is removed and it was auto-generated based on no code
+        newState.inspectionNumber = ''; 
       }
       return newState;
     });
@@ -168,12 +167,36 @@ export default function FireCheckPage() {
               }
               break;
             case 'removeRegisteredExtinguisher':
-              if (cat.subItems && update.subItemId) {
+              if (cat.subItems && update.subItemId && update.extinguisherId) {
                 updatedCatData.subItems = cat.subItems.map(sub => {
                   if (sub.id !== update.subItemId || !sub.isRegistry || !sub.registeredExtinguishers) return sub;
                   const newExtinguishersArray = sub.registeredExtinguishers.filter(ext => ext.id !== update.extinguisherId);
                   categoryStructurallyChanged = true;
                   return { ...sub, registeredExtinguishers: newExtinguishersArray };
+                });
+              }
+              break;
+            case 'addRegisteredHose':
+              if (cat.subItems && update.subItemId) {
+                updatedCatData.subItems = cat.subItems.map(sub => {
+                  if (sub.id !== update.subItemId || !sub.isRegistry) return sub;
+                  const newHose: RegisteredHose = {
+                    ...update.value,
+                     id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 11)}`,
+                  };
+                  const newHosesArray = [...(sub.registeredHoses || []), newHose];
+                  categoryStructurallyChanged = true;
+                  return { ...sub, registeredHoses: newHosesArray };
+                });
+              }
+              break;
+            case 'removeRegisteredHose':
+              if (cat.subItems && update.subItemId && update.hoseId) {
+                updatedCatData.subItems = cat.subItems.map(sub => {
+                  if (sub.id !== update.subItemId || !sub.isRegistry || !sub.registeredHoses) return sub;
+                  const newHosesArray = sub.registeredHoses.filter(hose => hose.id !== update.hoseId);
+                  categoryStructurallyChanged = true;
+                  return { ...sub, registeredHoses: newHosesArray };
                 });
               }
               break;
@@ -242,12 +265,12 @@ export default function FireCheckPage() {
     }
 
     const fullInspectionToSave: FullInspectionData = {
-      id: clientInfo.inspectionNumber, // Use inspectionNumber as the unique ID for the full inspection
-      clientInfo: { ...clientInfo },    // Save a copy of clientInfo
-      floors: namedFloors.map(floor => ({ // Map active floors to the simpler InspectionData structure
-        id: floor.id, // Retain unique ID for the floor
+      id: clientInfo.inspectionNumber, 
+      clientInfo: { ...clientInfo },    
+      floors: namedFloors.map(floor => ({ 
+        id: floor.id, 
         floor: floor.floor,
-        categories: JSON.parse(JSON.stringify(floor.categories)) // Deep copy categories
+        categories: JSON.parse(JSON.stringify(floor.categories)) 
       })),
       timestamp: Date.now(),
     };
@@ -256,11 +279,10 @@ export default function FireCheckPage() {
       let newSavedList = [...prevSaved];
       const existingIndex = newSavedList.findIndex(insp => insp.id === fullInspectionToSave.id);
       if (existingIndex > -1) {
-        newSavedList[existingIndex] = fullInspectionToSave; // Update existing
+        newSavedList[existingIndex] = fullInspectionToSave; 
       } else {
-        newSavedList.push(fullInspectionToSave); // Add new
+        newSavedList.push(fullInspectionToSave); 
       }
-      // Sort by timestamp, newest first
       return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
 
@@ -275,7 +297,6 @@ export default function FireCheckPage() {
     if (inspectionToLoad) {
       setClientInfo({ ...inspectionToLoad.clientInfo });
 
-      // Ensure floors and their sub-components have valid IDs
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
         ...floor,
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) 
@@ -289,7 +310,13 @@ export default function FireCheckPage() {
               ...ext,
               id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
                   ? ext.id
-                  : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}`
+                  : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-ext`
+            })) : [],
+            registeredHoses: sub.registeredHoses ? sub.registeredHoses.map(hose => ({
+              ...hose,
+              id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-'))
+                  ? hose.id
+                  : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-hose`
             })) : []
           })) : []
         }))
@@ -307,7 +334,6 @@ export default function FireCheckPage() {
       setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
 
-      // If the deleted inspection was the one currently loaded, reset the form
       if (clientInfo.inspectionNumber === fullInspectionId) {
         resetInspectionForm();
       }
@@ -324,7 +350,6 @@ export default function FireCheckPage() {
         toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para gerar o PDF.", variant: "destructive" });
         return;
     }
-    // Pass clientInfo and the current active floors to the PDF generator
     generateInspectionPdf(clientInfo, floorsToPrint);
   }, [clientInfo, activeFloorsData, toast]);
 
