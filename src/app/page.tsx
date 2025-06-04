@@ -19,7 +19,6 @@ export default function FireCheckPage() {
   const { toast } = useToast();
   const [currentInspection, setCurrentInspection] = useState<InspectionData | null>(null);
 
-  // Stabilize the initialValue for useLocalStorage
   const initialSavedInspections = useMemo(() => [], []);
   const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', initialSavedInspections);
 
@@ -27,22 +26,18 @@ export default function FireCheckPage() {
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
 
   useEffect(() => {
-    // Initialize on the client side to ensure Date.now() is client-specific
-    // and to get a deep clone of INITIAL_INSPECTION_DATA
     setCurrentInspection({
       id: Date.now().toString(),
-      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) // Deep clone
+      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) 
     });
   }, []);
 
   const handleClientDataChange = useCallback((field: keyof Omit<InspectionData, 'categories' | 'id' | 'timestamp'>, value: string) => {
     setCurrentInspection(prev => {
-      if (!prev) return null;
-      // Check if the value actually changed to prevent unnecessary updates
-      if (prev[field] === value) return prev;
+      if (!prev || prev[field] === value) return prev;
       return { ...prev, [field]: value };
     });
-  }, []); // setCurrentInspection is stable
+  }, []);
 
   const handleCategoryItemUpdate = useCallback((categoryId: string, update: CategoryUpdatePayload) => {
     setCurrentInspection(prevInspection => {
@@ -52,10 +47,10 @@ export default function FireCheckPage() {
 
       const newCategories = prevInspection.categories.map(cat => {
         if (cat.id !== categoryId) {
-          return cat; // Return original reference if not the target category
+          return cat; 
         }
 
-        let updatedCatData = { ...cat }; // Shallow copy the category being updated
+        let updatedCatData = { ...cat }; 
         let categoryStructurallyChanged = false;
 
         switch (update.field) {
@@ -65,19 +60,19 @@ export default function FireCheckPage() {
               categoryStructurallyChanged = true;
             }
             break;
-          case 'status': // For 'special' items
+          case 'status': 
             if (updatedCatData.status !== update.value) {
               updatedCatData.status = update.value;
               categoryStructurallyChanged = true;
             }
             break;
-          case 'observation': // For 'special' or 'pressure' items main observation
+          case 'observation': 
             if (updatedCatData.observation !== update.value) {
               updatedCatData.observation = update.value;
               categoryStructurallyChanged = true;
             }
             break;
-          case 'showObservation': // For 'special' or 'pressure' items main observation
+          case 'showObservation':
              if (updatedCatData.showObservation !== update.value) {
               updatedCatData.showObservation = update.value;
               categoryStructurallyChanged = true;
@@ -102,10 +97,10 @@ export default function FireCheckPage() {
               let subItemsArrayChangedInternally = false;
               const newSubItems = cat.subItems.map(sub => {
                 if (sub.id !== update.subItemId) {
-                  return sub; // Return original sub-item if not the target
+                  return sub;
                 }
                 
-                let updatedSubData = { ...sub }; // Shallow copy sub-item
+                let updatedSubData = { ...sub };
                 let subItemStructurallyChanged = false;
 
                 if (update.field === 'subItemStatus' && updatedSubData.status !== (update.value as StatusOption)) {
@@ -121,47 +116,30 @@ export default function FireCheckPage() {
 
                 if (subItemStructurallyChanged) {
                   subItemsArrayChangedInternally = true;
-                  return updatedSubData; // Return new sub-item data
+                  return updatedSubData;
                 }
-                return sub; // Return original sub-item if no change
+                return sub; 
               });
 
               if (subItemsArrayChangedInternally) {
-                updatedCatData.subItems = newSubItems; // Assign new array of sub-items
+                updatedCatData.subItems = newSubItems; 
                 categoryStructurallyChanged = true;
-              } else {
-                 // Ensure original array reference is kept if no sub-item changed
-                 // This line is important: if newSubItems is identical to cat.subItems by reference,
-                 // it means no sub-item actually changed its reference.
-                 // However, .map always returns a new array. So we must check if content changed.
-                 // The logic above already ensures newSubItems contains original refs if sub-items didn't change.
-                 // So, if subItemsArrayChangedInternally is false, it implies newSubItems is effectively the same.
-                 // To be absolutely sure, we could compare references of original cat.subItems to newSubItems,
-                 // but the current flag `subItemsArrayChangedInternally` should suffice.
-                 // If it's false, we don't assign updatedCatData.subItems = newSubItems to keep original ref if possible
-                 // For simplicity and given .map always new array: assign if changed.
-                 // The key is categoryStructurallyChanged will be true if subItemsArrayChangedInternally.
               }
             }
             break;
           default:
-            // This case should not be reached if CategoryUpdatePayload is correctly typed
-            // console.warn('Unknown update field:', (update as any).field);
             break;
         }
         
         if (categoryStructurallyChanged) {
           inspectionChangedOverall = true;
-          return updatedCatData; // Return new category data
+          return updatedCatData; 
         }
-        return cat; // Return original category if no structural change in this category
+        return cat; 
       });
-
-      // Only create a new inspection object if the categories array reference or content has changed.
-      // The .map for newCategories always creates a new array.
-      // We need to check if any of the *items* within newCategories have new references.
+      
       let actualCategoryDataChanged = false;
-      if (prevInspection.categories.length !== newCategories.length) { // Should not happen with map
+      if (prevInspection.categories.length !== newCategories.length) {
         actualCategoryDataChanged = true;
       } else {
         for (let i = 0; i < prevInspection.categories.length; i++) {
@@ -172,22 +150,49 @@ export default function FireCheckPage() {
         }
       }
 
-      if (inspectionChangedOverall || actualCategoryDataChanged) { // inspectionChangedOverall should cover actualCategoryDataChanged due to map logic
+      if (inspectionChangedOverall || actualCategoryDataChanged) {
         return { ...prevInspection, categories: newCategories };
       }
       
-      return prevInspection; // Return original inspection if no categories changed (important for reference equality)
+      return prevInspection; 
     });
-  }, []); // setCurrentInspection is stable
+  }, []); 
 
 
   const resetInspectionForm = useCallback(() => {
     setCurrentInspection({
       id: Date.now().toString(),
-      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) // Deep clone
+      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA))
     });
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
-  }, [toast]); // setCurrentInspection is stable
+  }, [toast]);
+
+  const handleNewFloorInspection = useCallback(() => {
+    if (!currentInspection) {
+      // If there's no current inspection, just start a new one
+      resetInspectionForm();
+      toast({
+        title: "Novo Formulário Iniciado",
+        description: "Preencha todos os dados para o novo andar.",
+      });
+      return;
+    }
+
+    const newFloorInspectionData: InspectionData = {
+      id: Date.now().toString(), // New unique ID for the new floor inspection
+      clientCode: currentInspection.clientCode, // Keep client code
+      clientLocation: currentInspection.clientLocation, // Keep client location
+      floor: '', // Clear floor for the user to input the new one
+      inspectionNumber: '', // Will be regenerated by ClientDataForm based on clientCode
+      categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)), // Reset checklist
+      timestamp: undefined // This inspection is not saved yet
+    };
+    setCurrentInspection(newFloorInspectionData);
+    toast({
+      title: "Formulário para Novo Andar",
+      description: "Preencha o novo ANDAR. Dados do cliente foram mantidos. Checklist reiniciado.",
+    });
+  }, [currentInspection, resetInspectionForm, toast]);
 
   const handleSaveInspection = () => {
     if (!currentInspection) return;
@@ -208,7 +213,6 @@ export default function FireCheckPage() {
       } else {
         newSavedInspections = [...prev, inspectionToSave];
       }
-      // Sort by newest first
       return newSavedInspections.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
     toast({ title: "Vistoria Salva", description: `Vistoria ${inspectionToSave.inspectionNumber || 'sem número'} salva com sucesso.` });
@@ -217,8 +221,8 @@ export default function FireCheckPage() {
   const handleLoadInspection = (inspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === inspectionId);
     if (inspectionToLoad) {
-      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad))); // Deep clone
-      setIsSavedInspectionsVisible(false); // Hide list after loading
+      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad))); 
+      setIsSavedInspectionsVisible(false); 
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} carregada.` });
     }
   };
@@ -228,7 +232,7 @@ export default function FireCheckPage() {
       setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria foi excluída com sucesso.", variant: "destructive" });
       if (currentInspection && currentInspection.id === inspectionId) {
-        resetInspectionForm(); // If current inspection is deleted, reset the form
+        resetInspectionForm(); 
       }
     }
   };
@@ -258,6 +262,7 @@ export default function FireCheckPage() {
         <ActionButtonsPanel
           onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
+          onNewFloor={handleNewFloorInspection} // Pass the new handler
           onToggleSavedInspections={toggleSavedInspections}
           isSavedInspectionsVisible={isSavedInspectionsVisible}
         />
@@ -300,5 +305,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
