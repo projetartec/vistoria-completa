@@ -44,7 +44,7 @@ export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDat
             />
           </div>
           <div>
-            <Label htmlFor="clientCode">CÓDIGO DO CLIENTE (até 5 números)</Label>
+            <Label htmlFor="clientCode">CÓDIGO DO CLIENTE</Label>
             <Input
               id="clientCode"
               value={clientInfoData.clientCode}
