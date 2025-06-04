@@ -57,7 +57,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     return;
   }
 
-  const logoUrl = '/brazil-extintores-logo.png'; 
+  const logoUrl = 'https://placehold.co/180x60.png'; // Changed to placeholder URL
 
   let pdfHtml = `
     <html>
