@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
-import type { InspectionCategoryState, SubItemState, StatusOption, CategoryUpdatePayload } from '@/lib/types';
+import { Eye, EyeOff } from 'lucide-react';
+import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS } from '@/constants/inspection.config';
 
 interface InspectionCategoryItemProps {
@@ -17,12 +17,6 @@ interface InspectionCategoryItemProps {
 }
 
 export function InspectionCategoryItem({ category, onCategoryItemUpdate }: InspectionCategoryItemProps) {
-  const [isContentVisible, setIsContentVisible] = useState(true);
-
-  const handleAccordionToggle = useCallback(() => {
-    onCategoryItemUpdate(category.id, { field: 'isExpanded', value: !category.isExpanded });
-  }, [category.id, category.isExpanded, onCategoryItemUpdate]);
-
   const handleSubItemStatusChange = useCallback((subItemId: string, newStatus: StatusOption) => {
     onCategoryItemUpdate(category.id, { field: 'subItemStatus', subItemId, value: newStatus });
   }, [category.id, onCategoryItemUpdate]);
@@ -55,40 +49,29 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
     onCategoryItemUpdate(category.id, { field: 'pressureUnit', value });
   }, [category.id, onCategoryItemUpdate]);
 
-  const handleVisibilityToggle = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
-    setIsContentVisible(prev => !prev);
-  };
+  const handleAccordionValueChange = useCallback((openItemId: string) => {
+    const newIsExpanded = openItemId === category.id;
+    // Only call update if the state actually changes to prevent potential loops
+    if (newIsExpanded !== category.isExpanded) {
+      onCategoryItemUpdate(category.id, { field: 'isExpanded', value: newIsExpanded });
+    }
+  }, [category.id, category.isExpanded, onCategoryItemUpdate]);
 
   return (
-    <Accordion type="single" collapsible defaultValue={category.isExpanded ? category.id : undefined} className="mb-4 bg-card shadow-md rounded-lg">
+    <Accordion 
+      type="single" 
+      collapsible 
+      value={category.isExpanded ? category.id : ""}
+      onValueChange={handleAccordionValueChange}
+      className="mb-4 bg-card shadow-md rounded-lg"
+    >
       <AccordionItem value={category.id} className="border-b-0">
         <AccordionTrigger
           className="px-4 py-3 hover:no-underline"
         >
-          <div className="flex justify-between items-center w-full" onClick={handleAccordionToggle}>
-            <h3 className="text-lg font-semibold font-headline">{category.title}</h3>
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              onClick={handleVisibilityToggle}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleVisibilityToggle(e);
-                }
-              }}
-              aria-label={isContentVisible ? 'Esconder Conteúdo' : 'Mostrar Conteúdo'}
-              className="p-1 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <div role="button" tabIndex={0}>
-                {isContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-              </div>
-            </Button>
-          </div>
+          <h3 className="text-lg font-semibold font-headline text-left flex-1">{category.title}</h3>
         </AccordionTrigger>
-        <AccordionContent className={`px-4 pt-0 pb-4 ${!isContentVisible ? 'hidden' : ''}`}>
+        <AccordionContent className="px-4 pt-0 pb-4">
           {category.type === 'standard' && category.subItems?.map((subItem) => (
             <div key={subItem.id} className="py-3 border-b last:border-b-0">
               <Label className="font-medium">{subItem.name}</Label>
