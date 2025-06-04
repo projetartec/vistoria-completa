@@ -12,17 +12,17 @@ import { SavedInspectionsList } from '@/components/app/saved-inspections-list';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
-import type { InspectionData, InspectionCategoryState, HoseEntry, ExtinguisherEntry } from '@/lib/types';
+import type { InspectionData, InspectionCategoryState, HoseEntry, ExtinguisherEntry, CategoryUpdatePayload, StatusOption } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { generateInspectionPdf } from '@/lib/pdfGenerator'; // Placeholder
+import { generateInspectionPdf } from '@/lib/pdfGenerator'; 
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function FireCheckPage() {
   const { toast } = useToast();
   const [currentInspection, setCurrentInspection] = useState<InspectionData>({
     id: Date.now().toString(),
-    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) // Deep copy
+    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) 
   });
   const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections', []);
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
@@ -32,12 +32,57 @@ export default function FireCheckPage() {
     setCurrentInspection(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleCategoryChange = useCallback((updatedCategory: InspectionCategoryState) => {
-    setCurrentInspection(prev => ({
-      ...prev,
-      categories: prev.categories.map(cat => cat.id === updatedCategory.id ? updatedCategory : cat),
-    }));
-  }, []);
+  const handleCategoryItemUpdate = useCallback(
+    (categoryId: string, update: CategoryUpdatePayload) => {
+      setCurrentInspection(prevInspection => {
+        const newCategories = prevInspection.categories.map(cat => {
+          if (cat.id === categoryId) {
+            let newCat = { ...cat };
+            switch (update.field) {
+              case 'isExpanded':
+                newCat.isExpanded = update.value;
+                break;
+              case 'status':
+                newCat.status = update.value;
+                break;
+              case 'observation':
+                newCat.observation = update.value;
+                break;
+              case 'showObservation':
+                newCat.showObservation = update.value;
+                break;
+              case 'pressureValue':
+                newCat.pressureValue = update.value;
+                break;
+              case 'pressureUnit':
+                newCat.pressureUnit = update.value as InspectionCategoryState['pressureUnit'];
+                break;
+              case 'subItemStatus':
+                newCat.subItems = newCat.subItems?.map(sub =>
+                  sub.id === update.subItemId ? { ...sub, status: update.value } : sub
+                );
+                break;
+              case 'subItemObservation':
+                newCat.subItems = newCat.subItems?.map(sub =>
+                  sub.id === update.subItemId ? { ...sub, observation: update.value } : sub
+                );
+                break;
+              case 'subItemShowObservation':
+                newCat.subItems = newCat.subItems?.map(sub =>
+                  sub.id === update.subItemId ? { ...sub, showObservation: update.value } : sub
+                );
+                break;
+            }
+            return newCat;
+          }
+          return cat;
+        });
+        return { ...prevInspection, categories: newCategories };
+      });
+    },
+    [] 
+  );
+
 
   const handleHosesChange = useCallback((updatedHoses: HoseEntry[]) => {
     setCurrentInspection(prev => ({ ...prev, hoses: updatedHoses }));
@@ -50,7 +95,7 @@ export default function FireCheckPage() {
   const resetInspectionForm = useCallback(() => {
     setCurrentInspection({
       id: Date.now().toString(),
-      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) // Deep copy
+      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) 
     });
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
@@ -79,7 +124,7 @@ export default function FireCheckPage() {
   const handleLoadInspection = (inspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === inspectionId);
     if (inspectionToLoad) {
-      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad))); // Deep copy to avoid mutation issues
+      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad))); 
       setIsSavedInspectionsVisible(false);
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber} carregada.` });
     }
@@ -102,7 +147,6 @@ export default function FireCheckPage() {
     }
     try {
       await generateInspectionPdf(currentInspection);
-      // The generateInspectionPdf function will show its own confirmation/alert
     } catch (error) {
       console.error("PDF generation error:", error);
       toast({ title: "Erro no PDF", description: "Falha ao gerar o PDF.", variant: "destructive" });
@@ -155,7 +199,7 @@ export default function FireCheckPage() {
                 <InspectionCategoryItem
                   key={category.id}
                   category={category}
-                  onCategoryChange={handleCategoryChange}
+                  onCategoryItemUpdate={handleCategoryItemUpdate}
                 />
               ))}
               <HoseRegistry hoses={currentInspection.hoses} onHosesChange={handleHosesChange} />

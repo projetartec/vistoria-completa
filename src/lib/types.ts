@@ -13,6 +13,7 @@ export interface InspectionCategoryState {
   id: string;
   title: string;
   isExpanded: boolean;
+  type: 'standard' | 'special' | 'pressure'; // Added type here for consistency
   // For items with sub-items (e.g., Extintor)
   subItems?: SubItemState[];
   // For special items (e.g., Bomba Principal SPK)
@@ -63,3 +64,15 @@ export interface InspectionCategoryConfig {
   type: 'standard' | 'special' | 'pressure';
   subItems?: SubItemConfig[]; // Only for 'standard' type
 }
+
+// Payload for updating category items granularly
+export type CategoryUpdatePayload =
+  | { field: 'isExpanded'; value: boolean }
+  | { field: 'status'; value: StatusOption } // For special type
+  | { field: 'observation'; value: string } // For special type
+  | { field: 'showObservation'; value: boolean } // For special type
+  | { field: 'pressureValue'; value: string } // For pressure type
+  | { field: 'pressureUnit'; value: string } // For pressure type
+  | { field: 'subItemStatus'; subItemId: string; value: StatusOption } // For standard type
+  | { field: 'subItemObservation'; subItemId: string; value: string } // For standard type
+  | { field: 'subItemShowObservation'; subItemId: string; value: boolean }; // For standard type
