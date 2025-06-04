@@ -1,5 +1,5 @@
 
-export type StatusOption = 'OK' | 'N/C' | 'N/A' | '';
+export type StatusOption = 'OK' | 'N/C' | 'N/A' | 'NONE'; // Changed '' to 'NONE'
 
 export interface SubItemState {
   id: string;
@@ -13,14 +13,11 @@ export interface InspectionCategoryState {
   id: string;
   title: string;
   isExpanded: boolean;
-  type: 'standard' | 'special' | 'pressure'; // Added type here for consistency
-  // For items with sub-items (e.g., Extintor)
+  type: 'standard' | 'special' | 'pressure';
   subItems?: SubItemState[];
-  // For special items (e.g., Bomba Principal SPK)
-  status?: StatusOption;
+  status?: StatusOption; // For special items
   observation?: string;
   showObservation?: boolean;
-  // For pressure items
   pressureValue?: string;
   pressureUnit?: 'Kg' | 'PSI' | 'Bar' | '';
 }
@@ -41,7 +38,7 @@ export interface ExtinguisherEntry {
 }
 
 export interface InspectionData {
-  id: string; // Unique ID for the inspection, can be timestamp or UUID
+  id: string;
   clientLocation: string;
   clientCode: string;
   floor: string;
@@ -49,10 +46,9 @@ export interface InspectionData {
   categories: InspectionCategoryState[];
   hoses: HoseEntry[];
   extinguishers: ExtinguisherEntry[];
-  timestamp?: number; // For sorting saved inspections
+  timestamp?: number;
 }
 
-// Config types
 export interface SubItemConfig {
   id: string;
   name: string;
@@ -62,17 +58,16 @@ export interface InspectionCategoryConfig {
   id: string;
   title: string;
   type: 'standard' | 'special' | 'pressure';
-  subItems?: SubItemConfig[]; // Only for 'standard' type
+  subItems?: SubItemConfig[];
 }
 
-// Payload for updating category items granularly
 export type CategoryUpdatePayload =
   | { field: 'isExpanded'; value: boolean }
-  | { field: 'status'; value: StatusOption } // For special type
-  | { field: 'observation'; value: string } // For special type
-  | { field: 'showObservation'; value: boolean } // For special type
-  | { field: 'pressureValue'; value: string } // For pressure type
-  | { field: 'pressureUnit'; value: string } // For pressure type
-  | { field: 'subItemStatus'; subItemId: string; value: StatusOption } // For standard type
-  | { field: 'subItemObservation'; subItemId: string; value: string } // For standard type
-  | { field: 'subItemShowObservation'; subItemId: string; value: boolean }; // For standard type
+  | { field: 'status'; value: StatusOption }
+  | { field: 'observation'; value: string }
+  | { field: 'showObservation'; value: boolean }
+  | { field: 'pressureValue'; value: string }
+  | { field: 'pressureUnit'; value: string }
+  | { field: 'subItemStatus'; subItemId: string; value: StatusOption }
+  | { field: 'subItemObservation'; subItemId: string; value: string }
+  | { field: 'subItemShowObservation'; subItemId: string; value: boolean };

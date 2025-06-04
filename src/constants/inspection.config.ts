@@ -77,8 +77,8 @@ export const HOSE_TYPE_OPTIONS: HoseEntry['type'][] = ['Tipo 1', 'Tipo 2', 'Tipo
 export const EXTINGUISHER_TYPE_OPTIONS: ExtinguisherEntry['type'][] = ['AP', 'ABC', 'BC', 'EPM', 'CO²'];
 export const EXTINGUISHER_WEIGHT_OPTIONS: ExtinguisherEntry['weight'][] = ['4kg', '6kg', '8kg', '10kg', '12kg', '20kg', '50kg', '75kg'];
 
-export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A', ''];
-export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar']; // Removed ''
+export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A', 'NONE']; // Changed '' to 'NONE'
+export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar'];
 
 export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> = {
   clientLocation: '',
@@ -91,19 +91,19 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> =
     ...(category.type === 'standard' && {
       subItems: category.subItems!.map(subItem => ({
         ...subItem,
-        status: '', 
+        status: 'NONE', // Changed '' to 'NONE'
         observation: '',
         showObservation: false,
       })),
     }),
     ...(category.type === 'special' && {
-      status: '', 
+      status: 'NONE', // Changed '' to 'NONE'
       observation: '',
       showObservation: false,
     }),
     ...(category.type === 'pressure' && {
       pressureValue: '',
-      pressureUnit: '',
+      pressureUnit: '', // Default empty, placeholder will show
     }),
   })),
   hoses: [],

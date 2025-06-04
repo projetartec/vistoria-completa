@@ -81,9 +81,11 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
                 className="flex items-center space-x-2 mt-2 mb-2"
               >
                 {STATUS_OPTIONS.map(opt => (
-                  <div key={`${category.id}-${subItem.id}-${opt}`} className="flex items-center space-x-1">
-                    <RadioGroupItem value={opt} id={`${category.id}-${subItem.id}-${opt}`} />
-                    <Label htmlFor={`${category.id}-${subItem.id}-${opt}`} className="mr-2 last:mr-0 cursor-pointer">{opt || 'Nenhum'}</Label>
+                  <div key={`${category.id}-${subItem.id}-${opt}-radio-option`} className="flex items-center space-x-1 mr-2 last:mr-0">
+                    <RadioGroupItem value={opt} id={`${category.id}-${subItem.id}-${opt}-rg-item`} />
+                    <Label htmlFor={`${category.id}-${subItem.id}-${opt}-rg-item`} className="cursor-pointer">
+                      {opt === 'NONE' ? 'Nenhum' : opt}
+                    </Label>
                   </div>
                 ))}
               </RadioGroup>
@@ -110,9 +112,11 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
                 className="flex items-center space-x-2 mt-2 mb-2"
               >
                 {STATUS_OPTIONS.map(opt => (
-                   <div key={`${category.id}-${opt}`} className="flex items-center space-x-1">
-                    <RadioGroupItem value={opt} id={`${category.id}-${opt}`} />
-                    <Label htmlFor={`${category.id}-${opt}`} className="mr-2 last:mr-0 cursor-pointer">{opt || 'Nenhum'}</Label>
+                   <div key={`${category.id}-${opt}-radio-option`} className="flex items-center space-x-1 mr-2 last:mr-0">
+                    <RadioGroupItem value={opt} id={`${category.id}-${opt}-rg-item`} />
+                    <Label htmlFor={`${category.id}-${opt}-rg-item`} className="cursor-pointer">
+                      {opt === 'NONE' ? 'Nenhum' : opt}
+                    </Label>
                   </div>
                 ))}
               </RadioGroup>
@@ -146,7 +150,7 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
               <div>
                 <Label htmlFor={`${category.id}-pressureUnit`}>Unidade</Label>
                 <Select
-                  value={category.pressureUnit}
+                  value={category.pressureUnit} // This can be '' to show placeholder
                   onValueChange={(value) => handlePressureUnitChange(value)}
                 >
                   <SelectTrigger id={`${category.id}-pressureUnit`}>
