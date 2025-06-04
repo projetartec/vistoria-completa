@@ -8,17 +8,20 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
 
+type CategoryOverallStatus = 'completed' | 'incomplete' | 'pending' | 'not-applicable';
+
 interface InspectionCategoryItemProps {
   category: InspectionCategoryState;
   onCategoryItemUpdate: (categoryId: string, update: CategoryUpdatePayload) => void;
+  overallStatus: CategoryOverallStatus;
 }
 
-const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: InspectionCategoryItemProps) => {
+const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overallStatus }: InspectionCategoryItemProps) => {
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value: any, subItemId?: string) => {
     let payload: CategoryUpdatePayload;
@@ -30,7 +33,6 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
       } else if (field === 'subItemShowObservation') {
         payload = { field, subItemId, value: value as boolean };
       } else {
-        // Should not happen for subItems with current logic
         return;
       }
     } else {
@@ -74,7 +76,15 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
     >
       <AccordionItem value={category.id} className="border-b-0">
         <AccordionTrigger className="px-4 py-3 hover:no-underline">
-          <h3 className="text-lg font-semibold font-headline text-left flex-1">{category.title}</h3>
+          <div className="flex items-center flex-1">
+            {overallStatus === 'completed' && (
+              <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
+            )}
+            {overallStatus === 'incomplete' && (
+              <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
+            )}
+            <h3 className="text-lg font-semibold font-headline text-left flex-1">{category.title}</h3>
+          </div>
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && category.subItems?.map((subItem) => (
@@ -83,7 +93,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
                 <Label className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
                   <RadioGroup
-                    value={subItem.status || ''} // Handle undefined for RadioGroup value
+                    value={subItem.status || ''} 
                     onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
                     className="flex items-center space-x-2"
                   >
@@ -111,7 +121,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
                 </div>
               </div>
               {subItem.showObservation && (
-                <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> {/* Adjust margin for alignment based on typical label width */}
+                <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> 
                   <Textarea
                     value={subItem.observation}
                     onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
@@ -126,7 +136,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
           {category.type === 'special' && (
             <div className="py-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span> {/* Indicate it's general status */}
+                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span> 
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
                   <RadioGroup
                     value={category.status || ''}
@@ -176,7 +186,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
                   <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label>
                   <Input
                     id={`${category.id}-pressureValue`}
-                    type="text" // Changed to text to allow decimal points easily, validation can be added if needed
+                    type="text" 
                     value={category.pressureValue || ''}
                     onChange={(e) => handleUpdate('pressureValue', e.target.value)}
                     placeholder="Ex: 7.5"
@@ -225,3 +235,4 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
+

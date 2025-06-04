@@ -34,6 +34,41 @@ const createNewFloorEntry = (): InspectionData => {
   };
 };
 
+type CategoryOverallStatus = 'completed' | 'incomplete' | 'pending' | 'not-applicable';
+
+const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOverallStatus => {
+  if (category.type === 'standard' && category.subItems) {
+    const totalSubItems = category.subItems.length;
+    if (totalSubItems === 0) return 'not-applicable';
+
+    let okCount = 0;
+    let ncCount = 0;
+    let naCount = 0;
+    let pendingCount = 0;
+
+    for (const subItem of category.subItems) {
+      if (subItem.status === 'OK') okCount++;
+      else if (subItem.status === 'N/C') ncCount++;
+      else if (subItem.status === 'N/A') naCount++;
+      else pendingCount++;
+    }
+
+    if (ncCount > 0) return 'incomplete';
+    if (pendingCount > 0) return 'pending';
+    
+    if (okCount > 0) return 'completed'; // At least one OK, and no N/C or pending
+    if (naCount === totalSubItems) return 'not-applicable'; // All are N/A
+
+    return 'pending'; 
+  } else if (category.type === 'special' || category.type === 'pressure') {
+    if (category.status === 'OK') return 'completed';
+    if (category.status === 'N/C') return 'incomplete';
+    if (category.status === 'N/A') return 'not-applicable';
+    return 'pending'; // Undefined status
+  }
+  return 'pending';
+};
+
 
 export default function FireCheckPage() {
   const { toast } = useToast();
@@ -42,7 +77,7 @@ export default function FireCheckPage() {
     clientLocation: '',
     clientCode: '',
     inspectionNumber: '',
-    inspectionDate: new Date().toISOString().split('T')[0], // Initialize with current date YYYY-MM-DD
+    inspectionDate: new Date().toISOString().split('T')[0],
   });
 
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
@@ -185,7 +220,7 @@ export default function FireCheckPage() {
       clientLocation: '',
       clientCode: '',
       inspectionNumber: '',
-      inspectionDate: new Date().toISOString().split('T')[0], // Reset to current date
+      inspectionDate: new Date().toISOString().split('T')[0],
     });
     setActiveFloorsData([createNewFloorEntry()]);
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
@@ -227,13 +262,12 @@ export default function FireCheckPage() {
 
     activeFloorsData.forEach(floorData => {
       if (!floorData.floor) {
-        // Skip saving this floor if its name is not filled, but don't prevent others from saving.
         return;
       }
 
       const now = Date.now();
       const inspectionToSave: InspectionData = {
-        ...floorData, // Contains id, floor, categories
+        ...floorData, 
         clientLocation: clientInfo.clientLocation,
         clientCode: clientInfo.clientCode,
         inspectionNumber: clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`,
@@ -249,7 +283,7 @@ export default function FireCheckPage() {
          return;
     }
 
-    if (floorsSavedCount === 0 && activeFloorsData.every(f => f.floor)) { // Should not happen if validation above is passed
+    if (floorsSavedCount === 0 && activeFloorsData.every(f => f.floor)) { 
          toast({ title: "Nada para Salvar", description: "Nenhum andar com nome preenchido para salvar.", variant: "default" });
          return;
     }
@@ -264,7 +298,6 @@ export default function FireCheckPage() {
           newSavedList.push(inspectionToSave);
         }
       });
-      // Sort by timestamp (newest first), then by inspection number if timestamps are identical or missing
       return newSavedList.sort((a, b) => {
         const tsCompare = (b.timestamp || 0) - (a.timestamp || 0);
         if (tsCompare !== 0) return tsCompare;
@@ -284,19 +317,18 @@ export default function FireCheckPage() {
         clientLocation: inspectionToLoad.clientLocation,
         clientCode: inspectionToLoad.clientCode,
         inspectionNumber: inspectionToLoad.inspectionNumber,
-        inspectionDate: inspectionToLoad.inspectionDate || new Date().toISOString().split('T')[0], // Default to current if not set
+        inspectionDate: inspectionToLoad.inspectionDate || new Date().toISOString().split('T')[0],
       });
 
       let loadedFloorData = { ...JSON.parse(JSON.stringify(inspectionToLoad))};
-       // Ensure client-side unique ID if loaded ID seems server-generated or problematic
-      if (typeof window !== 'undefined' && (!loadedFloorData.id || typeof loadedFloorData.id !== 'string' || !loadedFloorData.id.startsWith(Date.now().toString().substring(0,3)))) {
+      if (typeof window !== 'undefined' && (!loadedFloorData.id || typeof loadedFloorData.id !== 'string' || loadedFloorData.id.startsWith('server-temp-id-'))) {
          loadedFloorData.id = Date.now().toString() + Math.random().toString(36).substring(2, 15);
       }
 
 
-      setActiveFloorsData([loadedFloorData]); // Load only the selected floor for focused editing
-      setIsSavedInspectionsVisible(false); // Hide saved list after loading
-      setIsClientInitialized(true); // Ensure UI updates
+      setActiveFloorsData([loadedFloorData]); 
+      setIsSavedInspectionsVisible(false); 
+      setIsClientInitialized(true); 
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} (Andar: ${inspectionToLoad.floor || 'N/I'}) carregada.` });
     }
   };
@@ -306,7 +338,6 @@ export default function FireCheckPage() {
       setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
 
-      // If the deleted inspection was part of the active floors, remove it or reset.
       setActiveFloorsData(prevActive => {
         const newActive = prevActive.filter(af => af.id !== inspectionId);
         return newActive.length > 0 ? newActive : [createNewFloorEntry()];
@@ -424,13 +455,17 @@ export default function FireCheckPage() {
                       className="mt-1"
                     />
 
-                    {floorData.categories.map(category => (
-                      <InspectionCategoryItem
-                        key={`${floorData.id}-${category.id}`}
-                        category={category}
-                        onCategoryItemUpdate={(categoryId, update) => handleCategoryItemUpdateForFloor(floorIndex, categoryId, update)}
-                      />
-                    ))}
+                    {floorData.categories.map(category => {
+                      const overallStatus = getCategoryOverallStatus(category);
+                      return (
+                        <InspectionCategoryItem
+                          key={`${floorData.id}-${category.id}`}
+                          category={category}
+                          overallStatus={overallStatus}
+                          onCategoryItemUpdate={(categoryId, update) => handleCategoryItemUpdateForFloor(floorIndex, categoryId, update)}
+                        />
+                      );
+                    })}
                   </CardContent>
                 </Card>
               ))}
