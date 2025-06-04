@@ -9,9 +9,10 @@ export function AppHeader() {
           <Image
             src="/brazil-extintores-logo.png"
             alt="Brazil Extintores Logo"
-            width={150} // Ajustado para a proporção do logo
-            height={78}  // Ajustado para a proporção do logo
+            width={150} 
+            height={78} 
             className="rounded"
+            priority // Adiciona a propriedade priority para carregar o logo mais rapidamente
           />
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-primary font-headline">BRAZIL EXTINTORES</h1>
