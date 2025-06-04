@@ -65,25 +65,27 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
       <AccordionItem value={category.id} className="border-b-0">
         <AccordionTrigger
           className="px-4 py-3 hover:no-underline"
-          onClick={handleAccordionToggle}
         >
-          <div className="flex justify-between items-center w-full">
+          <div className="flex justify-between items-center w-full" onClick={handleAccordionToggle}>
             <h3 className="text-lg font-semibold font-headline">{category.title}</h3>
-            <div
-              role="button"
-              tabIndex={0}
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              onClick={handleVisibilityToggle}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   handleVisibilityToggle(e);
                 }
               }}
-              onClick={handleVisibilityToggle}
-              className="p-1 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
               aria-label={isContentVisible ? 'Esconder Conteúdo' : 'Mostrar Conteúdo'}
+              className="p-1 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              {isContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </div>
+              <div role="button" tabIndex={0}>
+                {isContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </div>
+            </Button>
           </div>
         </AccordionTrigger>
         <AccordionContent className={`px-4 pt-0 pb-4 ${!isContentVisible ? 'hidden' : ''}`}>
@@ -169,7 +171,7 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
                   </SelectTrigger>
                   <SelectContent>
                     {PRESSURE_UNITS.map(unit => (
-                      <SelectItem key={unit} value={unit || ''}>{unit || 'Nenhuma'}</SelectItem>
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
