@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,11 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
-import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus } from '@/lib/types';
-import { PRESSURE_UNITS, STATUS_OPTIONS } from '@/constants/inspection.config';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2 } from 'lucide-react';
+import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption } from '@/lib/types';
+import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 
 interface InspectionCategoryItemProps {
@@ -20,26 +21,117 @@ interface InspectionCategoryItemProps {
   overallStatus: CategoryOverallStatus;
 }
 
+const ExtinguisherRegistrySubItem: React.FC<{
+  subItem: SubItemState;
+  onUpdate: (update: CategoryUpdatePayload) => void;
+}> = ({ subItem, onUpdate }) => {
+  const [quantity, setQuantity] = useState<number | ''>(1);
+  const [type, setType] = useState<ExtinguisherTypeOption | ''>('');
+  const [weight, setWeight] = useState<ExtinguisherWeightOption | ''>('');
+
+  const handleAddExtinguisher = () => {
+    if (!quantity || !type || !weight) {
+      alert('Por favor, preencha Quantidade, Tipo e Peso do extintor.');
+      return;
+    }
+    onUpdate({
+      field: 'addRegisteredExtinguisher',
+      subItemId: subItem.id,
+      value: { quantity: Number(quantity), type, weight },
+    });
+    setQuantity(1);
+    setType('');
+    setWeight('');
+  };
+
+  const handleRemoveExtinguisher = (extinguisherId: string) => {
+    onUpdate({
+      field: 'removeRegisteredExtinguisher',
+      subItemId: subItem.id,
+      extinguisherId,
+    });
+  };
+
+  return (
+    <Card className="mt-2 mb-1 bg-muted/30">
+      <CardHeader className="pb-2 pt-3 px-3">
+        <CardTitle className="text-md font-semibold">{subItem.name}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+          <div>
+            <Label htmlFor={`${subItem.id}-qty`} className="text-xs">Quantidade</Label>
+            <Input
+              id={`${subItem.id}-qty`}
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+              min="1"
+              className="h-9 text-sm"
+            />
+          </div>
+          <div>
+            <Label htmlFor={`${subItem.id}-type`} className="text-xs">Tipo</Label>
+            <Select value={type} onValueChange={(val) => setType(val as ExtinguisherTypeOption)}>
+              <SelectTrigger id={`${subItem.id}-type`} className="h-9 text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {EXTINGUISHER_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor={`${subItem.id}-weight`} className="text-xs">Peso</Label>
+            <Select value={weight} onValueChange={(val) => setWeight(val as ExtinguisherWeightOption)}>
+              <SelectTrigger id={`${subItem.id}-weight`} className="h-9 text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {EXTINGUISHER_WEIGHTS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={handleAddExtinguisher} size="sm" className="h-9">
+            <PlusCircle className="mr-1 h-4 w-4" /> Adicionar
+          </Button>
+        </div>
+
+        {subItem.registeredExtinguishers && subItem.registeredExtinguishers.length > 0 && (
+          <div className="space-y-1 pt-2 border-t">
+            <h4 className="text-sm font-medium text-muted-foreground">Extintores Cadastrados:</h4>
+            <ul className="list-disc list-inside pl-1 space-y-0.5 text-sm">
+              {subItem.registeredExtinguishers.map((ext) => (
+                <li key={ext.id} className="flex justify-between items-center">
+                  <span>{ext.quantity}x - {ext.type} - {ext.weight}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveExtinguisher(ext.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+
 const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overallStatus }: InspectionCategoryItemProps) => {
 
-  const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value: any, subItemId?: string) => {
+  const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value: any, subItemId?: string, extinguisherId?: string) => {
     let payload: CategoryUpdatePayload;
     if (subItemId) {
-      if (field === 'subItemStatus') {
-        payload = { field, subItemId, value: value as StatusOption | undefined };
-      } else if (field === 'subItemObservation') {
-        payload = { field, subItemId, value: value as string };
-      } else if (field === 'subItemShowObservation') {
-        payload = { field, subItemId, value: value as boolean };
-      } else {
-        return;
-      }
+      if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
+      else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
+      else if (field === 'subItemShowObservation') payload = { field, subItemId, value: value as boolean };
+      else if (field === 'addRegisteredExtinguisher') payload = { field, subItemId, value: value as Omit<RegisteredExtinguisher, 'id'> };
+      else if (field === 'removeRegisteredExtinguisher' && extinguisherId) payload = { field, subItemId, extinguisherId };
+      else return;
     } else {
-      if (field === 'status') {
-        payload = { field, value: value as StatusOption | undefined };
-      } else {
-         payload = { field, value } as CategoryUpdatePayload;
-      }
+      if (field === 'status') payload = { field, value: value as StatusOption | undefined };
+      else payload = { field, value } as CategoryUpdatePayload;
     }
     onCategoryItemUpdate(category.id, payload);
   }, [category.id, onCategoryItemUpdate]);
@@ -48,20 +140,16 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
   const handleAccordionValueChange = useCallback((openItemId: string) => {
     const newIsExpanded = openItemId === category.id;
     if (newIsExpanded !== category.isExpanded) {
-      handleUpdate('isExpanded', newIsExpanded);
+      handleUpdate('isExpanded', newIsExpanded, undefined);
     }
   }, [category.id, category.isExpanded, handleUpdate]);
 
   const getStatusLabelColor = (option: StatusOption): string => {
     switch (option) {
-      case 'OK':
-        return "text-green-600 dark:text-green-400";
-      case 'N/C':
-        return "text-red-600 dark:text-red-400";
-      case 'N/A':
-        return "text-yellow-600 dark:text-yellow-400";
-      default:
-        return "";
+      case 'OK': return "text-green-600 dark:text-green-400";
+      case 'N/C': return "text-red-600 dark:text-red-400";
+      case 'N/A': return "text-yellow-600 dark:text-yellow-400";
+      default: return "";
     }
   };
 
@@ -85,60 +173,71 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
-          {category.type === 'standard' && category.subItems?.map((subItem) => (
-            <div key={subItem.id} className="py-2 border-t first:border-t-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                <Label className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
-                <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
-                  <RadioGroup
-                    value={subItem.status || ''} 
-                    onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
-                    className="flex items-center space-x-2"
-                  >
-                    {STATUS_OPTIONS.map(opt => (
-                      <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1">
-                        <RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} />
-                        <Label
-                          htmlFor={`${subItem.id}-${opt}-rg-item`}
-                          className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
-                        >
-                          {opt}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)}
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  >
-                    {subItem.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="sr-only">{subItem.showObservation ? 'Esconder' : 'Mostrar'} Observação</span>
-                  </Button>
+          {category.type === 'standard' && category.subItems?.map((subItem) => {
+            if (subItem.isRegistry) {
+              return (
+                <ExtinguisherRegistrySubItem
+                  key={subItem.id}
+                  subItem={subItem}
+                  onUpdate={(updatePayload) => onCategoryItemUpdate(category.id, updatePayload)}
+                />
+              );
+            }
+            return (
+              <div key={subItem.id} className="py-2 border-t first:border-t-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+                  <Label className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
+                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
+                    <RadioGroup
+                      value={subItem.status || ''}
+                      onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
+                      className="flex items-center space-x-2"
+                    >
+                      {STATUS_OPTIONS.map(opt => (
+                        <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1">
+                          <RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} />
+                          <Label
+                            htmlFor={`${subItem.id}-${opt}-rg-item`}
+                            className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
+                          >
+                            {opt}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)}
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    >
+                      {subItem.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{subItem.showObservation ? 'Esconder' : 'Mostrar'} Observação</span>
+                    </Button>
+                  </div>
                 </div>
+                {subItem.showObservation && (
+                  <div className="mt-1 sm:ml-[calc(33%+0.5rem)]">
+                    <Textarea
+                      value={subItem.observation}
+                      onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
+                      placeholder="Observações do subitem..."
+                      className="w-full"
+                    />
+                  </div>
+                )}
               </div>
-              {subItem.showObservation && (
-                <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> 
-                  <Textarea
-                    value={subItem.observation}
-                    onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
-                    placeholder="Observações do subitem..."
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {category.type === 'special' && (
             <div className="py-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span> 
+                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
                   <RadioGroup
                     value={category.status || ''}
-                    onValueChange={(value) => handleUpdate('status', value as StatusOption)}
+                    onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)}
                     className="flex items-center space-x-2"
                   >
                     {STATUS_OPTIONS.map(opt => (
@@ -156,7 +255,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleUpdate('showObservation', !category.showObservation)}
+                    onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)}
                     className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   >
                     {category.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -168,7 +267,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                  <div className="mt-1 sm:ml-[calc(33%+0.5rem)]">
                   <Textarea
                     value={category.observation}
-                    onChange={(e) => handleUpdate('observation', e.target.value)}
+                    onChange={(e) => handleUpdate('observation', e.target.value, undefined)}
                     placeholder={`Observações para ${category.title}...`}
                     className="w-full"
                   />
@@ -184,9 +283,9 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                   <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label>
                   <Input
                     id={`${category.id}-pressureValue`}
-                    type="text" 
+                    type="text"
                     value={category.pressureValue || ''}
-                    onChange={(e) => handleUpdate('pressureValue', e.target.value)}
+                    onChange={(e) => handleUpdate('pressureValue', e.target.value, undefined)}
                     placeholder="Ex: 7.5"
                   />
                 </div>
@@ -194,7 +293,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                   <Label htmlFor={`${category.id}-pressureUnit`}>Unidade</Label>
                   <Select
                     value={category.pressureUnit || ''}
-                    onValueChange={(value) => handleUpdate('pressureUnit', value as InspectionCategoryState['pressureUnit'])}
+                    onValueChange={(value) => handleUpdate('pressureUnit', value as InspectionCategoryState['pressureUnit'], undefined)}
                   >
                     <SelectTrigger id={`${category.id}-pressureUnit`}>
                       <SelectValue placeholder="Selecione Unidade" />
@@ -207,10 +306,10 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                   </Select>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleUpdate('showObservation', !category.showObservation)} 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)}
                 className="text-muted-foreground hover:text-foreground"
               >
                 {category.showObservation ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
@@ -219,7 +318,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
               {category.showObservation && (
                 <Textarea
                   value={category.observation}
-                  onChange={(e) => handleUpdate('observation', e.target.value)}
+                  onChange={(e) => handleUpdate('observation', e.target.value, undefined)}
                   placeholder={`Observações para ${category.title}...`}
                   className="mt-1"
                 />

@@ -18,7 +18,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     return;
   }
 
-  const logoUrl = '/brazil-extintores-logo.png'; // Assumes logo is in public folder
+  const logoUrl = '/brazil-extintores-logo.png';
 
   let pdfHtml = `
     <html>
@@ -27,40 +27,33 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         <style>
           body { font-family: 'PT Sans', Arial, sans-serif; margin: 20px; line-height: 1.4; font-size: 10pt; }
           .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
-          .header-text h1 { font-size: 16pt; margin: 0; color: #64B5F6; } /* Primary color */
+          .header-text h1 { font-size: 16pt; margin: 0; color: #64B5F6; }
           .header-text p { font-size: 12pt; margin: 0; }
           .header-logo img { max-height: 50px; max-width: 180px; }
           .client-info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
           .client-info-table th, .client-info-table td { border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 9pt; }
-          .client-info-table th { background-color: #f5f5f5; } /* Light gray background */
+          .client-info-table th { background-color: #f5f5f5; }
           .floor-section { margin-bottom: 25px; padding-top: 10px; }
           .floor-title { font-size: 14pt; font-weight: bold; margin-bottom: 15px; color: #333; border-top: 1px dashed #ccc; padding-top:15px; }
-          .floor-section:first-of-type .floor-title { border-top: none; padding-top:0; } /* No top border for the first floor title */
+          .floor-section:first-of-type .floor-title { border-top: none; padding-top:0; }
           .category-section { margin-bottom: 10px; }
           .category-title { font-size: 12pt; font-weight: bold; margin-top: 10px; margin-bottom: 5px; color: #444; }
-          .subitem-list, .special-item-details, .pressure-item-details { margin-left: 0; padding-left: 0; list-style-type: none; }
-          .subitem-list li { margin-bottom: 4px; padding-left: 10px; border-left: 2px solid #eee; }
-          .subitem-list li strong, .special-item-details p strong, .pressure-item-details p strong { font-weight: normal; color: #555; } /* Changed from bold to normal for item names to reduce visual clutter */
+          .subitem-list, .special-item-details, .pressure-item-details, .registry-list { margin-left: 0; padding-left: 0; list-style-type: none; }
+          .subitem-list li, .registry-list li { margin-bottom: 4px; padding-left: 10px; border-left: 2px solid #eee; }
+          .subitem-list li strong, .special-item-details p strong, .pressure-item-details p strong { font-weight: normal; color: #555; }
           .observation-note { font-style: italic; color: #777; margin-left: 15px; font-size: 9pt; padding-top: 2px;}
-          .page-break-before { page-break-before: always; } /* Utility for forcing page breaks if needed */
+          .registry-title { font-size: 10pt; font-weight: bold; margin-top: 8px; margin-bottom: 3px; color: #555; }
+          .page-break-before { page-break-before: always; }
           
           @media print {
-            body { 
-              -webkit-print-color-adjust: exact; /* Ensures colors and backgrounds print in Chrome/Safari */
-              print-color-adjust: exact; /* Standard */
-            }
-            .header-container {
-              /* This header is part of the document flow, will only appear on the first page naturally */
-            }
-            /* Avoid breaking inside these elements if possible */
-            .floor-section, .category-section, .subitem-list li { page-break-inside: avoid; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .floor-section, .category-section, .subitem-list li, .registry-list li { page-break-inside: avoid; }
           }
         </style>
       </head>
       <body>
   `;
 
-  // Header section (only once at the beginning)
   pdfHtml += `
     <div class="header-container">
       <div class="header-text">
@@ -87,7 +80,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   `;
 
   floorsData.forEach((floor) => {
-    if (!floor.floor) return; // Skip floors without a name
+    if (!floor.floor) return;
 
     pdfHtml += `<div class="floor-section">`;
     pdfHtml += `<div class="floor-title">Andar: ${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
@@ -99,11 +92,25 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
       if (category.type === 'standard' && category.subItems) {
         pdfHtml += `<ul class="subitem-list">`;
         category.subItems.forEach(subItem => {
-          pdfHtml += `<li><strong>${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</strong> ${getStatusLabel(subItem.status)}`;
-          if (subItem.showObservation && subItem.observation) {
-            pdfHtml += `<div class="observation-note">Obs: ${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>')}</div>`;
+          if (subItem.isRegistry) {
+            pdfHtml += `<li><strong>${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</strong>`;
+            if (subItem.registeredExtinguishers && subItem.registeredExtinguishers.length > 0) {
+              pdfHtml += `<ul class="registry-list" style="padding-left: 15px; margin-top: 5px;">`;
+              subItem.registeredExtinguishers.forEach(ext => {
+                pdfHtml += `<li>${ext.quantity}x - ${ext.type} - ${ext.weight}</li>`;
+              });
+              pdfHtml += `</ul>`;
+            } else {
+              pdfHtml += ` <span style="color: #777;">Nenhum extintor cadastrado.</span>`;
+            }
+            pdfHtml += `</li>`;
+          } else {
+            pdfHtml += `<li><strong>${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</strong> ${getStatusLabel(subItem.status)}`;
+            if (subItem.showObservation && subItem.observation) {
+              pdfHtml += `<div class="observation-note">Obs: ${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>')}</div>`;
+            }
+            pdfHtml += `</li>`;
           }
-          pdfHtml += `</li>`;
         });
         pdfHtml += `</ul>`;
       } else if (category.type === 'special') {
@@ -121,9 +128,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         }
         pdfHtml += `</div>`;
       }
-      pdfHtml += `</div>`; // category-section
+      pdfHtml += `</div>`;
     });
-    pdfHtml += `</div>`; // floor-section
+    pdfHtml += `</div>`;
   });
 
   pdfHtml += `
@@ -136,18 +143,15 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     printWindow.document.open();
     printWindow.document.write(pdfHtml);
     printWindow.document.close();
-    // Timeout to ensure content is loaded before printing
     setTimeout(() => {
       try {
-         printWindow.focus(); // Ensure the window has focus before printing
+         printWindow.focus();
          printWindow.print();
       } catch (e) {
         console.error("Error during print:", e);
         alert("Ocorreu um erro ao tentar imprimir. Verifique o console para detalhes.");
       }
-      // Optionally close the window after printing/cancelling, but some browsers might block this or print might be async
-      // setTimeout(() => { if (!printWindow.closed) { printWindow.close(); } }, 2000);
-    }, 500); // Increased timeout slightly
+    }, 500);
   } else {
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }

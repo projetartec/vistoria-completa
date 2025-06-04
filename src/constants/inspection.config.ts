@@ -1,5 +1,9 @@
 
-import type { InspectionData, InspectionCategoryState, InspectionCategoryConfig, StatusOption } from '@/lib/types';
+import type { InspectionData, InspectionCategoryState, InspectionCategoryConfig, StatusOption, ExtinguisherTypeOption, ExtinguisherWeightOption } from '@/lib/types';
+
+export const EXTINGUISHER_TYPES: ExtinguisherTypeOption[] = ['AP', 'ABC', 'BC', 'EPM', 'CO²'];
+export const EXTINGUISHER_WEIGHTS: ExtinguisherWeightOption[] = ['4kg', '6kg', '8kg', '10kg', '12kg', '20kg', '50kg', '75kg'];
+
 
 export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
   {
@@ -13,6 +17,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
       { id: 'extintor_pintura_solo', name: 'Pintura De Solo' },
       { id: 'extintor_obstrucao_protecao_intemperies', name: 'Obstr/ Proteção Int.' },
       { id: 'extintor_teste_hidrostatico', name: 'Teste Hidrostático' },
+      { id: 'extintor_cadastro', name: 'Cadastro de Extintores', isRegistry: true },
     ],
   },
   {
@@ -71,36 +76,39 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
   { id: 'pressao_hidrante', title: 'Pressão Hidrante', type: 'pressure' },
 ];
 
-export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A']; // Removed 'NONE'
+export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A'];
 export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar'];
 
 export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> = {
   clientLocation: '',
   clientCode: '',
   floor: '',
-  inspectionNumber: '', // Will be generated based on clientCode
+  inspectionNumber: '',
+  inspectionDate: new Date().toISOString().split('T')[0],
   categories: INSPECTION_CONFIG.map(category => ({
     id: category.id,
     title: category.title,
     type: category.type,
-    isExpanded: false, // All categories start collapsed by default
+    isExpanded: false,
     ...(category.type === 'standard' && {
       subItems: category.subItems!.map(subItem => ({
         id: subItem.id,
         name: subItem.name,
-        status: undefined, // Default to undefined (no selection)
+        status: undefined,
         observation: '',
         showObservation: false,
+        isRegistry: subItem.isRegistry || false,
+        ...(subItem.isRegistry && { registeredExtinguishers: [] }),
       })),
     }),
     ...(category.type === 'special' && {
-      status: undefined, // Default to undefined (no selection)
+      status: undefined,
       observation: '',
       showObservation: false,
     }),
     ...(category.type === 'pressure' && {
       pressureValue: '',
-      pressureUnit: '' as InspectionCategoryState['pressureUnit'], // Empty, placeholder will show
+      pressureUnit: '' as InspectionCategoryState['pressureUnit'],
       observation: '',
       showObservation: false,
     }),
