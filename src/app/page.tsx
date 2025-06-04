@@ -22,7 +22,8 @@ const createNewFloorEntry = (): InspectionData => {
   // INITIAL_INSPECTION_DATA already has clientCode, clientLocation, inspectionNumber as empty strings.
   // These will be effectively overridden by global clientInfo when saving or can be ignored if not used directly from floor entry.
   return {
-    id: Date.now().toString() + Math.random().toString(36).substring(2, 15), // More robust unique ID
+    // Ensure ID generation happens client-side or is stable if SSR'd
+    id: typeof window !== 'undefined' ? Date.now().toString() + Math.random().toString(36).substring(2, 15) : 'ssr-initial-id-' + Math.random(),
     ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Deep clone categories and other defaults
     floor: '', // Ensure floor is empty for a new entry
     timestamp: undefined, // No timestamp until saved
@@ -39,13 +40,22 @@ export default function FireCheckPage() {
     inspectionNumber: ''
   });
 
-  const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([createNewFloorEntry()]);
+  // Initialize activeFloorsData as empty; will be populated client-side in useEffect
+  const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
   
   const initialSavedInspections = useMemo(() => [], []);
   const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', initialSavedInspections);
 
   const [isChecklistVisible, setIsChecklistVisible] = useState(true); // For the main checklist toggle
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
+
+  // Populate initial floor entry on client-side to avoid hydration mismatch from IDs
+  useEffect(() => {
+    if (activeFloorsData.length === 0 && typeof window !== 'undefined') {
+      setActiveFloorsData([createNewFloorEntry()]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prev => {
@@ -167,7 +177,8 @@ export default function FireCheckPage() {
 
   const resetInspectionForm = useCallback(() => {
     setClientInfo({ clientLocation: '', clientCode: '', inspectionNumber: '' });
-    setActiveFloorsData([createNewFloorEntry()]);
+    // Reset with a client-side generated ID
+    setActiveFloorsData(typeof window !== 'undefined' ? [createNewFloorEntry()] : []);
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -274,7 +285,7 @@ export default function FireCheckPage() {
       setActiveFloorsData(prevActive => {
         const newActive = prevActive.filter(af => af.id !== inspectionId);
         // If all active floors are removed (e.g. if only one was active and it was deleted), reset to a new single entry
-        return newActive.length > 0 ? newActive : [createNewFloorEntry()];
+        return newActive.length > 0 ? newActive : (typeof window !== 'undefined' ? [createNewFloorEntry()] : []);
       });
     }
   };
@@ -283,7 +294,8 @@ export default function FireCheckPage() {
     setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
   };
   
-  if (activeFloorsData.length === 0 && !clientInfo.clientCode) { // Initial state before useEffect might run fully
+  // Loading state until activeFloorsData is populated client-side
+  if (activeFloorsData.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
         <p className="text-foreground">Carregando formulário...</p>
