@@ -1,5 +1,5 @@
 
-export type StatusOption = 'OK' | 'N/C' | 'N/A' | 'NONE'; // Changed '' to 'NONE'
+export type StatusOption = 'OK' | 'N/C' | 'N/A' | 'NONE';
 
 export interface SubItemState {
   id: string;
@@ -14,60 +14,40 @@ export interface InspectionCategoryState {
   title: string;
   isExpanded: boolean;
   type: 'standard' | 'special' | 'pressure';
-  subItems?: SubItemState[];
-  status?: StatusOption; // For special items
-  observation?: string;
-  showObservation?: boolean;
-  pressureValue?: string;
-  pressureUnit?: 'Kg' | 'PSI' | 'Bar' | '';
-}
-
-export interface HoseEntry {
-  id: string;
-  quantity: string;
-  length: '15 metros' | '20 metros' | '30 metros' | '';
-  diameter: '1½"' | '2½"' | '';
-  type: 'Tipo 1' | 'Tipo 2' | 'Tipo 3' | 'Tipo 4' | 'Tipo 5' | 'Tipo 6' | '';
-}
-
-export interface ExtinguisherEntry {
-  id: string;
-  quantity: string;
-  type: 'AP' | 'ABC' | 'BC' | 'EPM' | 'CO²' | '';
-  weight: '4kg' | '6kg' | '8kg' | '10kg' | '12kg' | '20kg' | '50kg' | '75kg' | '';
+  subItems?: SubItemState[]; // For 'standard' type
+  status?: StatusOption; // For 'special' type
+  observation?: string; // For 'special' and 'pressure' types (main observation for the category)
+  showObservation?: boolean; // For 'special' and 'pressure' types
+  pressureValue?: string; // For 'pressure' type
+  pressureUnit?: 'Kg' | 'PSI' | 'Bar' | ''; // For 'pressure' type
 }
 
 export interface InspectionData {
-  id: string;
+  id: string; // Unique ID for the inspection, generated client-side
   clientLocation: string;
   clientCode: string;
   floor: string;
-  inspectionNumber: string;
+  inspectionNumber: string; // Auto-generated: <clientCode>-<sequence>
   categories: InspectionCategoryState[];
-  hoses: HoseEntry[];
-  extinguishers: ExtinguisherEntry[];
-  timestamp?: number;
+  timestamp?: number; // For sorting saved inspections
 }
 
-export interface SubItemConfig {
-  id: string;
-  name: string;
-}
-
+// Defines the static configuration for each category type
 export interface InspectionCategoryConfig {
   id: string;
   title: string;
   type: 'standard' | 'special' | 'pressure';
-  subItems?: SubItemConfig[];
+  subItems?: Array<{ id: string; name: string }>; // Only for 'standard' type
 }
 
+// Payload for updating category items, used in callbacks
 export type CategoryUpdatePayload =
   | { field: 'isExpanded'; value: boolean }
-  | { field: 'status'; value: StatusOption }
-  | { field: 'observation'; value: string }
-  | { field: 'showObservation'; value: boolean }
+  | { field: 'status'; value: StatusOption } // For 'special' items
+  | { field: 'observation'; value: string } // For 'special' or 'pressure' items (main observation)
+  | { field: 'showObservation'; value: boolean } // For 'special' or 'pressure' items (main observation)
   | { field: 'pressureValue'; value: string }
-  | { field: 'pressureUnit'; value: string }
+  | { field: 'pressureUnit'; value: InspectionCategoryState['pressureUnit'] }
   | { field: 'subItemStatus'; subItemId: string; value: StatusOption }
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean };

@@ -1,10 +1,11 @@
+
 import { Button } from '@/components/ui/button';
-import { Download, Save, FolderOpen, PlusSquare, ListChecks } from 'lucide-react';
+import { Save, FolderOpen, PlusSquare, ListChecks } from 'lucide-react'; // Removed Download icon
 
 interface ActionButtonsPanelProps {
   onSave: () => void;
   onNewInspection: () => void;
-  onDownloadPdf: () => void;
+  // onDownloadPdf: () => void; // Removed PDF functionality for now
   onToggleSavedInspections: () => void;
   isSavedInspectionsVisible: boolean;
 }
@@ -12,17 +13,15 @@ interface ActionButtonsPanelProps {
 export function ActionButtonsPanel({
   onSave,
   onNewInspection,
-  onDownloadPdf,
+  // onDownloadPdf, // Removed
   onToggleSavedInspections,
   isSavedInspectionsVisible,
 }: ActionButtonsPanelProps) {
   return (
     <div className="my-8 p-4 bg-card shadow-lg rounded-lg">
       <h2 className="text-xl font-semibold mb-4 font-headline">Ações</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <Button onClick={onDownloadPdf} variant="outline">
-          <Download className="mr-2 h-4 w-4" /> Baixar PDF
-        </Button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"> {/* Adjusted grid to 3 cols */}
+        {/* Removed Download PDF Button */}
         <Button onClick={onSave} >
           <Save className="mr-2 h-4 w-4" /> Salvar Vistoria
         </Button>
