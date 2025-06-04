@@ -10,14 +10,8 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
+    // No remote patterns needed if only using local images
+    // If you had other remote patterns, they would remain here.
   },
 };
 

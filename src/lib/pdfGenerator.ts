@@ -57,7 +57,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     return;
   }
 
-  const logoUrl = 'https://placehold.co/180x60.png'; // Changed to placeholder URL
+  const logoUrl = '/brazil-extintores-logo.png'; // Using local logo
 
   let pdfHtml = `
     <html>
@@ -78,7 +78,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           .pdf-header-main { 
             display: flex; 
-            align-items: center; 
+            align-items: center; /* Align items vertically */
             border-bottom: 2px solid #D1D5DB; 
             padding-bottom: 20px; 
             margin-bottom: 25px; 
@@ -89,13 +89,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           }
           .pdf-header-main .logo-img { 
             max-height: 60px; 
-            max-width: 180px;
+            max-width: 180px; /* Ensure it doesn't get too wide */
             width: auto;
             height: auto;
             border-radius: 4px; /* Optional: if logo has rounded corners */
           }
           .pdf-header-main .text-container {
-            /* flex-grow: 1; // Let it take remaining space if needed */
+            text-align: left; /* Text alignment for company name and subtitle */
           }
           .pdf-header-main .company-title { 
             font-size: 26pt; /* Increased */
@@ -254,7 +254,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         <div class="pdf-container">
           <header class="pdf-header-main">
             <div class="logo-container">
-              <img src="${logoUrl}" alt="Logo Brazil Extintores" class="logo-img" onerror="this.style.display='none'"/>
+              <img src="${logoUrl}" alt="Logo Brazil Extintores" class="logo-img" onerror="this.style.display='none'; this.alt='Logo não pôde ser carregado.'"/>
             </div>
             <div class="text-container">
               <div class="company-title">BRAZIL EXTINTORES</div>
@@ -373,4 +373,3 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
-
