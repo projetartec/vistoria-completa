@@ -36,11 +36,13 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
           )}
           <Button 
             variant="outline" 
+            size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="h-8 px-2 text-xs" // Diminuído o tamanho aqui
+            className="h-8 w-8" 
+            title="Carregar Logo"
           >
-            <UploadCloud className="mr-2 h-3 w-3" /> {/* Ícone um pouco menor também */}
-            Carregar Logo
+            <UploadCloud className="h-4 w-4" /> 
+            <span className="sr-only">Carregar Logo</span>
           </Button>
           <input
             type="file"
