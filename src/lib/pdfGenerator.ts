@@ -9,8 +9,8 @@ function getStatusLabel(status: StatusOption | undefined): string {
 }
 
 export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: InspectionData[]): void {
-  if (!clientInfo.clientCode || !clientInfo.clientLocation) {
-    alert("CÓDIGO DO CLIENTE e LOCAL são obrigatórios para gerar o PDF.");
+  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate) {
+    alert("CÓDIGO DO CLIENTE, LOCAL e DATA DA VISTORIA são obrigatórios para gerar o PDF.");
     return;
   }
   if (floorsData.length === 0 || floorsData.every(floor => !floor.floor)) {
@@ -74,13 +74,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     <table class="client-info-table">
       <tr>
         <th>Número da Vistoria:</th><td>${clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`}</td>
-        <th>Data da Geração:</th><td>${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</td>
+        <th>Data da Vistoria:</th><td>${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</td>
       </tr>
       <tr>
         <th>Local (Cliente):</th><td colspan="3">${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</td>
       </tr>
       <tr>
-        <th>Código do Cliente:</th><td colspan="3">${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</td>
+        <th>Código do Cliente:</th><td>${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</td>
+        <th>Data da Geração do PDF:</th><td>${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</td>
       </tr>
     </table>
   `;

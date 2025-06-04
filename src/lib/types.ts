@@ -28,6 +28,7 @@ export interface InspectionData {
   clientLocation: string; // Will be filled from ClientInfo when saving
   clientCode: string; // Will be filled from ClientInfo when saving
   inspectionNumber: string; // Will be filled from ClientInfo when saving
+  inspectionDate?: string; // Date of the inspection YYYY-MM-DD
   floor: string; // Specific to this floor entry
   categories: InspectionCategoryState[];
   timestamp?: number; // For sorting saved inspections
@@ -38,6 +39,7 @@ export interface ClientInfo {
   clientLocation: string;
   clientCode: string;
   inspectionNumber: string; 
+  inspectionDate: string; // Date of the inspection YYYY-MM-DD
 }
 
 
@@ -59,3 +61,4 @@ export type CategoryUpdatePayload =
   | { field: 'subItemStatus'; subItemId: string; value: StatusOption | undefined } 
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean };
+

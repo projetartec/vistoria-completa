@@ -13,22 +13,19 @@ interface ClientDataFormProps {
 
 export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDataFormProps) {
   
-  // This useEffect ensures inspectionNumber is updated when clientCode changes.
-  // It's part of clientInfo now, so onClientInfoChange handles its update.
   useEffect(() => {
     if (clientInfoData.clientCode) {
-      const newInspectionNumber = `${clientInfoData.clientCode}-01`; // Simplified logic
+      const newInspectionNumber = `${clientInfoData.clientCode}-01`; 
       if (clientInfoData.inspectionNumber !== newInspectionNumber) {
         onClientInfoChange('inspectionNumber', newInspectionNumber);
       }
     } else {
-      // If clientCode is cleared, clear inspectionNumber too
       if (clientInfoData.inspectionNumber !== '') {
         onClientInfoChange('inspectionNumber', '');
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [clientInfoData.clientCode]); // Removed onClientInfoChange and clientInfoData.inspectionNumber from deps to avoid loops
+  }, [clientInfoData.clientCode]);
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -62,15 +59,30 @@ export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDat
               pattern="\d*" 
             />
           </div>
-          <div>
-            <Label htmlFor="inspectionNumber">Número da Vistoria</Label>
-            <Input
-              id="inspectionNumber"
-              value={clientInfoData.inspectionNumber}
-              readOnly
-              className="bg-muted cursor-not-allowed"
-              placeholder="Gerado automaticamente"
-            />
+          
+          {/* Container for Inspection Number and Date to be side-by-side on larger screens */}
+          <div className="md:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="inspectionNumber">Número da Vistoria</Label>
+                <Input
+                  id="inspectionNumber"
+                  value={clientInfoData.inspectionNumber}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
+                  placeholder="Gerado automaticamente"
+                />
+              </div>
+              <div>
+                <Label htmlFor="inspectionDate">Data da Vistoria</Label>
+                <Input
+                  id="inspectionDate"
+                  type="date"
+                  value={clientInfoData.inspectionDate}
+                  onChange={(e) => onClientInfoChange('inspectionDate', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>

@@ -27,8 +27,9 @@ const createNewFloorEntry = (): InspectionData => {
 
   return {
     id: newId,
-    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)),
-    floor: '',
+    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Ensure deep copy of categories
+    floor: '', // Floor name is specific to this entry
+    // clientLocation, clientCode, inspectionNumber, inspectionDate will be from ClientInfo
     timestamp: undefined,
   };
 };
@@ -40,7 +41,8 @@ export default function FireCheckPage() {
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
     clientCode: '',
-    inspectionNumber: ''
+    inspectionNumber: '',
+    inspectionDate: new Date().toISOString().split('T')[0], // Initialize with current date YYYY-MM-DD
   });
 
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
@@ -179,7 +181,12 @@ export default function FireCheckPage() {
   }, []);
 
   const resetInspectionForm = useCallback(() => {
-    setClientInfo({ clientLocation: '', clientCode: '', inspectionNumber: '' });
+    setClientInfo({
+      clientLocation: '',
+      clientCode: '',
+      inspectionNumber: '',
+      inspectionDate: new Date().toISOString().split('T')[0], // Reset to current date
+    });
     setActiveFloorsData([createNewFloorEntry()]);
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
@@ -209,21 +216,28 @@ export default function FireCheckPage() {
       toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE e LOCAL são obrigatórios.", variant: "destructive" });
       return;
     }
+    if (!clientInfo.inspectionDate) {
+      toast({ title: "Erro ao Salvar", description: "DATA DA VISTORIA é obrigatória.", variant: "destructive" });
+      return;
+    }
+
 
     let floorsSavedCount = 0;
     const inspectionsToUpdateInStorage: InspectionData[] = [];
 
     activeFloorsData.forEach(floorData => {
       if (!floorData.floor) {
+        // Skip saving this floor if its name is not filled, but don't prevent others from saving.
         return;
       }
 
       const now = Date.now();
       const inspectionToSave: InspectionData = {
-        ...floorData,
+        ...floorData, // Contains id, floor, categories
         clientLocation: clientInfo.clientLocation,
         clientCode: clientInfo.clientCode,
         inspectionNumber: clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`,
+        inspectionDate: clientInfo.inspectionDate,
         timestamp: now,
       };
       inspectionsToUpdateInStorage.push(inspectionToSave);
@@ -235,7 +249,7 @@ export default function FireCheckPage() {
          return;
     }
 
-    if (floorsSavedCount === 0 && activeFloorsData.every(f => f.floor)) {
+    if (floorsSavedCount === 0 && activeFloorsData.every(f => f.floor)) { // Should not happen if validation above is passed
          toast({ title: "Nada para Salvar", description: "Nenhum andar com nome preenchido para salvar.", variant: "default" });
          return;
     }
@@ -250,7 +264,12 @@ export default function FireCheckPage() {
           newSavedList.push(inspectionToSave);
         }
       });
-      return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      // Sort by timestamp (newest first), then by inspection number if timestamps are identical or missing
+      return newSavedList.sort((a, b) => {
+        const tsCompare = (b.timestamp || 0) - (a.timestamp || 0);
+        if (tsCompare !== 0) return tsCompare;
+        return (a.inspectionNumber || "").localeCompare(b.inspectionNumber || "");
+      });
     });
 
     if (floorsSavedCount > 0) {
@@ -265,17 +284,19 @@ export default function FireCheckPage() {
         clientLocation: inspectionToLoad.clientLocation,
         clientCode: inspectionToLoad.clientCode,
         inspectionNumber: inspectionToLoad.inspectionNumber,
+        inspectionDate: inspectionToLoad.inspectionDate || new Date().toISOString().split('T')[0], // Default to current if not set
       });
 
       let loadedFloorData = { ...JSON.parse(JSON.stringify(inspectionToLoad))};
+       // Ensure client-side unique ID if loaded ID seems server-generated or problematic
       if (typeof window !== 'undefined' && (!loadedFloorData.id || typeof loadedFloorData.id !== 'string' || !loadedFloorData.id.startsWith(Date.now().toString().substring(0,3)))) {
          loadedFloorData.id = Date.now().toString() + Math.random().toString(36).substring(2, 15);
       }
 
 
-      setActiveFloorsData([loadedFloorData]);
-      setIsSavedInspectionsVisible(false);
-      setIsClientInitialized(true); 
+      setActiveFloorsData([loadedFloorData]); // Load only the selected floor for focused editing
+      setIsSavedInspectionsVisible(false); // Hide saved list after loading
+      setIsClientInitialized(true); // Ensure UI updates
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} (Andar: ${inspectionToLoad.floor || 'N/I'}) carregada.` });
     }
   };
@@ -285,6 +306,7 @@ export default function FireCheckPage() {
       setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
 
+      // If the deleted inspection was part of the active floors, remove it or reset.
       setActiveFloorsData(prevActive => {
         const newActive = prevActive.filter(af => af.id !== inspectionId);
         return newActive.length > 0 ? newActive : [createNewFloorEntry()];
@@ -293,8 +315,8 @@ export default function FireCheckPage() {
   };
 
   const handleGeneratePdf = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation) {
-      toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE e LOCAL são obrigatórios para gerar o PDF.", variant: "destructive" });
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate) {
+      toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL e DATA DA VISTORIA são obrigatórios para gerar o PDF.", variant: "destructive" });
       return;
     }
     const floorsToPrint = activeFloorsData.filter(floor => floor.floor);
@@ -336,7 +358,7 @@ export default function FireCheckPage() {
   }, [toast]);
 
 
-  if (!isClientInitialized || activeFloorsData.length === 0) {
+  if (!isClientInitialized) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
         <p className="text-foreground">Carregando formulário...</p>
