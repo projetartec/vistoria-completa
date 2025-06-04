@@ -254,7 +254,7 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
     setBlockAutoSaveOnce(true); 
-    // uploadedLogoDataUrl is intentionally not reset here
+    // uploadedLogoDataUrl is intentionally not reset here to persist logo
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -415,8 +415,12 @@ export default function FireCheckPage() {
   }, [setSavedInspections, toast, clientInfo.inspectionNumber, resetInspectionForm]);
 
   const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
-    // A confirmação já é feita no componente SavedInspectionsList
-    setSavedInspections(prev => prev.filter(insp => !inspectionIds.includes(insp.id)));
+    console.log('Attempting to delete inspection IDs:', inspectionIds);
+    setSavedInspections(prev => {
+      const newList = prev.filter(insp => !inspectionIds.includes(insp.id));
+      console.log('New list after filtering:', newList.length, 'items. Previous list:', prev.length, 'items.');
+      return newList;
+    });
     toast({
       title: "Vistorias Excluídas",
       description: `${inspectionIds.length} vistoria(s) foram excluídas com sucesso.`,
@@ -424,6 +428,7 @@ export default function FireCheckPage() {
     });
 
     if (clientInfo.inspectionNumber && inspectionIds.includes(clientInfo.inspectionNumber)) {
+      console.log('Current inspection was deleted, resetting form.');
       resetInspectionForm();
     }
   }, [setSavedInspections, toast, clientInfo.inspectionNumber, resetInspectionForm]);
@@ -588,3 +593,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
