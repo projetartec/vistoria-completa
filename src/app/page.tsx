@@ -175,30 +175,57 @@ export default function FireCheckPage() {
   }, [toast]);
 
   const handleNewFloorInspection = useCallback(() => {
-    if (!currentInspection) {
-      resetInspectionForm();
-      toast({
-        title: "Novo Formulário Iniciado",
-        description: "Preencha todos os dados para o novo andar.",
+    if (!currentInspection) return; // Should ideally not happen after initial load
+
+    let previousFloorSaved = false;
+    let previousFloorIdentifier = '';
+
+    // Condição para salvar o andar atual: cliente, local e andar devem estar preenchidos
+    if (currentInspection.clientCode && currentInspection.clientLocation && currentInspection.floor) {
+      const now = Date.now();
+      const inspectionToSave = { ...currentInspection, timestamp: now };
+      previousFloorIdentifier = `${inspectionToSave.inspectionNumber || 'Vistoria'} (Andar: ${inspectionToSave.floor})`;
+
+      setSavedInspections(prev => {
+        const existingIndex = prev.findIndex(insp => insp.id === inspectionToSave.id);
+        let newSavedInspections;
+        if (existingIndex > -1) {
+          // Se o ID já existe, atualiza a vistoria (caso o usuário esteja editando um andar carregado e clique em Novo Andar)
+          newSavedInspections = [...prev];
+          newSavedInspections[existingIndex] = inspectionToSave;
+        } else {
+          newSavedInspections = [...prev, inspectionToSave];
+        }
+        return newSavedInspections.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
-      return;
+      previousFloorSaved = true;
     }
 
+    // Criar dados para o novo andar
     const newFloorInspectionData: InspectionData = {
-      id: Date.now().toString(),
-      clientCode: currentInspection.clientCode,
-      clientLocation: currentInspection.clientLocation,
-      floor: '',
-      inspectionNumber: '',
-      categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)),
-      timestamp: undefined
+      id: Date.now().toString(), // Novo ID único para este estado de formulário de andar
+      clientCode: currentInspection.clientCode, // Manter código do cliente
+      clientLocation: currentInspection.clientLocation, // Manter local do cliente
+      inspectionNumber: currentInspection.inspectionNumber, // Manter número da vistoria principal
+      floor: '', // Limpar para o novo andar
+      categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)), // Resetar checklist
+      timestamp: undefined // Novo item não tem timestamp até ser salvo explicitamente
     };
     setCurrentInspection(newFloorInspectionData);
-    toast({
-      title: "Formulário para Novo Andar",
-      description: "Preencha o novo ANDAR. Dados do cliente foram mantidos. Checklist reiniciado.",
-    });
-  }, [currentInspection, resetInspectionForm, toast]);
+
+    if (previousFloorSaved) {
+      toast({
+        title: `Andar Anterior Salvo`,
+        description: `Vistoria ${previousFloorIdentifier} salva. Formulário para novo andar pronto.`,
+      });
+    } else {
+      // Mensagem se o andar anterior não era "salvável" (ex: campos de cliente ou andar não preenchidos)
+      toast({
+        title: "Formulário para Novo Andar",
+        description: "Dados do cliente mantidos. Preencha o nome do novo andar e o checklist.",
+      });
+    }
+  }, [currentInspection, setSavedInspections, toast]);
 
   const handleSaveInspection = () => {
     if (!currentInspection) return;
@@ -206,6 +233,11 @@ export default function FireCheckPage() {
       toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE e LOCAL são obrigatórios.", variant: "destructive" });
       return;
     }
+     if (!currentInspection.floor) {
+      toast({ title: "Erro ao Salvar", description: "O campo ANDAR é obrigatório.", variant: "destructive" });
+      return;
+    }
+
 
     const now = Date.now();
     const inspectionToSave = { ...currentInspection, timestamp: now };
@@ -221,15 +253,15 @@ export default function FireCheckPage() {
       }
       return newSavedInspections.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
-    toast({ title: "Vistoria Salva", description: `Vistoria ${inspectionToSave.inspectionNumber || 'sem número'} salva com sucesso.` });
+    toast({ title: "Vistoria Salva", description: `Vistoria ${inspectionToSave.inspectionNumber || 'sem número'} (Andar: ${inspectionToSave.floor}) salva com sucesso.` });
   };
 
   const handleLoadInspection = (inspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === inspectionId);
     if (inspectionToLoad) {
-      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad)));
+      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad))); // Deep clone
       setIsSavedInspectionsVisible(false);
-      toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} carregada.` });
+      toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} (Andar: ${inspectionToLoad.floor || 'N/I'}) carregada.` });
     }
   };
 
@@ -265,7 +297,6 @@ export default function FireCheckPage() {
           onFieldChange={handleClientDataChange as any} 
         />
 
-        {/* Saved Inspections List is now rendered conditionally before the checklist */}
         {isSavedInspectionsVisible && (
           <SavedInspectionsList
             savedInspections={savedInspections}
@@ -307,8 +338,7 @@ export default function FireCheckPage() {
             </>
           )}
         </div>
-
-        {/* ActionButtonsPanel is moved here, below the checklist section */}
+        
         <ActionButtonsPanel
           onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
