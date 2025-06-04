@@ -10,8 +10,8 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    // No remote patterns needed if only using local images
-    // If you had other remote patterns, they would remain here.
+    // For local images in the `public` folder, no `remotePatterns` are needed.
+    // If you were using external images, you would add their domains here in remotePatterns.
   },
 };
 
