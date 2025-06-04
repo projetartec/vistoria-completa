@@ -30,19 +30,17 @@ export default function FireCheckPage() {
   useEffect(() => {
     setCurrentInspection({
       id: Date.now().toString(),
-      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) 
+      ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA))
     });
   }, []);
 
   const handleClientDataChange = useCallback((field: keyof Omit<InspectionData, 'categories' | 'id' | 'timestamp'>, value: string) => {
     setCurrentInspection(prev => {
-      if (!prev) return null; // Should not happen if currentInspection is initialized
+      if (!prev) return null; 
       
-      // Create a temporary copy to check if the value is actually different
       const tempInspection = { ...prev };
-      if (tempInspection[field] === value) return prev; // No actual change, return previous state
+      if (tempInspection[field] === value) return prev; 
   
-      // If there's a change, create a new object
       return { ...prev, [field]: value };
     });
   }, []);
@@ -56,10 +54,10 @@ export default function FireCheckPage() {
 
       const newCategories = prevInspection.categories.map(cat => {
         if (cat.id !== categoryId) {
-          return cat; 
+          return cat;
         }
 
-        let updatedCatData = { ...cat }; 
+        let updatedCatData = { ...cat };
         let categoryStructurallyChanged = false;
 
         switch (update.field) {
@@ -69,13 +67,13 @@ export default function FireCheckPage() {
               categoryStructurallyChanged = true;
             }
             break;
-          case 'status': 
+          case 'status':
             if (updatedCatData.status !== update.value) {
               updatedCatData.status = update.value;
               categoryStructurallyChanged = true;
             }
             break;
-          case 'observation': 
+          case 'observation':
             if (updatedCatData.observation !== update.value) {
               updatedCatData.observation = update.value;
               categoryStructurallyChanged = true;
@@ -127,11 +125,11 @@ export default function FireCheckPage() {
                   subItemsArrayChangedInternally = true;
                   return updatedSubData;
                 }
-                return sub; 
+                return sub;
               });
 
               if (subItemsArrayChangedInternally) {
-                updatedCatData.subItems = newSubItems; 
+                updatedCatData.subItems = newSubItems;
                 categoryStructurallyChanged = true;
               }
             }
@@ -142,9 +140,9 @@ export default function FireCheckPage() {
         
         if (categoryStructurallyChanged) {
           inspectionChangedOverall = true;
-          return updatedCatData; 
+          return updatedCatData;
         }
-        return cat; 
+        return cat;
       });
       
       let actualCategoryDataChanged = false;
@@ -163,9 +161,9 @@ export default function FireCheckPage() {
         return { ...prevInspection, categories: newCategories };
       }
       
-      return prevInspection; 
+      return prevInspection;
     });
-  }, []); 
+  }, []);
 
 
   const resetInspectionForm = useCallback(() => {
@@ -187,13 +185,13 @@ export default function FireCheckPage() {
     }
 
     const newFloorInspectionData: InspectionData = {
-      id: Date.now().toString(), 
-      clientCode: currentInspection.clientCode, 
-      clientLocation: currentInspection.clientLocation, 
-      floor: '', 
-      inspectionNumber: '', 
-      categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)), 
-      timestamp: undefined 
+      id: Date.now().toString(),
+      clientCode: currentInspection.clientCode,
+      clientLocation: currentInspection.clientLocation,
+      floor: '',
+      inspectionNumber: '',
+      categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)),
+      timestamp: undefined
     };
     setCurrentInspection(newFloorInspectionData);
     toast({
@@ -229,8 +227,8 @@ export default function FireCheckPage() {
   const handleLoadInspection = (inspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === inspectionId);
     if (inspectionToLoad) {
-      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad))); 
-      setIsSavedInspectionsVisible(false); 
+      setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad)));
+      setIsSavedInspectionsVisible(false);
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} carregada.` });
     }
   };
@@ -240,7 +238,7 @@ export default function FireCheckPage() {
       setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria foi excluída com sucesso.", variant: "destructive" });
       if (currentInspection && currentInspection.id === inspectionId) {
-        resetInspectionForm(); 
+        resetInspectionForm();
       }
     }
   };
@@ -264,17 +262,10 @@ export default function FireCheckPage() {
 
         <ClientDataForm
           inspectionData={currentInspection}
-          onFieldChange={handleClientDataChange as any} // Cast as any due to 'floor' field removal from ClientDataForm's specific onFieldChange prop type
+          onFieldChange={handleClientDataChange as any} 
         />
 
-        <ActionButtonsPanel
-          onSave={handleSaveInspection}
-          onNewInspection={resetInspectionForm}
-          onNewFloor={handleNewFloorInspection}
-          onToggleSavedInspections={toggleSavedInspections}
-          isSavedInspectionsVisible={isSavedInspectionsVisible}
-        />
-
+        {/* Saved Inspections List is now rendered conditionally before the checklist */}
         {isSavedInspectionsVisible && (
           <SavedInspectionsList
             savedInspections={savedInspections}
@@ -293,7 +284,7 @@ export default function FireCheckPage() {
             {isChecklistVisible ? <ChevronUp className="h-6 w-6" /> : <ChevronDown className="h-6 w-6" />}
           </Button>
 
-          <div className="mt-0 mb-4"> {/* Adjusted margins here for spacing */}
+          <div className="mt-0 mb-4"> 
             <Label htmlFor="pageFloorInput">ANDAR (alfanumérico)</Label>
             <Input
               id="pageFloorInput"
@@ -316,6 +307,15 @@ export default function FireCheckPage() {
             </>
           )}
         </div>
+
+        {/* ActionButtonsPanel is moved here, below the checklist section */}
+        <ActionButtonsPanel
+          onSave={handleSaveInspection}
+          onNewInspection={resetInspectionForm}
+          onNewFloor={handleNewFloorInspection}
+          onToggleSavedInspections={toggleSavedInspections}
+          isSavedInspectionsVisible={isSavedInspectionsVisible}
+        />
 
         <footer className="text-center text-sm text-muted-foreground mt-12 pb-8">
           FireCheck Brazil &copy; {new Date().getFullYear()} - BRAZIL EXTINTORES
