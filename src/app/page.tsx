@@ -35,15 +35,11 @@ const createNewFloorEntry = (): InspectionData => {
 
 const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOverallStatus => {
   if (category.type === 'standard' && category.subItems) {
-    if (category.subItems.length === 0) {
+    const relevantSubItems = category.subItems.filter(subItem => !subItem.isRegistry);
+    if (relevantSubItems.length === 0) { // If only registry subitems or no subitems, consider it selected.
       return 'all-items-selected';
     }
-    const allSelected = category.subItems.every(subItem => {
-      if (subItem.isRegistry) { // For registry subitems, consider it "selected" if there's at least one extinguisher or if it's just present (can be adjusted)
-        return (subItem.registeredExtinguishers && subItem.registeredExtinguishers.length > 0) || subItem.status !== undefined; // Or simply true if registry items don't have a status in the same way
-      }
-      return subItem.status !== undefined;
-    });
+    const allSelected = relevantSubItems.every(subItem => subItem.status !== undefined);
     return allSelected ? 'all-items-selected' : 'some-items-pending';
   } else if (category.type === 'special' || category.type === 'pressure') {
     return category.status !== undefined ? 'all-items-selected' : 'some-items-pending';
@@ -72,16 +68,12 @@ export default function FireCheckPage() {
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setActiveFloorsData(prevData => {
-        if (prevData.length === 0) {
-          return [createNewFloorEntry()];
-        }
-        return prevData;
-      });
-      setIsClientInitialized(true);
-    }
+    // This effect runs only on the client, after initial hydration.
+    // Populate activeFloorsData here to ensure unique IDs are generated client-side.
+    setActiveFloorsData([createNewFloorEntry()]);
+    setIsClientInitialized(true);
   }, []);
+
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prev => {
@@ -287,9 +279,11 @@ export default function FireCheckPage() {
       });
 
       let loadedFloorData = { ...JSON.parse(JSON.stringify(inspectionToLoad))};
+      // Ensure client-side unique ID if it's missing or looks like a server temp ID
       if (typeof window !== 'undefined' && (!loadedFloorData.id || typeof loadedFloorData.id !== 'string' || loadedFloorData.id.startsWith('server-temp-id-'))) {
          loadedFloorData.id = Date.now().toString() + Math.random().toString(36).substring(2, 15);
       }
+
 
       setActiveFloorsData([loadedFloorData]);
       setIsSavedInspectionsVisible(false);
@@ -467,3 +461,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
