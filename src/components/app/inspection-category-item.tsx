@@ -11,29 +11,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { Eye, EyeOff } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS } from '@/constants/inspection.config';
+import { cn } from '@/lib/utils';
 
 interface InspectionCategoryItemProps {
   category: InspectionCategoryState;
   onCategoryItemUpdate: (categoryId: string, update: CategoryUpdatePayload) => void;
 }
 
-// Renaming the original component to allow wrapping with React.memo
 const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: InspectionCategoryItemProps) => {
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value: any, subItemId?: string) => {
-    const payload: CategoryUpdatePayload = subItemId 
-      ? { field, subItemId, value } as CategoryUpdatePayload
-      : { field, value } as CategoryUpdatePayload;
-    
-    if (field === 'subItemStatus' && subItemId) {
-      onCategoryItemUpdate(category.id, { field, subItemId, value: value as StatusOption });
-    } else if (field === 'subItemObservation' && subItemId) {
-      onCategoryItemUpdate(category.id, { field, subItemId, value: value as string });
-    } else if (field === 'subItemShowObservation' && subItemId) {
-      onCategoryItemUpdate(category.id, { field, subItemId, value: value as boolean });
+    let payload: CategoryUpdatePayload;
+    if (subItemId) {
+      if (field === 'subItemStatus') {
+        payload = { field, subItemId, value: value as StatusOption | undefined };
+      } else if (field === 'subItemObservation') {
+        payload = { field, subItemId, value: value as string };
+      } else if (field === 'subItemShowObservation') {
+        payload = { field, subItemId, value: value as boolean };
+      } else {
+        // Should not happen for subItems with current logic
+        return;
+      }
     } else {
-      onCategoryItemUpdate(category.id, payload);
+      if (field === 'status') {
+        payload = { field, value: value as StatusOption | undefined };
+      } else {
+         payload = { field, value } as CategoryUpdatePayload;
+      }
     }
+    onCategoryItemUpdate(category.id, payload);
   }, [category.id, onCategoryItemUpdate]);
 
 
@@ -43,6 +50,19 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
       handleUpdate('isExpanded', newIsExpanded);
     }
   }, [category.id, category.isExpanded, handleUpdate]);
+
+  const getStatusLabelColor = (option: StatusOption): string => {
+    switch (option) {
+      case 'OK':
+        return "text-green-600 dark:text-green-400";
+      case 'N/C':
+        return "text-red-600 dark:text-red-400";
+      case 'N/A':
+        return "text-yellow-600 dark:text-yellow-400";
+      default:
+        return "";
+    }
+  };
 
   return (
     <Accordion
@@ -56,72 +76,95 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
         <AccordionTrigger className="px-4 py-3 hover:no-underline">
           <h3 className="text-lg font-semibold font-headline text-left flex-1">{category.title}</h3>
         </AccordionTrigger>
-        <AccordionContent className="px-4 pt-0 pb-4 space-y-4">
+        <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && category.subItems?.map((subItem) => (
-            <div key={subItem.id} className="py-3 border-t first:border-t-0">
-              <Label className="font-medium text-base">{subItem.name}</Label>
-              <RadioGroup
-                value={subItem.status}
-                onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
-                className="flex items-center space-x-2 mt-2 mb-2"
-              >
-                {STATUS_OPTIONS.map(opt => (
-                  <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1">
-                    <RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} />
-                    <Label htmlFor={`${subItem.id}-${opt}-rg-item`} className="cursor-pointer font-normal">
-                      {opt === 'NONE' ? 'Nenhum' : opt}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)}
-                className="mb-2"
-              >
-                {subItem.showObservation ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                {subItem.showObservation ? 'Esconder' : 'Mostrar'} Observação
-              </Button>
+            <div key={subItem.id} className="py-2 border-t first:border-t-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+                <Label className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
+                <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
+                  <RadioGroup
+                    value={subItem.status || ''} // Handle undefined for RadioGroup value
+                    onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
+                    className="flex items-center space-x-2"
+                  >
+                    {STATUS_OPTIONS.map(opt => (
+                      <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1">
+                        <RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} />
+                        <Label
+                          htmlFor={`${subItem.id}-${opt}-rg-item`}
+                          className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
+                        >
+                          {opt}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)}
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  >
+                    {subItem.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">{subItem.showObservation ? 'Esconder' : 'Mostrar'} Observação</span>
+                  </Button>
+                </div>
+              </div>
               {subItem.showObservation && (
-                <Textarea
-                  value={subItem.observation}
-                  onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
-                  placeholder="Observações do subitem..."
-                  className="mt-1"
-                />
+                <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> {/* Adjust margin for alignment based on typical label width */}
+                  <Textarea
+                    value={subItem.observation}
+                    onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
+                    placeholder="Observações do subitem..."
+                    className="w-full"
+                  />
+                </div>
               )}
             </div>
           ))}
 
           {category.type === 'special' && (
-            <div className="py-3">
-              <Label className="font-medium text-base">Status Geral</Label>
-              <RadioGroup
-                value={category.status}
-                onValueChange={(value) => handleUpdate('status', value as StatusOption)}
-                className="flex items-center space-x-2 mt-2 mb-2"
-              >
-                {STATUS_OPTIONS.map(opt => (
-                  <div key={`${category.id}-${opt}`} className="flex items-center space-x-1">
-                    <RadioGroupItem value={opt} id={`${category.id}-${opt}-rg-item`} />
-                    <Label htmlFor={`${category.id}-${opt}-rg-item`} className="cursor-pointer font-normal">
-                     {opt === 'NONE' ? 'Nenhum' : opt}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              <Button variant="outline" size="sm" onClick={() => handleUpdate('showObservation', !category.showObservation)} className="mb-2">
-                {category.showObservation ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                {category.showObservation ? 'Esconder' : 'Mostrar'} Observação
-              </Button>
+            <div className="py-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span> {/* Indicate it's general status */}
+                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
+                  <RadioGroup
+                    value={category.status || ''}
+                    onValueChange={(value) => handleUpdate('status', value as StatusOption)}
+                    className="flex items-center space-x-2"
+                  >
+                    {STATUS_OPTIONS.map(opt => (
+                      <div key={`${category.id}-${opt}`} className="flex items-center space-x-1">
+                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-rg-item`} />
+                        <Label
+                          htmlFor={`${category.id}-${opt}-rg-item`}
+                          className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
+                        >
+                          {opt}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleUpdate('showObservation', !category.showObservation)}
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  >
+                    {category.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">{category.showObservation ? 'Esconder' : 'Mostrar'} Observação</span>
+                  </Button>
+                </div>
+              </div>
               {category.showObservation && (
-                <Textarea
-                  value={category.observation}
-                  onChange={(e) => handleUpdate('observation', e.target.value)}
-                  placeholder={`Observações para ${category.title}...`}
-                  className="mt-1"
-                />
+                 <div className="mt-1 sm:ml-[calc(33%+0.5rem)]">
+                  <Textarea
+                    value={category.observation}
+                    onChange={(e) => handleUpdate('observation', e.target.value)}
+                    placeholder={`Observações para ${category.title}...`}
+                    className="w-full"
+                  />
+                </div>
               )}
             </div>
           )}
@@ -133,7 +176,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
                   <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label>
                   <Input
                     id={`${category.id}-pressureValue`}
-                    type="text"
+                    type="text" // Changed to text to allow decimal points easily, validation can be added if needed
                     value={category.pressureValue || ''}
                     onChange={(e) => handleUpdate('pressureValue', e.target.value)}
                     placeholder="Ex: 7.5"
@@ -156,7 +199,12 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
                   </Select>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => handleUpdate('showObservation', !category.showObservation)} className="mb-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleUpdate('showObservation', !category.showObservation)} 
+                className="text-muted-foreground hover:text-foreground"
+              >
                 {category.showObservation ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                 {category.showObservation ? 'Esconder' : 'Mostrar'} Observação
               </Button>
@@ -176,5 +224,4 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate }: Ins
   );
 };
 
-// Export the memoized component
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);

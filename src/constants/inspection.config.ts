@@ -71,7 +71,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
   { id: 'pressao_hidrante', title: 'Pressão Hidrante', type: 'pressure' },
 ];
 
-export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A', 'NONE'];
+export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A']; // Removed 'NONE'
 export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar'];
 
 export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> = {
@@ -88,20 +88,20 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> =
       subItems: category.subItems!.map(subItem => ({
         id: subItem.id,
         name: subItem.name,
-        status: 'NONE' as StatusOption,
+        status: undefined, // Default to undefined (no selection)
         observation: '',
         showObservation: false,
       })),
     }),
     ...(category.type === 'special' && {
-      status: 'NONE' as StatusOption,
+      status: undefined, // Default to undefined (no selection)
       observation: '',
       showObservation: false,
     }),
     ...(category.type === 'pressure' && {
       pressureValue: '',
       pressureUnit: '' as InspectionCategoryState['pressureUnit'], // Empty, placeholder will show
-      observation: '', // Add observation field for pressure items too for consistency
+      observation: '',
       showObservation: false,
     }),
   })),

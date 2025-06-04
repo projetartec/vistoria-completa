@@ -1,10 +1,10 @@
 
-export type StatusOption = 'OK' | 'N/C' | 'N/A' | 'NONE';
+export type StatusOption = 'OK' | 'N/C' | 'N/A';
 
 export interface SubItemState {
   id: string;
   name: string;
-  status: StatusOption;
+  status: StatusOption | undefined; // Changed from StatusOption to allow unselected
   observation: string;
   showObservation: boolean;
 }
@@ -15,7 +15,7 @@ export interface InspectionCategoryState {
   isExpanded: boolean;
   type: 'standard' | 'special' | 'pressure';
   subItems?: SubItemState[]; // For 'standard' type
-  status?: StatusOption; // For 'special' type
+  status?: StatusOption | undefined; // For 'special' type, changed to allow unselected
   observation?: string; // For 'special' and 'pressure' types (main observation for the category)
   showObservation?: boolean; // For 'special' and 'pressure' types
   pressureValue?: string; // For 'pressure' type
@@ -43,11 +43,12 @@ export interface InspectionCategoryConfig {
 // Payload for updating category items, used in callbacks
 export type CategoryUpdatePayload =
   | { field: 'isExpanded'; value: boolean }
-  | { field: 'status'; value: StatusOption } // For 'special' items
+  | { field: 'status'; value: StatusOption | undefined } // For 'special' items, updated
   | { field: 'observation'; value: string } // For 'special' or 'pressure' items (main observation)
   | { field: 'showObservation'; value: boolean } // For 'special' or 'pressure' items (main observation)
   | { field: 'pressureValue'; value: string }
   | { field: 'pressureUnit'; value: InspectionCategoryState['pressureUnit'] }
-  | { field: 'subItemStatus'; subItemId: string; value: StatusOption }
+  | { field: 'subItemStatus'; subItemId: string; value: StatusOption | undefined } // Updated
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean };
+
