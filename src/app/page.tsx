@@ -254,7 +254,7 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
     setBlockAutoSaveOnce(true); 
-    // uploadedLogoDataUrl is intentionally not reset here to persist logo
+    // uploadedLogoDataUrl is intentionally not reset here
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -417,8 +417,10 @@ export default function FireCheckPage() {
   const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
     console.log('Attempting to delete inspection IDs:', inspectionIds);
     setSavedInspections(prev => {
-      const newList = prev.filter(insp => !inspectionIds.includes(insp.id));
-      console.log('New list after filtering:', newList.length, 'items. Previous list:', prev.length, 'items.');
+      const filteredList = prev.filter(insp => !inspectionIds.includes(insp.id));
+      // Explicitly create a new array from the filtered list to ensure reference change
+      const newList = [...filteredList];
+      console.log('New list after filtering (and spreading):', newList.length, 'items. Previous list:', prev.length, 'items.');
       return newList;
     });
     toast({

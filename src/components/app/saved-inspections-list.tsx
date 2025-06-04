@@ -45,9 +45,10 @@ export function SavedInspectionsList({
 
   const handleDeleteSelectedClick = () => {
     if (selectedToDelete.length === 0) {
-      console.warn("Botão 'Excluir Selecionadas' clicado, mas nenhuma vistoria está selecionada.");
+      console.warn("SavedInspectionsList: Botão 'Excluir Selecionadas' clicado, mas nenhuma vistoria está selecionada.");
       return;
     }
+    console.log("SavedInspectionsList: IDs selecionados para exclusão:", JSON.stringify(selectedToDelete));
     if (typeof window !== 'undefined' && window.confirm(`Tem certeza que deseja excluir ${selectedToDelete.length} vistoria(s) selecionada(s)? Esta ação é irreversível.`)) {
       onDeleteMultipleInspections(selectedToDelete);
       setSelectedToDelete([]);
