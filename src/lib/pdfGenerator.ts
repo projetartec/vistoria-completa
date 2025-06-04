@@ -92,24 +92,25 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           }
 
           .pdf-logo-container img {
-            max-height: 80px; /* Increased max height for the logo */
+            max-height: 112px; 
             width: auto; 
-            display: block; /* Helps with centering if parent has text-align: center */
+            max-width: 224px;
+            display: block; 
           }
           
           .pdf-company-info-container {
-             text-align: center; /* Center the text within this block */
+             text-align: center; 
           }
 
           .pdf-header-main .company-name {
             font-size: 18pt; 
             font-weight: 700;
-            color: #2563EB;
+            color: #2563EB; /* Primary color from theme */
             margin-bottom: 5px;
           }
           .pdf-header-main .company-details p {
             font-size: 9pt; 
-            color: #374151;
+            color: #374151; /* Muted foreground-like */
             margin: 2px 0;
             line-height: 1.3;
           }
@@ -120,16 +121,32 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             padding: 20px; 
             margin-bottom: 30px;
             background-color: #F9FAFB;
+            text-align: center; /* Center align content of client-info */
           }
-          .pdf-client-info h2 {
-            font-size: 16pt; 
-            color: #1D4ED8;
+          .pdf-client-info .pdf-main-title { /* VISTORIA TÉCNICA */
+            font-size: 20pt; /* Corresponds to text-2xl approx */
+            font-weight: 700; /* Corresponds to font-bold from headline */
+            color: #2563EB; /* Primary color */
+            margin-top: 0;
+            margin-bottom: 5px; 
+          }
+          .pdf-client-info .pdf-subtitle { /* DADOS DO CLIENTE */
+            font-size: 14pt; /* Corresponds to text-lg approx */
+            font-weight: 700; /* Corresponds to font-bold from headline */
+            color: #6B7280; /* Muted-foreground color */
             margin-top: 0;
             margin-bottom: 15px; 
-            border-bottom: 1px solid #E5E7EB;
             padding-bottom: 10px; 
+            border-bottom: 1px solid #E5E7EB;
           }
-          .pdf-client-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size: 10pt; }
+
+          .pdf-client-info-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px 20px; 
+            font-size: 10pt; 
+            text-align: left; /* Keep grid text left-aligned */
+          }
           .pdf-client-info-grid div { padding: 3px 0; }
           .pdf-client-info-grid strong { color: #111827; font-weight: 600; }
 
@@ -268,7 +285,8 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           </header>
 
           <section class="pdf-client-info">
-            <h2>Dados do Cliente e Vistoria</h2>
+            <h2 class="pdf-main-title">VISTORIA TÉCNICA</h2>
+            <p class="pdf-subtitle">DADOS DO CLIENTE</p>
             <div class="pdf-client-info-grid">
               <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
               <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
