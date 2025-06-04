@@ -16,14 +16,14 @@ import { useToast } from "@/hooks/use-toast";
 import type { InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { generateInspectionPdf } from '@/lib/pdfGenerator'; // Import PDF generator
+import { generateInspectionPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 const createNewFloorEntry = (): InspectionData => {
   // ID generation will happen client-side to avoid hydration mismatch
   const newId = (typeof window !== 'undefined')
     ? Date.now().toString() + Math.random().toString(36).substring(2, 15)
-    : 'server-temp-id-' + Math.random().toString(36).substring(2,9); // Temporary ID for SSR if needed
+    : 'server-temp-id-' + Math.random().toString(36).substring(2,9);
 
   return {
     id: newId,
@@ -44,7 +44,8 @@ export default function FireCheckPage() {
   });
 
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
-  
+  const [isClientInitialized, setIsClientInitialized] = useState(false); // New state for hydration fix
+
   const initialSavedInspections = useMemo(() => [], []);
   const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', initialSavedInspections);
 
@@ -53,25 +54,26 @@ export default function FireCheckPage() {
 
   // Client-side initialization for activeFloorsData
   useEffect(() => {
-    if (activeFloorsData.length === 0 && typeof window !== 'undefined') {
+    if (activeFloorsData.length === 0) { // Removed typeof window check, useEffect is client-side
       setActiveFloorsData([createNewFloorEntry()]);
     }
+    setIsClientInitialized(true); // Signal client initialization is complete
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prev => {
       const newState = { ...prev, [field]: value };
       if (field === 'clientCode') {
-        newState.inspectionNumber = value ? `${value}-01` : ''; 
+        newState.inspectionNumber = value ? `${value}-01` : '';
       }
       return newState;
     });
   }, []);
 
   const handleFloorSpecificFieldChange = useCallback((floorIndex: number, field: keyof Pick<InspectionData, 'floor'>, value: string) => {
-    setActiveFloorsData(prevFloors => 
-      prevFloors.map((floor, index) => 
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map((floor, index) =>
         index === floorIndex ? { ...floor, [field]: value } : floor
       )
     );
@@ -177,12 +179,7 @@ export default function FireCheckPage() {
 
   const resetInspectionForm = useCallback(() => {
     setClientInfo({ clientLocation: '', clientCode: '', inspectionNumber: '' });
-    // Initialize client-side to avoid hydration issues with createNewFloorEntry
-    if (typeof window !== 'undefined') {
-      setActiveFloorsData([createNewFloorEntry()]);
-    } else {
-      setActiveFloorsData([]); // Server can render an empty list initially
-    }
+    setActiveFloorsData([createNewFloorEntry()]);
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -218,12 +215,12 @@ export default function FireCheckPage() {
     activeFloorsData.forEach(floorData => {
       if (!floorData.floor) {
         // console.warn(`Andar ${floorData.id} sem nome, não será salvo individualmente agora.`);
-        return; 
+        return;
       }
 
       const now = Date.now();
       const inspectionToSave: InspectionData = {
-        ...floorData, 
+        ...floorData,
         clientLocation: clientInfo.clientLocation,
         clientCode: clientInfo.clientCode,
         inspectionNumber: clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`,
@@ -237,7 +234,7 @@ export default function FireCheckPage() {
          toast({ title: "Atenção ao Salvar", description: "Preencha o nome do ANDAR para cada seção antes de salvar.", variant: "destructive" });
          return;
     }
-    
+
     if (floorsSavedCount === 0 && activeFloorsData.every(f => f.floor)) {
          toast({ title: "Nada para Salvar", description: "Nenhum andar com nome preenchido para salvar.", variant: "default" });
          return;
@@ -269,15 +266,18 @@ export default function FireCheckPage() {
         clientCode: inspectionToLoad.clientCode,
         inspectionNumber: inspectionToLoad.inspectionNumber,
       });
-      // Ensure loaded data also gets a client-side generated ID if it's from an older format or for consistency
+
       const loadedFloorData = { ...JSON.parse(JSON.stringify(inspectionToLoad))};
-      if (typeof window !== 'undefined' && !loadedFloorData.id.includes(Date.now().toString().slice(0,5))) { // Basic check for old ID format
-         // loadedFloorData.id = createNewFloorEntry().id; // Can't use createNewFloorEntry directly due to full object
+      // Ensure client-side ID generation for loaded data if it's from an old format or for consistency,
+      // but only if typeof window is defined to avoid issues during potential server-side use or testing.
+      if (typeof window !== 'undefined' && (!loadedFloorData.id || !loadedFloorData.id.includes(Date.now().toString().slice(0,3)))) { // Basic check for old/missing ID format
          loadedFloorData.id = Date.now().toString() + Math.random().toString(36).substring(2, 15);
       }
 
-      setActiveFloorsData([loadedFloorData]); 
+
+      setActiveFloorsData([loadedFloorData]);
       setIsSavedInspectionsVisible(false);
+      setIsClientInitialized(true); // Ensure form is shown after loading
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} (Andar: ${inspectionToLoad.floor || 'N/I'}) carregada.` });
     }
   };
@@ -286,11 +286,10 @@ export default function FireCheckPage() {
     if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja excluir esta vistoria salva? Esta ação não pode ser desfeita.')) {
       setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
-      
+
       setActiveFloorsData(prevActive => {
         const newActive = prevActive.filter(af => af.id !== inspectionId);
-        // Ensure there's always one form if all are deleted or the deleted one was the only active one
-        return newActive.length > 0 ? newActive : (typeof window !== 'undefined' ? [createNewFloorEntry()] : []);
+        return newActive.length > 0 ? newActive : [createNewFloorEntry()];
       });
     }
   };
@@ -317,26 +316,17 @@ export default function FireCheckPage() {
   const toggleSavedInspections = () => {
     setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
   };
-  
-  // Loading state while client-side initialization of activeFloorsData occurs
-  if (activeFloorsData.length === 0 && typeof window !== 'undefined') {
+
+  // Consistent loading state for initial render (SSR and client pre-hydration)
+  // and also covers the period activeFloorsData is being populated by useEffect
+  if (!isClientInitialized || activeFloorsData.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
+        {/* This message will be rendered by both server and client initially */}
         <p className="text-foreground">Carregando formulário...</p>
       </div>
     );
   }
-  // If still SSR or activeFloorsData is genuinely empty after client-side effect (e.g., if createNewFloorEntry failed or was cleared)
-  // This check might be too aggressive if `createNewFloorEntry` itself can fail to produce an item for activeFloorsData initially.
-  // Assuming createNewFloorEntry will always provide one entry on client side.
-  if (activeFloorsData.length === 0) {
-      return (
-      <div className="flex justify-center items-center h-screen bg-background">
-        <p className="text-foreground">Configurando formulário inicial...</p>
-      </div>
-    );
-  }
-
 
   return (
     <ScrollArea className="h-screen bg-background">
@@ -384,10 +374,10 @@ export default function FireCheckPage() {
                   placeholder="Ex: Térreo, 1A, Subsolo"
                   className="mt-1"
                 />
-                
+
                 {floorData.categories.map(category => (
                   <InspectionCategoryItem
-                    key={`${floorData.id}-${category.id}`} 
+                    key={`${floorData.id}-${category.id}`}
                     category={category}
                     onCategoryItemUpdate={(categoryId, update) => handleCategoryItemUpdateForFloor(floorIndex, categoryId, update)}
                   />
@@ -396,7 +386,7 @@ export default function FireCheckPage() {
             </Card>
           ))}
         </div>
-        
+
         <ActionButtonsPanel
           onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
@@ -422,3 +412,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
