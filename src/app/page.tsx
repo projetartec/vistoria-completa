@@ -1,8 +1,7 @@
 
 'use client';
 
-import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
@@ -19,7 +18,11 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 export default function FireCheckPage() {
   const { toast } = useToast();
   const [currentInspection, setCurrentInspection] = useState<InspectionData | null>(null);
-  const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', []); // Changed key to avoid conflicts with old structure
+
+  // Stabilize the initialValue for useLocalStorage
+  const initialSavedInspections = useMemo(() => [], []);
+  const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', initialSavedInspections);
+
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
 
@@ -35,10 +38,11 @@ export default function FireCheckPage() {
   const handleClientDataChange = useCallback((field: keyof Omit<InspectionData, 'categories' | 'id' | 'timestamp'>, value: string) => {
     setCurrentInspection(prev => {
       if (!prev) return null;
-      if (prev[field] === value) return prev; // No change
+      // Check if the value actually changed to prevent unnecessary updates
+      if (prev[field] === value) return prev;
       return { ...prev, [field]: value };
     });
-  }, []);
+  }, []); // setCurrentInspection is stable
 
   const handleCategoryItemUpdate = useCallback((categoryId: string, update: CategoryUpdatePayload) => {
     setCurrentInspection(prevInspection => {
@@ -48,7 +52,7 @@ export default function FireCheckPage() {
 
       const newCategories = prevInspection.categories.map(cat => {
         if (cat.id !== categoryId) {
-          return cat;
+          return cat; // Return original reference if not the target category
         }
 
         let updatedCatData = { ...cat }; // Shallow copy the category being updated
@@ -98,7 +102,7 @@ export default function FireCheckPage() {
               let subItemsArrayChangedInternally = false;
               const newSubItems = cat.subItems.map(sub => {
                 if (sub.id !== update.subItemId) {
-                  return sub;
+                  return sub; // Return original sub-item if not the target
                 }
                 
                 let updatedSubData = { ...sub }; // Shallow copy sub-item
@@ -117,17 +121,26 @@ export default function FireCheckPage() {
 
                 if (subItemStructurallyChanged) {
                   subItemsArrayChangedInternally = true;
-                  return updatedSubData;
+                  return updatedSubData; // Return new sub-item data
                 }
-                return sub; // Return original if no change
+                return sub; // Return original sub-item if no change
               });
 
               if (subItemsArrayChangedInternally) {
-                updatedCatData.subItems = newSubItems;
+                updatedCatData.subItems = newSubItems; // Assign new array of sub-items
                 categoryStructurallyChanged = true;
               } else {
                  // Ensure original array reference is kept if no sub-item changed
-                 updatedCatData.subItems = cat.subItems;
+                 // This line is important: if newSubItems is identical to cat.subItems by reference,
+                 // it means no sub-item actually changed its reference.
+                 // However, .map always returns a new array. So we must check if content changed.
+                 // The logic above already ensures newSubItems contains original refs if sub-items didn't change.
+                 // So, if subItemsArrayChangedInternally is false, it implies newSubItems is effectively the same.
+                 // To be absolutely sure, we could compare references of original cat.subItems to newSubItems,
+                 // but the current flag `subItemsArrayChangedInternally` should suffice.
+                 // If it's false, we don't assign updatedCatData.subItems = newSubItems to keep original ref if possible
+                 // For simplicity and given .map always new array: assign if changed.
+                 // The key is categoryStructurallyChanged will be true if subItemsArrayChangedInternally.
               }
             }
             break;
@@ -139,17 +152,33 @@ export default function FireCheckPage() {
         
         if (categoryStructurallyChanged) {
           inspectionChangedOverall = true;
-          return updatedCatData;
+          return updatedCatData; // Return new category data
         }
-        return cat; // Return original if no change in this category
+        return cat; // Return original category if no structural change in this category
       });
 
-      if (inspectionChangedOverall) {
+      // Only create a new inspection object if the categories array reference or content has changed.
+      // The .map for newCategories always creates a new array.
+      // We need to check if any of the *items* within newCategories have new references.
+      let actualCategoryDataChanged = false;
+      if (prevInspection.categories.length !== newCategories.length) { // Should not happen with map
+        actualCategoryDataChanged = true;
+      } else {
+        for (let i = 0; i < prevInspection.categories.length; i++) {
+          if (prevInspection.categories[i] !== newCategories[i]) {
+            actualCategoryDataChanged = true;
+            break;
+          }
+        }
+      }
+
+      if (inspectionChangedOverall || actualCategoryDataChanged) { // inspectionChangedOverall should cover actualCategoryDataChanged due to map logic
         return { ...prevInspection, categories: newCategories };
       }
-      return prevInspection; // Return original inspection if no categories changed
+      
+      return prevInspection; // Return original inspection if no categories changed (important for reference equality)
     });
-  }, []);
+  }, []); // setCurrentInspection is stable
 
 
   const resetInspectionForm = useCallback(() => {
@@ -158,7 +187,7 @@ export default function FireCheckPage() {
       ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)) // Deep clone
     });
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
-  }, [toast]);
+  }, [toast]); // setCurrentInspection is stable
 
   const handleSaveInspection = () => {
     if (!currentInspection) return;
@@ -223,7 +252,7 @@ export default function FireCheckPage() {
 
         <ClientDataForm
           inspectionData={currentInspection}
-          onFieldChange={handleClientDataChange as any} // Cast due to specific field types in InspectionData
+          onFieldChange={handleClientDataChange}
         />
 
         <ActionButtonsPanel
@@ -260,7 +289,6 @@ export default function FireCheckPage() {
                   onCategoryItemUpdate={handleCategoryItemUpdate}
                 />
               ))}
-              {/* HoseRegistry and ExtinguisherRegistry removed as per new requirements */}
             </>
           )}
         </div>
@@ -272,3 +300,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
