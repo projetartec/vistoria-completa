@@ -16,19 +16,19 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
     <header className="bg-card p-4 shadow-md rounded-lg mb-6">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-center md:justify-between gap-x-6 gap-y-4">
         {/* Logo Upload and Display Section */}
-        <div className="flex items-center gap-3 order-1 md:order-none"> {/* Modified: flex-col items-center gap-2 to flex items-center gap-3 */}
+        <div className="flex items-center gap-3 order-1 md:order-none">
           {uploadedLogoDataUrl ? (
             <Image
               src={uploadedLogoDataUrl}
               alt="Logo Carregado"
-              width={150}
-              height={75}
-              className="max-h-20 w-auto object-contain border rounded-md p-1"
+              width={224} // Aumentado
+              height={112} // Aumentado
+              className="max-h-28 w-auto object-contain border rounded-md p-1" // Aumentado max-h
               data-ai-hint="company logo"
             />
           ) : (
             <div
-              className="h-20 w-36 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-sm"
+              className="h-28 w-56 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-sm" // Aumentado h e w
               data-ai-hint="logo placeholder"
             >
               Nenhum logo
@@ -38,7 +38,7 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
             variant="outline"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="h-8 w-8"
+            className="h-8 w-8" // Mantido pequeno conforme solicitado anteriormente
             title="Carregar Logo"
           >
             <UploadCloud className="h-4 w-4" />
