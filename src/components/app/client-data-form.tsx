@@ -8,25 +8,18 @@ import type { InspectionData } from '@/lib/types';
 
 interface ClientDataFormProps {
   inspectionData: InspectionData;
-  onFieldChange: (field: keyof InspectionData, value: string) => void;
+  onFieldChange: (field: keyof Omit<InspectionData, 'categories' | 'id' | 'timestamp' | 'floor'>, value: string) => void;
 }
 
 export function ClientDataForm({ inspectionData, onFieldChange }: ClientDataFormProps) {
   
   useEffect(() => {
-    // Auto-generate inspection number when client code changes
-    // A more robust system might involve checking for existing inspection numbers
-    // or using a different sequence generation logic.
     if (inspectionData.clientCode) {
-      // Example: if there are saved inspections, find the last one for this client and increment.
-      // For now, a simple "-01" suffix or based on a global counter for this client might be too simple.
-      // Let's keep the simple "-01" for now, acknowledging it's basic.
       const newInspectionNumber = `${inspectionData.clientCode}-01`;
       if (inspectionData.inspectionNumber !== newInspectionNumber) {
         onFieldChange('inspectionNumber', newInspectionNumber);
       }
     } else {
-      // If client code is cleared, clear the inspection number
       if (inspectionData.inspectionNumber !== '') {
         onFieldChange('inspectionNumber', '');
       }
@@ -56,22 +49,13 @@ export function ClientDataForm({ inspectionData, onFieldChange }: ClientDataForm
               value={inspectionData.clientCode}
               onChange={(e) => {
                 const val = e.target.value;
-                if (/^\d{0,5}$/.test(val)) { // Only digits, max 5
+                if (/^\d{0,5}$/.test(val)) { 
                   onFieldChange('clientCode', val);
                 }
               }}
               placeholder="Ex: 12345"
               maxLength={5}
-              pattern="\d*" // Suggests numeric input to browsers
-            />
-          </div>
-          <div>
-            <Label htmlFor="floor">ANDAR (alfanumérico)</Label>
-            <Input
-              id="floor"
-              value={inspectionData.floor}
-              onChange={(e) => onFieldChange('floor', e.target.value)}
-              placeholder="Ex: Térreo, 1A, Subsolo"
+              pattern="\d*" 
             />
           </div>
           <div>
