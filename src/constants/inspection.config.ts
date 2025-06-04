@@ -1,4 +1,4 @@
-import type { InspectionCategoryConfig } from '@/lib/types';
+import type { InspectionData, InspectionCategoryState, InspectionCategoryConfig, HoseEntry, ExtinguisherEntry, StatusOption } from '@/lib/types';
 
 export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
   {
@@ -33,7 +33,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
       { id: 'painel_alarme', name: 'Painel' },
       { id: 'botoeiras_alarme', name: 'Botoeiras' },
       { id: 'detector_fumaca_alarme', name: 'Detector De Fumaça' },
-      { id: 'pressurizacao_alarme', name: 'Pressurização' }, // This seems like it belongs to stairs, but following request
+      { id: 'pressurizacao_alarme', name: 'Pressurização' },
       { id: 'funcionamento_alarme', name: 'Funcionamento' },
     ],
   },
@@ -77,8 +77,8 @@ export const HOSE_TYPE_OPTIONS: HoseEntry['type'][] = ['Tipo 1', 'Tipo 2', 'Tipo
 export const EXTINGUISHER_TYPE_OPTIONS: ExtinguisherEntry['type'][] = ['AP', 'ABC', 'BC', 'EPM', 'CO²'];
 export const EXTINGUISHER_WEIGHT_OPTIONS: ExtinguisherEntry['weight'][] = ['4kg', '6kg', '8kg', '10kg', '12kg', '20kg', '50kg', '75kg'];
 
-export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A'];
-export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar'];
+export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A', ''];
+export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar', ''];
 
 export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> = {
   clientLocation: '',
@@ -91,13 +91,13 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> =
     ...(category.type === 'standard' && {
       subItems: category.subItems!.map(subItem => ({
         ...subItem,
-        status: '',
+        status: '', // Initial status is empty string
         observation: '',
         showObservation: false,
       })),
     }),
     ...(category.type === 'special' && {
-      status: '',
+      status: '', // Initial status is empty string
       observation: '',
       showObservation: false,
     }),
