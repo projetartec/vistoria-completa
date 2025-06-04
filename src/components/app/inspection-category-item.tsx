@@ -81,10 +81,10 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
                 className="flex items-center space-x-2 mt-2 mb-2"
               >
                 {STATUS_OPTIONS.map(opt => (
-                  <React.Fragment key={`${category.id}-${subItem.id}-${opt}-frag`}>
+                  <div key={`${category.id}-${subItem.id}-${opt}`} className="flex items-center space-x-1">
                     <RadioGroupItem value={opt} id={`${category.id}-${subItem.id}-${opt}`} />
-                    <Label htmlFor={`${category.id}-${subItem.id}-${opt}`} className="mr-2 last:mr-0">{opt || 'Nenhum'}</Label>
-                  </React.Fragment>
+                    <Label htmlFor={`${category.id}-${subItem.id}-${opt}`} className="mr-2 last:mr-0 cursor-pointer">{opt || 'Nenhum'}</Label>
+                  </div>
                 ))}
               </RadioGroup>
               <Button variant="outline" size="sm" onClick={() => toggleSubItemObservation(subItem.id, subItem.showObservation)} className="mb-2">
@@ -110,10 +110,10 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
                 className="flex items-center space-x-2 mt-2 mb-2"
               >
                 {STATUS_OPTIONS.map(opt => (
-                   <React.Fragment key={`${category.id}-${opt}-frag`}>
+                   <div key={`${category.id}-${opt}`} className="flex items-center space-x-1">
                     <RadioGroupItem value={opt} id={`${category.id}-${opt}`} />
-                    <Label htmlFor={`${category.id}-${opt}`} className="mr-2 last:mr-0">{opt || 'Nenhum'}</Label>
-                  </React.Fragment>
+                    <Label htmlFor={`${category.id}-${opt}`} className="mr-2 last:mr-0 cursor-pointer">{opt || 'Nenhum'}</Label>
+                  </div>
                 ))}
               </RadioGroup>
               <Button variant="outline" size="sm" onClick={toggleSpecialObservation} className="mb-2">
