@@ -80,44 +80,48 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           .pdf-header-main {
             display: flex;
-            flex-direction: row; /* Align logo and company info side-by-side */
-            justify-content: space-between; /* Push logo to left, info to right */
-            align-items: center; /* Vertically center align items */
+            flex-direction: row; /* Align content wrapper (which is the single child) */
+            justify-content: center; /* Center the content wrapper */
+            align-items: center; 
             border-bottom: 2px solid #D1D5DB;
             padding-bottom: 15px;
             margin-bottom: 25px;
           }
 
+          .pdf-header-content-wrapper { /* New wrapper for logo and company info */
+            display: flex;
+            align-items: center; /* Vertically align logo and company info */
+            gap: 20px; /* Space between logo and company info */
+          }
+
           .pdf-logo-container {
-            margin-right: 20px; /* Space between logo and company info */
-            flex-shrink: 0; /* Prevent logo container from shrinking */
+            /* margin-right removed, gap is used in wrapper */
+            flex-shrink: 0; 
           }
 
           .pdf-logo-container img {
-            max-height: 112px; /* From app-header max-h-28 (7rem * 16px) */
+            max-height: 112px; 
             width: auto; 
-            max-width: 224px; /* From app-header w-56 (224px) */
+            max-width: 224px; 
             display: block; 
           }
           
           .pdf-company-info-container {
-             text-align: left; /* Align company info text to the left, like in app */
-             flex-grow: 1; /* Allow company info to take up remaining space */
+             text-align: left; 
+             /* flex-grow: 1; removed to prevent expansion when centered */
           }
 
           .pdf-header-main .company-name {
             font-size: 18pt; 
             font-weight: 700;
-            color: #2563EB; /* Primary color from theme */
+            color: #2563EB; 
             margin-bottom: 5px;
-            /* text-align is left due to .pdf-company-info-container */
           }
           .pdf-header-main .company-details p {
             font-size: 9pt; 
-            color: #374151; /* Muted foreground-like */
+            color: #374151; 
             margin: 2px 0;
             line-height: 1.3;
-            /* text-align is left due to .pdf-company-info-container */
           }
 
           .pdf-client-info {
@@ -126,25 +130,24 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             padding: 20px; 
             margin-bottom: 30px;
             background-color: #F9FAFB;
-            /* text-align: center; /* Center align content of client-info (removed as per app) */
           }
-          .pdf-client-info .pdf-main-title { /* VISTORIA TÉCNICA */
-            font-size: 20pt; /* Corresponds to text-2xl approx */
-            font-weight: 700; /* Corresponds to font-bold from headline */
-            color: #2563EB; /* Primary color */
+          .pdf-client-info .pdf-main-title { 
+            font-size: 20pt; 
+            font-weight: 700; 
+            color: #2563EB; 
             margin-top: 0;
             margin-bottom: 5px; 
-            text-align: center; /* Specifically center this title */
+            text-align: center; 
           }
-          .pdf-client-info .pdf-subtitle { /* DADOS DO CLIENTE */
-            font-size: 14pt; /* Corresponds to text-lg approx */
-            font-weight: 700; /* Corresponds to font-bold from headline */
-            color: #6B7280; /* Muted-foreground color */
+          .pdf-client-info .pdf-subtitle { 
+            font-size: 14pt; 
+            font-weight: 700; 
+            color: #6B7280; 
             margin-top: 0;
             margin-bottom: 15px; 
             padding-bottom: 10px; 
             border-bottom: 1px solid #E5E7EB;
-            text-align: center; /* Specifically center this subtitle */
+            text-align: center; 
           }
 
           .pdf-client-info-grid { 
@@ -152,7 +155,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             grid-template-columns: 1fr 1fr; 
             gap: 10px 20px; 
             font-size: 10pt; 
-            text-align: left; /* Keep grid text left-aligned */
+            text-align: left; 
           }
           .pdf-client-info-grid div { padding: 3px 0; }
           .pdf-client-info-grid strong { color: #111827; font-weight: 600; }
@@ -275,18 +278,20 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
       <body>
         <div class="pdf-container">
           <header class="pdf-header-main">
-            <div class="pdf-logo-container">
-              <img src="${isDataUrl ? logoToUse : (typeof window !== 'undefined' ? window.location.origin + logoToUse : logoToUse) }" alt="Brazil Extintores Logo" />
-            </div>
-            <div class="pdf-company-info-container">
-              <div class="company-name">BRAZIL EXTINTORES - SP</div>
-              <div class="company-details">
-                <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
-                <p>OSORIO MACHADO DE PAIVA, 915</p>
-                <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
-                <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
-                <p>Registro Inmetro N°: 001459/2018</p>
-                <p>e-mail: comercial@brazilexintores.com.br</p>
+            <div class="pdf-header-content-wrapper">
+              <div class="pdf-logo-container">
+                <img src="${isDataUrl ? logoToUse : (typeof window !== 'undefined' ? window.location.origin + logoToUse : logoToUse) }" alt="Brazil Extintores Logo" />
+              </div>
+              <div class="pdf-company-info-container">
+                <div class="company-name">BRAZIL EXTINTORES - SP</div>
+                <div class="company-details">
+                  <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
+                  <p>OSORIO MACHADO DE PAIVA, 915</p>
+                  <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
+                  <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
+                  <p>Registro Inmetro N°: 001459/2018</p>
+                  <p>e-mail: comercial@brazilexintores.com.br</p>
+                </div>
               </div>
             </div>
           </header>
@@ -403,5 +408,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
+    
 
     
