@@ -79,28 +79,26 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           .pdf-container { max-width: 850px; margin: 0 auto; background-color: #FFFFFF; padding: 25px; border: 1px solid #DDD; }
 
           .pdf-header-main {
-            display: flex; /* Use flexbox for side-by-side layout */
-            align-items: center; /* Vertically align items */
-            justify-content: space-between; /* Space out logo and text */
+            display: flex;
+            flex-direction: column; /* Stack logo and company info */
+            align-items: center; /* Center items horizontally */
             border-bottom: 2px solid #D1D5DB;
             padding-bottom: 15px;
             margin-bottom: 25px;
           }
 
           .pdf-logo-container {
-            flex-shrink: 0; /* Prevent logo from shrinking */
-            margin-right: 20px; /* Space between logo and text */
+            margin-bottom: 15px; /* Space between logo and company info */
           }
 
           .pdf-logo-container img {
-            max-height: 70px; /* Max height for the logo */
-            width: auto; /* Maintain aspect ratio */
-            display: block;
+            max-height: 80px; /* Increased max height for the logo */
+            width: auto; 
+            display: block; /* Helps with centering if parent has text-align: center */
           }
           
           .pdf-company-info-container {
-             flex-grow: 1; /* Allow text to take available space */
-             text-align: left; /* Align text to the left if side-by-side */
+             text-align: center; /* Center the text within this block */
           }
 
           .pdf-header-main .company-name {
@@ -115,21 +113,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             margin: 2px 0;
             line-height: 1.3;
           }
-           /* If logo is not present or on very small viewports, center company details */
-          @media (max-width: 400px) { /* Example breakpoint */
-            .pdf-header-main {
-              flex-direction: column;
-              align-items: center; /* Center items when stacked */
-            }
-            .pdf-logo-container {
-              margin-right: 0;
-              margin-bottom: 10px; /* Space below logo when stacked */
-            }
-            .pdf-company-info-container {
-              text-align: center; /* Center text when stacked */
-            }
-          }
-
 
           .pdf-client-info {
             border: 1px solid #D1D5DB;
