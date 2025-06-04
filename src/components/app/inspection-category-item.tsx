@@ -38,6 +38,11 @@ export function InspectionCategoryItem({ category, onCategoryChange }: Inspectio
     handleSpecialItemChange('showObservation', !category.showObservation);
   };
 
+  const handleVisibilityToggle = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    setIsContentVisible(prev => !prev);
+  };
+
   return (
     <Accordion type="single" collapsible defaultValue={category.isExpanded ? category.id : undefined} className="mb-4 bg-card shadow-md rounded-lg">
       <AccordionItem value={category.id} className="border-b-0">
@@ -47,9 +52,25 @@ export function InspectionCategoryItem({ category, onCategoryChange }: Inspectio
         >
           <div className="flex justify-between items-center w-full">
             <h3 className="text-lg font-semibold font-headline">{category.title}</h3>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsContentVisible(!isContentVisible); }}>
-              {isContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-              <span className="sr-only">{isContentVisible ? 'Esconder' : 'Mostrar'} Conteúdo</span>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              onClick={handleVisibilityToggle}
+            >
+              <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleVisibilityToggle(e);
+                  }
+                }}
+              >
+                {isContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                <span className="sr-only">{isContentVisible ? 'Esconder' : 'Mostrar'} Conteúdo</span>
+              </div>
             </Button>
           </div>
         </AccordionTrigger>
@@ -119,7 +140,7 @@ export function InspectionCategoryItem({ category, onCategoryChange }: Inspectio
                 <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label>
                 <Input
                   id={`${category.id}-pressureValue`}
-                  type="text" // Using text to allow for decimal points flexibly
+                  type="text" 
                   value={category.pressureValue}
                   onChange={(e) => handleSpecialItemChange('pressureValue', e.target.value)}
                   placeholder="Ex: 7.5"
