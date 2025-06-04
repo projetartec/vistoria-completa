@@ -21,14 +21,14 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
             <Image
               src={uploadedLogoDataUrl}
               alt="Logo Carregado"
-              width={224} // Aumentado
-              height={112} // Aumentado
-              className="max-h-28 w-auto object-contain border rounded-md p-1" // Aumentado max-h
+              width={224} 
+              height={112} 
+              className="max-h-28 w-auto object-contain border rounded-md p-1" 
               data-ai-hint="company logo"
             />
           ) : (
             <div
-              className="h-28 w-56 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-sm" // Aumentado h e w
+              className="h-28 w-56 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-sm" 
               data-ai-hint="logo placeholder"
             >
               Nenhum logo
@@ -38,7 +38,7 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
             variant="outline"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="h-8 w-8" // Mantido pequeno conforme solicitado anteriormente
+            className="h-8 w-8" 
             title="Carregar Logo"
           >
             <UploadCloud className="h-4 w-4" />
