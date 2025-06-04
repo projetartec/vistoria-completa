@@ -1,4 +1,5 @@
-import type React from 'react';
+
+import * as React from 'react';
 import { useCallback } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,6 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
 
   const handleAccordionValueChange = useCallback((openItemId: string) => {
     const newIsExpanded = openItemId === category.id;
-    // Only call update if the state actually changes to prevent potential loops
     if (newIsExpanded !== category.isExpanded) {
       onCategoryItemUpdate(category.id, { field: 'isExpanded', value: newIsExpanded });
     }
@@ -73,18 +73,18 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-0 pb-4">
           {category.type === 'standard' && category.subItems?.map((subItem) => (
-            <div key={subItem.id} className="py-3 border-b last:border-b-0">
+             <div key={subItem.id} className="py-3 border-b last:border-b-0">
               <Label className="font-medium">{subItem.name}</Label>
               <RadioGroup
                 value={subItem.status}
                 onValueChange={(value) => handleSubItemStatusChange(subItem.id, value as StatusOption)}
-                className="flex space-x-4 mt-2 mb-2"
+                className="flex items-center space-x-2 mt-2 mb-2"
               >
                 {STATUS_OPTIONS.map(opt => (
-                  <div key={opt} className="flex items-center space-x-2">
+                  <React.Fragment key={`${category.id}-${subItem.id}-${opt}-frag`}>
                     <RadioGroupItem value={opt} id={`${category.id}-${subItem.id}-${opt}`} />
-                    <Label htmlFor={`${category.id}-${subItem.id}-${opt}`}>{opt || 'Nenhum'}</Label>
-                  </div>
+                    <Label htmlFor={`${category.id}-${subItem.id}-${opt}`} className="mr-2 last:mr-0">{opt || 'Nenhum'}</Label>
+                  </React.Fragment>
                 ))}
               </RadioGroup>
               <Button variant="outline" size="sm" onClick={() => toggleSubItemObservation(subItem.id, subItem.showObservation)} className="mb-2">
@@ -107,13 +107,13 @@ export function InspectionCategoryItem({ category, onCategoryItemUpdate }: Inspe
               <RadioGroup
                 value={category.status}
                 onValueChange={(value) => handleSpecialStatusChange(value as StatusOption)}
-                className="flex space-x-4 mt-2 mb-2"
+                className="flex items-center space-x-2 mt-2 mb-2"
               >
                 {STATUS_OPTIONS.map(opt => (
-                  <div key={opt} className="flex items-center space-x-2">
+                   <React.Fragment key={`${category.id}-${opt}-frag`}>
                     <RadioGroupItem value={opt} id={`${category.id}-${opt}`} />
-                    <Label htmlFor={`${category.id}-${opt}`}>{opt || 'Nenhum'}</Label>
-                  </div>
+                    <Label htmlFor={`${category.id}-${opt}`} className="mr-2 last:mr-0">{opt || 'Nenhum'}</Label>
+                  </React.Fragment>
                 ))}
               </RadioGroup>
               <Button variant="outline" size="sm" onClick={toggleSpecialObservation} className="mb-2">
