@@ -17,7 +17,7 @@ import type { InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, I
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff } from 'lucide-react';
 
 const createNewFloorEntry = (): InspectionData => {
   // ID generation will happen client-side to avoid hydration mismatch
@@ -44,7 +44,7 @@ export default function FireCheckPage() {
   });
 
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
-  const [isClientInitialized, setIsClientInitialized] = useState(false); // New state for hydration fix
+  const [isClientInitialized, setIsClientInitialized] = useState(false); 
 
   const initialSavedInspections = useMemo(() => [], []);
   const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', initialSavedInspections);
@@ -52,12 +52,13 @@ export default function FireCheckPage() {
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
 
-  // Client-side initialization for activeFloorsData
   useEffect(() => {
-    if (activeFloorsData.length === 0) { // Removed typeof window check, useEffect is client-side
-      setActiveFloorsData([createNewFloorEntry()]);
+    if (typeof window !== 'undefined') {
+      if (activeFloorsData.length === 0) {
+        setActiveFloorsData([createNewFloorEntry()]);
+      }
+      setIsClientInitialized(true); 
     }
-    setIsClientInitialized(true); // Signal client initialization is complete
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -214,7 +215,6 @@ export default function FireCheckPage() {
 
     activeFloorsData.forEach(floorData => {
       if (!floorData.floor) {
-        // console.warn(`Andar ${floorData.id} sem nome, não será salvo individualmente agora.`);
         return;
       }
 
@@ -267,17 +267,15 @@ export default function FireCheckPage() {
         inspectionNumber: inspectionToLoad.inspectionNumber,
       });
 
-      const loadedFloorData = { ...JSON.parse(JSON.stringify(inspectionToLoad))};
-      // Ensure client-side ID generation for loaded data if it's from an old format or for consistency,
-      // but only if typeof window is defined to avoid issues during potential server-side use or testing.
-      if (typeof window !== 'undefined' && (!loadedFloorData.id || !loadedFloorData.id.includes(Date.now().toString().slice(0,3)))) { // Basic check for old/missing ID format
+      let loadedFloorData = { ...JSON.parse(JSON.stringify(inspectionToLoad))};
+      if (typeof window !== 'undefined' && (!loadedFloorData.id || typeof loadedFloorData.id !== 'string' || !loadedFloorData.id.startsWith(Date.now().toString().substring(0,3)))) {
          loadedFloorData.id = Date.now().toString() + Math.random().toString(36).substring(2, 15);
       }
 
 
       setActiveFloorsData([loadedFloorData]);
       setIsSavedInspectionsVisible(false);
-      setIsClientInitialized(true); // Ensure form is shown after loading
+      setIsClientInitialized(true); 
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} (Andar: ${inspectionToLoad.floor || 'N/I'}) carregada.` });
     }
   };
@@ -317,12 +315,30 @@ export default function FireCheckPage() {
     setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
   };
 
-  // Consistent loading state for initial render (SSR and client pre-hydration)
-  // and also covers the period activeFloorsData is being populated by useEffect
+  const handleCollapseAll = useCallback(() => {
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map(floor => ({
+        ...floor,
+        categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })),
+      }))
+    );
+    toast({ title: "Checklist Recolhido", description: "Todos os itens do checklist foram recolhidos." });
+  }, [toast]);
+
+  const handleExpandAll = useCallback(() => {
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map(floor => ({
+        ...floor,
+        categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })),
+      }))
+    );
+    toast({ title: "Checklist Expandido", description: "Todos os itens do checklist foram expandidos." });
+  }, [toast]);
+
+
   if (!isClientInitialized || activeFloorsData.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen bg-background">
-        {/* This message will be rendered by both server and client initially */}
         <p className="text-foreground">Carregando formulário...</p>
       </div>
     );
@@ -342,51 +358,64 @@ export default function FireCheckPage() {
           <Button
             onClick={() => setIsChecklistVisible(!isChecklistVisible)}
             variant="ghost"
-            className="w-full flex justify-between items-center text-left mb-4 text-xl font-semibold font-headline text-primary hover:bg-accent/10"
+            className="w-full flex justify-between items-center text-left mb-2 text-xl font-semibold font-headline text-primary hover:bg-accent/10"
           >
             Checklist da Vistoria
             {isChecklistVisible ? <ChevronUp className="h-6 w-6" /> : <ChevronDown className="h-6 w-6" />}
           </Button>
 
-          {isChecklistVisible && activeFloorsData.map((floorData, floorIndex) => (
-            <Card key={floorData.id} className="mb-6 shadow-md overflow-hidden">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor={`floorName-${floorData.id}`} className="text-lg font-medium">
-                    ANDAR (Formulário {floorIndex + 1})
-                  </Label>
-                  {activeFloorsData.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveFloor(floorIndex)}
-                      className="text-destructive hover:bg-destructive/10"
-                      title="Remover este andar"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  )}
-                </div>
-                <Input
-                  id={`floorName-${floorData.id}`}
-                  value={floorData.floor}
-                  onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
-                  placeholder="Ex: Térreo, 1A, Subsolo"
-                  className="mt-1"
-                />
+          {isChecklistVisible && (
+            <>
+              <div className="flex space-x-2 mb-4">
+                <Button onClick={handleExpandAll} variant="outline" size="sm">
+                  <Eye className="mr-2 h-4 w-4" /> Mostrar Todos os Itens
+                </Button>
+                <Button onClick={handleCollapseAll} variant="outline" size="sm">
+                  <EyeOff className="mr-2 h-4 w-4" /> Esconder Todos os Itens
+                </Button>
+              </div>
 
-                {floorData.categories.map(category => (
-                  <InspectionCategoryItem
-                    key={`${floorData.id}-${category.id}`}
-                    category={category}
-                    onCategoryItemUpdate={(categoryId, update) => handleCategoryItemUpdateForFloor(floorIndex, categoryId, update)}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          ))}
+              {activeFloorsData.map((floorData, floorIndex) => (
+                <Card key={floorData.id} className="mb-6 shadow-md overflow-hidden">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor={`floorName-${floorData.id}`} className="text-lg font-medium">
+                        ANDAR (Formulário {floorIndex + 1})
+                      </Label>
+                      {activeFloorsData.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveFloor(floorIndex)}
+                          className="text-destructive hover:bg-destructive/10"
+                          title="Remover este andar"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      )}
+                    </div>
+                    <Input
+                      id={`floorName-${floorData.id}`}
+                      value={floorData.floor}
+                      onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
+                      placeholder="Ex: Térreo, 1A, Subsolo"
+                      className="mt-1"
+                    />
+
+                    {floorData.categories.map(category => (
+                      <InspectionCategoryItem
+                        key={`${floorData.id}-${category.id}`}
+                        category={category}
+                        onCategoryItemUpdate={(categoryId, update) => handleCategoryItemUpdateForFloor(floorIndex, categoryId, update)}
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
         </div>
-
+        
         <ActionButtonsPanel
           onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
