@@ -1,7 +1,7 @@
 
 import type React from 'react';
 import { useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ClientInfo } from '@/lib/types';
@@ -30,7 +30,10 @@ export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDat
   return (
     <Card className="mb-6 shadow-lg">
       <CardHeader>
-        <CardTitle className="font-headline text-xl">Dados do Cliente e Vistoria</CardTitle>
+        <CardTitle className="font-headline text-2xl text-center text-primary">VISTORIA TÉCNICA</CardTitle>
+        <CardDescription className="font-headline text-lg text-center text-muted-foreground pt-1">
+          DADOS DO CLIENTE
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
