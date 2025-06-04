@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
@@ -26,7 +26,7 @@ const createNewFloorEntry = (): InspectionData => {
 
   return {
     id: newId,
-    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // INITIAL_INSPECTION_DATA is now just floor data
+    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)),
     floor: '',
     categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)),
   };
@@ -49,6 +49,8 @@ const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOv
 
 export default function FireCheckPage() {
   const { toast } = useToast();
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [blockAutoSaveOnce, setBlockAutoSaveOnce] = useState(false);
 
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
@@ -60,9 +62,8 @@ export default function FireCheckPage() {
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
   const [isClientInitialized, setIsClientInitialized] = useState(false);
 
-  // SavedInspections now stores FullInspectionData array
   const initialSavedFullInspections = useMemo(() => [], []);
-  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v2', initialSavedFullInspections); // V2 for new structure
+  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v2', initialSavedFullInspections);
 
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
@@ -76,13 +77,13 @@ export default function FireCheckPage() {
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prev => {
       const newState = { ...prev, [field]: value };
-      if (field === 'clientCode' || field === 'clientLocation') { 
-        const codePart = newState.clientCode || 'SC'; 
+      if (field === 'clientCode' || field === 'clientLocation') {
+        const codePart = newState.clientCode || 'SC';
         const locationPart = newState.clientLocation.substring(0,3).toUpperCase() || 'LOC';
         newState.inspectionNumber = `${codePart}-${locationPart}-01`;
       }
       if (field === 'clientCode' && !value && newState.inspectionNumber.startsWith('SC-')) {
-        newState.inspectionNumber = ''; 
+        newState.inspectionNumber = '';
       }
       return newState;
     });
@@ -225,6 +226,7 @@ export default function FireCheckPage() {
     };
     setClientInfo(defaultClientInfo);
     setActiveFloorsData([createNewFloorEntry()]);
+    setBlockAutoSaveOnce(true); // Prevent auto-saving an empty form right after reset
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -248,29 +250,41 @@ export default function FireCheckPage() {
   }, [activeFloorsData.length, toast]);
 
 
-  const handleSaveInspection = () => {
+  const handleSaveInspection = useCallback((isAutoSave = false) => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
-      toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.", variant: "destructive" });
+      if (!isAutoSave) {
+        toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.", variant: "destructive" });
+      } else {
+        console.log("Auto-save: Client info incomplete, not saving.");
+      }
       return;
     }
      if (!clientInfo.inspectionDate) {
-      toast({ title: "Erro ao Salvar", description: "DATA DA VISTORIA é obrigatória.", variant: "destructive" });
+      if (!isAutoSave) {
+        toast({ title: "Erro ao Salvar", description: "DATA DA VISTORIA é obrigatória.", variant: "destructive" });
+      } else {
+        console.log("Auto-save: Inspection date missing, not saving.");
+      }
       return;
     }
 
     const namedFloors = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (namedFloors.length === 0) {
-      toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para salvar a vistoria.", variant: "destructive" });
+      if (!isAutoSave) {
+        toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para salvar a vistoria.", variant: "destructive" });
+      } else {
+        console.log("Auto-save: No named floors, not saving.");
+      }
       return;
     }
 
     const fullInspectionToSave: FullInspectionData = {
-      id: clientInfo.inspectionNumber, 
-      clientInfo: { ...clientInfo },    
-      floors: namedFloors.map(floor => ({ 
-        id: floor.id, 
+      id: clientInfo.inspectionNumber,
+      clientInfo: { ...clientInfo },
+      floors: namedFloors.map(floor => ({
+        id: floor.id,
         floor: floor.floor,
-        categories: JSON.parse(JSON.stringify(floor.categories)) 
+        categories: JSON.parse(JSON.stringify(floor.categories))
       })),
       timestamp: Date.now(),
     };
@@ -279,28 +293,65 @@ export default function FireCheckPage() {
       let newSavedList = [...prevSaved];
       const existingIndex = newSavedList.findIndex(insp => insp.id === fullInspectionToSave.id);
       if (existingIndex > -1) {
-        newSavedList[existingIndex] = fullInspectionToSave; 
+        newSavedList[existingIndex] = fullInspectionToSave;
       } else {
-        newSavedList.push(fullInspectionToSave); 
+        newSavedList.push(fullInspectionToSave);
       }
       return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
 
-    toast({ 
-      title: "Vistoria Salva", 
-      description: `A vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.` 
-    });
-  };
+    if (isAutoSave) {
+      // Do not show toast for auto-save success to avoid being too noisy.
+      // User will see the data persisted if they refresh or come back.
+      // Alternatively, a very subtle, short-lived toast:
+      // toast({
+      //   title: "Progresso Salvo",
+      //   duration: 1500,
+      // });
+      console.log(`Auto-save: Vistoria ${fullInspectionToSave.id} atualizada.`);
+    } else {
+      toast({
+        title: "Vistoria Salva",
+        description: `A vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.`
+      });
+    }
+  }, [clientInfo, activeFloorsData, setSavedInspections, toast]);
+
+
+  useEffect(() => {
+    if (blockAutoSaveOnce) {
+      setBlockAutoSaveOnce(false); // Reset the flag and skip this auto-save cycle
+      return;
+    }
+
+    if (isClientInitialized) {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        console.log('Attempting auto-save...');
+        handleSaveInspection(true); // Pass true for auto-save
+      }, 2500); // Auto-save after 2.5 seconds of inactivity
+    }
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [clientInfo, activeFloorsData, isClientInitialized, handleSaveInspection, blockAutoSaveOnce]);
+
 
   const handleLoadInspection = (fullInspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
+      setBlockAutoSaveOnce(true); // Prevent auto-save right after loading
       setClientInfo({ ...inspectionToLoad.clientInfo });
 
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
         ...floor,
-        id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) 
-            ? floor.id 
+        id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
+            ? floor.id
             : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
         categories: floor.categories.map(cat => ({
           ...cat,
@@ -471,7 +522,7 @@ export default function FireCheckPage() {
         </div>
         
         <ActionButtonsPanel
-          onSave={handleSaveInspection}
+          onSave={() => handleSaveInspection(false)} // Explicitly call with false for manual save
           onNewInspection={resetInspectionForm}
           onNewFloor={handleNewFloorInspection}
           onToggleSavedInspections={toggleSavedInspections}
@@ -495,3 +546,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
