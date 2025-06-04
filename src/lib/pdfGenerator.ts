@@ -89,7 +89,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           }
 
           .pdf-logo-container {
-            /* margin-bottom: 15px; /* Removed, not needed for horizontal layout */
             margin-right: 20px; /* Space between logo and company info */
             flex-shrink: 0; /* Prevent logo container from shrinking */
           }
@@ -111,14 +110,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             font-weight: 700;
             color: #2563EB; /* Primary color from theme */
             margin-bottom: 5px;
-            /* text-align will be inherited from .pdf-company-info-container or can be set to left if needed */
+            /* text-align is left due to .pdf-company-info-container */
           }
           .pdf-header-main .company-details p {
             font-size: 9pt; 
             color: #374151; /* Muted foreground-like */
             margin: 2px 0;
             line-height: 1.3;
-            /* text-align will be inherited */
+            /* text-align is left due to .pdf-company-info-container */
           }
 
           .pdf-client-info {
@@ -127,7 +126,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             padding: 20px; 
             margin-bottom: 30px;
             background-color: #F9FAFB;
-            text-align: center; /* Center align content of client-info */
+            /* text-align: center; /* Center align content of client-info (removed as per app) */
           }
           .pdf-client-info .pdf-main-title { /* VISTORIA TÉCNICA */
             font-size: 20pt; /* Corresponds to text-2xl approx */
@@ -135,6 +134,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             color: #2563EB; /* Primary color */
             margin-top: 0;
             margin-bottom: 5px; 
+            text-align: center; /* Specifically center this title */
           }
           .pdf-client-info .pdf-subtitle { /* DADOS DO CLIENTE */
             font-size: 14pt; /* Corresponds to text-lg approx */
@@ -144,6 +144,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             margin-bottom: 15px; 
             padding-bottom: 10px; 
             border-bottom: 1px solid #E5E7EB;
+            text-align: center; /* Specifically center this subtitle */
           }
 
           .pdf-client-info-grid { 
