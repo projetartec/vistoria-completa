@@ -1,5 +1,9 @@
 
-import type { InspectionData, ClientInfo, InspectionCategoryState, SubItemState, StatusOption } from './types';
+// Note: generateInspectionPdf now takes ClientInfo and InspectionData[] (for active floors)
+// This is because it's called with the *currently active* data for PDF generation,
+// not necessarily a FullInspectionData object from storage.
+
+import type { InspectionData, ClientInfo, SubItemState, StatusOption } from './types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -9,11 +13,13 @@ function getStatusLabel(status: StatusOption | undefined): string {
 }
 
 export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: InspectionData[]): void {
-  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate) {
-    alert("CÓDIGO DO CLIENTE, LOCAL e DATA DA VISTORIA são obrigatórios para gerar o PDF.");
+  // Validation for clientInfo remains critical for PDF header
+  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+    alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o PDF.");
     return;
   }
-  if (floorsData.length === 0 || floorsData.every(floor => !floor.floor)) {
+  // floorsData is the array of active floors, already filtered for named ones by the caller if needed
+  if (floorsData.length === 0) {
     alert("Nenhum andar com nome preenchido para incluir no PDF.");
     return;
   }
@@ -23,7 +29,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   let pdfHtml = `
     <html>
       <head>
-        <title>Vistoria Técnica - ${clientInfo.inspectionNumber || clientInfo.clientCode}</title>
+        <title>Vistoria Técnica - ${clientInfo.inspectionNumber}</title>
         <style>
           body { font-family: 'PT Sans', Arial, sans-serif; margin: 20px; line-height: 1.4; font-size: 10pt; }
           .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
@@ -66,7 +72,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     </div>
     <table class="client-info-table">
       <tr>
-        <th>Número da Vistoria:</th><td>${clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`}</td>
+        <th>Número da Vistoria:</th><td>${clientInfo.inspectionNumber}</td>
         <th>Data da Vistoria:</th><td>${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</td>
       </tr>
       <tr>
@@ -79,8 +85,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     </table>
   `;
 
-  floorsData.forEach((floor) => {
-    if (!floor.floor) return;
+  // floorsData here are the active floors passed to the function
+  floorsData.forEach((floor) => { 
+    if (!floor.floor) return; // Should already be filtered by caller if generating from save, but good check
 
     pdfHtml += `<div class="floor-section">`;
     pdfHtml += `<div class="floor-title">Andar: ${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;

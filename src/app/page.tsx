@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import type { InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher } from '@/lib/types';
+import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
@@ -26,26 +26,24 @@ const createNewFloorEntry = (): InspectionData => {
 
   return {
     id: newId,
-    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)),
+    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // INITIAL_INSPECTION_DATA is now just floor data
     floor: '',
-    timestamp: undefined,
     categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)),
   };
 };
-
 
 const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOverallStatus => {
   if (category.type === 'standard' && category.subItems) {
     const relevantSubItems = category.subItems.filter(subItem => !subItem.isRegistry);
     if (relevantSubItems.length === 0) {
-      return 'all-items-selected'; // Consider it selected if no relevant items to check
+      return 'all-items-selected';
     }
     const allSelected = relevantSubItems.every(subItem => subItem.status !== undefined);
     return allSelected ? 'all-items-selected' : 'some-items-pending';
   } else if (category.type === 'special' || category.type === 'pressure') {
     return category.status !== undefined ? 'all-items-selected' : 'some-items-pending';
   }
-  return 'some-items-pending'; // Default for any other unexpected case
+  return 'some-items-pending';
 };
 
 
@@ -62,8 +60,9 @@ export default function FireCheckPage() {
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
   const [isClientInitialized, setIsClientInitialized] = useState(false);
 
-  const initialSavedInspections = useMemo(() => [], []);
-  const [savedInspections, setSavedInspections] = useLocalStorage<InspectionData[]>('firecheck-inspections-v2', initialSavedInspections);
+  // SavedInspections now stores FullInspectionData array
+  const initialSavedFullInspections = useMemo(() => [], []);
+  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v1', initialSavedFullInspections);
 
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
@@ -77,8 +76,14 @@ export default function FireCheckPage() {
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prev => {
       const newState = { ...prev, [field]: value };
-      if (field === 'clientCode') {
-        newState.inspectionNumber = value ? `${value}-01` : '';
+      if (field === 'clientCode' || field === 'clientLocation') { // Update inspection number if client code or location changes to ensure uniqueness if desired
+        const codePart = newState.clientCode || 'SC'; // SC for Sem Código
+        const locationPart = newState.clientLocation.substring(0,3).toUpperCase() || 'LOC';
+        // This is a simple way to generate an inspection number. You might want a more robust system.
+        newState.inspectionNumber = `${codePart}-${locationPart}-01`;
+      }
+      if (field === 'clientCode' && !value && newState.inspectionNumber.startsWith('SC-')) {
+        newState.inspectionNumber = ''; // Clear if client code is removed and it was auto-generated based on no code
       }
       return newState;
     });
@@ -155,7 +160,7 @@ export default function FireCheckPage() {
                   };
                   const newExtinguishersArray = [...(sub.registeredExtinguishers || []), newExtinguisher];
                   categoryStructurallyChanged = true;
-                  if (typeof window !== 'undefined') {
+                   if (typeof window !== 'undefined') {
                      console.log('[ADD EXT]', JSON.stringify(newExtinguisher), 'Current items in array for this subitem:', newExtinguishersArray.length, 'Existing items before add:', (sub.registeredExtinguishers || []).length);
                   }
                   return { ...sub, registeredExtinguishers: newExtinguishersArray };
@@ -188,12 +193,14 @@ export default function FireCheckPage() {
 
 
   const resetInspectionForm = useCallback(() => {
-    setClientInfo({
+    const defaultInspectionDate = new Date().toISOString().split('T')[0];
+    const defaultClientInfo: ClientInfo = {
       clientLocation: '',
       clientCode: '',
       inspectionNumber: '',
-      inspectionDate: new Date().toISOString().split('T')[0],
-    });
+      inspectionDate: defaultInspectionDate,
+    };
+    setClientInfo(defaultClientInfo);
     setActiveFloorsData([createNewFloorEntry()]);
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
@@ -219,8 +226,8 @@ export default function FireCheckPage() {
 
 
   const handleSaveInspection = () => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation) {
-      toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE e LOCAL são obrigatórios.", variant: "destructive" });
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
+      toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.", variant: "destructive" });
       return;
     }
      if (!clientInfo.inspectionDate) {
@@ -228,125 +235,96 @@ export default function FireCheckPage() {
       return;
     }
 
-    let floorsSavedCount = 0;
-    const inspectionsToUpdateInStorage: InspectionData[] = [];
-
-    activeFloorsData.forEach(floorData => {
-      if (!floorData.floor) {
-        return;
-      }
-
-      const now = Date.now();
-      const inspectionToSave: InspectionData = {
-        ...floorData, 
-        clientLocation: clientInfo.clientLocation,
-        clientCode: clientInfo.clientCode,
-        inspectionNumber: clientInfo.inspectionNumber || `${clientInfo.clientCode}-01`,
-        inspectionDate: clientInfo.inspectionDate,
-        timestamp: now,
-      };
-      inspectionsToUpdateInStorage.push(inspectionToSave);
-      floorsSavedCount++;
-    });
-
-    if (floorsSavedCount === 0 && activeFloorsData.some(f => !f.floor)) {
-         toast({ title: "Atenção ao Salvar", description: "Preencha o nome do ANDAR para cada seção antes de salvar.", variant: "destructive" });
-         return;
+    const namedFloors = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
+    if (namedFloors.length === 0) {
+      toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para salvar a vistoria.", variant: "destructive" });
+      return;
     }
 
-    if (floorsSavedCount === 0 && activeFloorsData.every(f => f.floor)) {
-         toast({ title: "Nada para Salvar", description: "Nenhum andar com nome preenchido para salvar.", variant: "default" });
-         return;
-    }
-
+    const fullInspectionToSave: FullInspectionData = {
+      id: clientInfo.inspectionNumber, // Use inspectionNumber as the unique ID for the full inspection
+      clientInfo: { ...clientInfo },    // Save a copy of clientInfo
+      floors: namedFloors.map(floor => ({ // Map active floors to the simpler InspectionData structure
+        id: floor.id, // Retain unique ID for the floor
+        floor: floor.floor,
+        categories: JSON.parse(JSON.stringify(floor.categories)) // Deep copy categories
+      })),
+      timestamp: Date.now(),
+    };
 
     setSavedInspections(prevSaved => {
       let newSavedList = [...prevSaved];
-      inspectionsToUpdateInStorage.forEach(inspectionToSave => {
-        const existingIndex = newSavedList.findIndex(insp => insp.id === inspectionToSave.id);
-        if (existingIndex > -1) {
-          newSavedList[existingIndex] = inspectionToSave;
-        } else {
-          newSavedList.push(inspectionToSave);
-        }
-      });
-      return newSavedList.sort((a, b) => {
-        const tsCompare = (b.timestamp || 0) - (a.timestamp || 0);
-        if (tsCompare !== 0) return tsCompare;
-        return (a.inspectionNumber || "").localeCompare(b.inspectionNumber || "");
-      });
+      const existingIndex = newSavedList.findIndex(insp => insp.id === fullInspectionToSave.id);
+      if (existingIndex > -1) {
+        newSavedList[existingIndex] = fullInspectionToSave; // Update existing
+      } else {
+        newSavedList.push(fullInspectionToSave); // Add new
+      }
+      // Sort by timestamp, newest first
+      return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
 
-    if (floorsSavedCount > 0) {
-      toast({ title: "Vistorias Salvas", description: `${floorsSavedCount} andar(es) da vistoria ${clientInfo.inspectionNumber || 'sem número'} salvos com sucesso.` });
-    }
+    toast({ 
+      title: "Vistoria Salva", 
+      description: `A vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.` 
+    });
   };
 
-  const handleLoadInspection = (inspectionId: string) => {
-    const inspectionToLoad = savedInspections.find(insp => insp.id === inspectionId);
+  const handleLoadInspection = (fullInspectionId: string) => {
+    const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
-      setClientInfo({
-        clientLocation: inspectionToLoad.clientLocation,
-        clientCode: inspectionToLoad.clientCode,
-        inspectionNumber: inspectionToLoad.inspectionNumber,
-        inspectionDate: inspectionToLoad.inspectionDate || new Date().toISOString().split('T')[0],
-      });
+      setClientInfo({ ...inspectionToLoad.clientInfo });
 
-      let loadedFloorData = JSON.parse(JSON.stringify(inspectionToLoad));
+      // Ensure floors and their sub-components have valid IDs
+      const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
+        ...floor,
+        id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) 
+            ? floor.id 
+            : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
+        categories: floor.categories.map(cat => ({
+          ...cat,
+          subItems: cat.subItems ? cat.subItems.map(sub => ({
+            ...sub,
+            registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
+              ...ext,
+              id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
+                  ? ext.id
+                  : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}`
+            })) : []
+          })) : []
+        }))
+      }));
       
-      if (typeof window !== 'undefined' && (!loadedFloorData.id || typeof loadedFloorData.id !== 'string' || loadedFloorData.id.startsWith('server-temp-id-'))) {
-         loadedFloorData.id = `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
-      }
-      
-      if (loadedFloorData.categories) {
-        loadedFloorData.categories.forEach((cat: InspectionCategoryState) => {
-          if (cat.subItems) {
-            cat.subItems.forEach(sub => {
-              if (sub.isRegistry && sub.registeredExtinguishers) {
-                sub.registeredExtinguishers = sub.registeredExtinguishers.map(ext => ({
-                  ...ext,
-                  id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}`
-                }));
-              }
-            });
-          }
-        });
-      }
-
-
-      setActiveFloorsData([loadedFloorData]);
+      setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
       setIsChecklistVisible(true);
-      toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber || 'sem número'} (Andar: ${inspectionToLoad.floor || 'N/I'}) carregada.` });
+      toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.id} carregada.` });
     }
   };
 
-  const handleDeleteInspection = (inspectionId: string) => {
+  const handleDeleteInspection = (fullInspectionId: string) => {
     if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja excluir esta vistoria salva? Esta ação não pode ser desfeita.')) {
-      setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
+      setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
 
-      setActiveFloorsData(prevActive => {
-        const wasActive = prevActive.some(af => af.id === inspectionId);
-        if (wasActive) {
-          const newActive = prevActive.filter(af => af.id !== inspectionId);
-          return newActive.length > 0 ? newActive : [createNewFloorEntry()];
-        }
-        return prevActive;
-      });
+      // If the deleted inspection was the one currently loaded, reset the form
+      if (clientInfo.inspectionNumber === fullInspectionId) {
+        resetInspectionForm();
+      }
     }
   };
 
   const handleGeneratePdf = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate) {
-      toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL e DATA DA VISTORIA são obrigatórios para gerar o PDF.", variant: "destructive" });
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+      toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL, DATA e NÚMERO DA VISTORIA são obrigatórios para gerar o PDF.", variant: "destructive" });
       return;
     }
-    const floorsToPrint = activeFloorsData.filter(floor => floor.floor);
+    const floorsToPrint = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (floorsToPrint.length === 0) {
-        toast({ title: "Nenhum Andar", description: "Adicione e nomeie pelo menos um andar para gerar o PDF.", variant: "destructive" });
+        toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para gerar o PDF.", variant: "destructive" });
         return;
     }
+    // Pass clientInfo and the current active floors to the PDF generator
     generateInspectionPdf(clientInfo, floorsToPrint);
   }, [clientInfo, activeFloorsData, toast]);
 
@@ -492,6 +470,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-    
-        
-        

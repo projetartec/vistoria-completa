@@ -7,8 +7,8 @@ export type ExtinguisherWeightOption = '4kg' | '6kg' | '8kg' | '10kg' | '12kg' |
 export interface RegisteredExtinguisher {
   id: string;
   quantity: number;
-  type: ExtinguisherTypeOption | ''; // Allow empty for initial state of add form
-  weight: ExtinguisherWeightOption | ''; // Allow empty for initial state of add form
+  type: ExtinguisherTypeOption | '';
+  weight: ExtinguisherWeightOption | '';
 }
 
 export interface SubItemState {
@@ -17,7 +17,7 @@ export interface SubItemState {
   status?: StatusOption | undefined;
   observation?: string;
   showObservation?: boolean;
-  isRegistry?: boolean; // Flag to identify the special sub-item
+  isRegistry?: boolean;
   registeredExtinguishers?: RegisteredExtinguisher[];
 }
 
@@ -34,15 +34,11 @@ export interface InspectionCategoryState {
   pressureUnit?: 'Kg' | 'PSI' | 'Bar' | '';
 }
 
+// Represents a single floor's data within a full inspection
 export interface InspectionData {
-  id: string;
-  clientLocation: string;
-  clientCode: string;
-  inspectionNumber: string;
-  inspectionDate?: string;
+  id: string; // Unique ID for this floor entry
   floor: string;
   categories: InspectionCategoryState[];
-  timestamp?: number;
 }
 
 export interface ClientInfo {
@@ -51,6 +47,15 @@ export interface ClientInfo {
   inspectionNumber: string;
   inspectionDate: string;
 }
+
+// Represents a full inspection, including client info and all its floors
+export interface FullInspectionData {
+  id: string; // Unique ID for the full inspection (typically inspectionNumber)
+  clientInfo: ClientInfo;
+  floors: InspectionData[];
+  timestamp: number;
+}
+
 
 export interface InspectionCategoryConfig {
   id: string;

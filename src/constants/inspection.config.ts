@@ -79,17 +79,14 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
 export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A'];
 export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar'];
 
-export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id' | 'timestamp'> = {
-  clientLocation: '',
-  clientCode: '',
+// This now defines the structure for a single floor, without client info.
+export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id'> = {
   floor: '',
-  inspectionNumber: '',
-  inspectionDate: new Date().toISOString().split('T')[0],
   categories: INSPECTION_CONFIG.map(category => ({
     id: category.id,
     title: category.title,
     type: category.type,
-    isExpanded: false,
+    isExpanded: false, // Default to collapsed
     ...(category.type === 'standard' && {
       subItems: category.subItems!.map(subItem => ({
         id: subItem.id,
