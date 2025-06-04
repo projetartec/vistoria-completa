@@ -4,27 +4,31 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { InspectionData } from '@/lib/types';
+import type { ClientInfo } from '@/lib/types';
 
 interface ClientDataFormProps {
-  inspectionData: InspectionData;
-  onFieldChange: (field: keyof Omit<InspectionData, 'categories' | 'id' | 'timestamp' | 'floor'>, value: string) => void;
+  clientInfoData: ClientInfo;
+  onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
 }
 
-export function ClientDataForm({ inspectionData, onFieldChange }: ClientDataFormProps) {
+export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDataFormProps) {
   
+  // This useEffect ensures inspectionNumber is updated when clientCode changes.
+  // It's part of clientInfo now, so onClientInfoChange handles its update.
   useEffect(() => {
-    if (inspectionData.clientCode) {
-      const newInspectionNumber = `${inspectionData.clientCode}-01`;
-      if (inspectionData.inspectionNumber !== newInspectionNumber) {
-        onFieldChange('inspectionNumber', newInspectionNumber);
+    if (clientInfoData.clientCode) {
+      const newInspectionNumber = `${clientInfoData.clientCode}-01`; // Simplified logic
+      if (clientInfoData.inspectionNumber !== newInspectionNumber) {
+        onClientInfoChange('inspectionNumber', newInspectionNumber);
       }
     } else {
-      if (inspectionData.inspectionNumber !== '') {
-        onFieldChange('inspectionNumber', '');
+      // If clientCode is cleared, clear inspectionNumber too
+      if (clientInfoData.inspectionNumber !== '') {
+        onClientInfoChange('inspectionNumber', '');
       }
     }
-  }, [inspectionData.clientCode, inspectionData.inspectionNumber, onFieldChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps 
+  }, [clientInfoData.clientCode]); // Removed onClientInfoChange and clientInfoData.inspectionNumber from deps to avoid loops
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -37,8 +41,8 @@ export function ClientDataForm({ inspectionData, onFieldChange }: ClientDataForm
             <Label htmlFor="clientLocation">LOCAL (Nome do Cliente)</Label>
             <Input
               id="clientLocation"
-              value={inspectionData.clientLocation}
-              onChange={(e) => onFieldChange('clientLocation', e.target.value)}
+              value={clientInfoData.clientLocation}
+              onChange={(e) => onClientInfoChange('clientLocation', e.target.value)}
               placeholder="Nome do Cliente"
             />
           </div>
@@ -46,11 +50,11 @@ export function ClientDataForm({ inspectionData, onFieldChange }: ClientDataForm
             <Label htmlFor="clientCode">CÓDIGO DO CLIENTE (até 5 números)</Label>
             <Input
               id="clientCode"
-              value={inspectionData.clientCode}
+              value={clientInfoData.clientCode}
               onChange={(e) => {
                 const val = e.target.value;
                 if (/^\d{0,5}$/.test(val)) { 
-                  onFieldChange('clientCode', val);
+                  onClientInfoChange('clientCode', val);
                 }
               }}
               placeholder="Ex: 12345"
@@ -62,7 +66,7 @@ export function ClientDataForm({ inspectionData, onFieldChange }: ClientDataForm
             <Label htmlFor="inspectionNumber">Número da Vistoria</Label>
             <Input
               id="inspectionNumber"
-              value={inspectionData.inspectionNumber}
+              value={clientInfoData.inspectionNumber}
               readOnly
               className="bg-muted cursor-not-allowed"
               placeholder="Gerado automaticamente"

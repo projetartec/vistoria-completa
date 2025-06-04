@@ -4,7 +4,7 @@ export type StatusOption = 'OK' | 'N/C' | 'N/A';
 export interface SubItemState {
   id: string;
   name: string;
-  status: StatusOption | undefined; // Changed from StatusOption to allow unselected
+  status: StatusOption | undefined; 
   observation: string;
   showObservation: boolean;
 }
@@ -14,41 +14,48 @@ export interface InspectionCategoryState {
   title: string;
   isExpanded: boolean;
   type: 'standard' | 'special' | 'pressure';
-  subItems?: SubItemState[]; // For 'standard' type
-  status?: StatusOption | undefined; // For 'special' type, changed to allow unselected
-  observation?: string; // For 'special' and 'pressure' types (main observation for the category)
-  showObservation?: boolean; // For 'special' and 'pressure' types
-  pressureValue?: string; // For 'pressure' type
-  pressureUnit?: 'Kg' | 'PSI' | 'Bar' | ''; // For 'pressure' type
+  subItems?: SubItemState[]; 
+  status?: StatusOption | undefined; 
+  observation?: string; 
+  showObservation?: boolean; 
+  pressureValue?: string; 
+  pressureUnit?: 'Kg' | 'PSI' | 'Bar' | ''; 
 }
 
+// Represents the data for a single floor's inspection checklist
 export interface InspectionData {
-  id: string; // Unique ID for the inspection, generated client-side
-  clientLocation: string;
-  clientCode: string;
-  floor: string;
-  inspectionNumber: string; // Auto-generated: <clientCode>-<sequence>
+  id: string; // Unique ID for this specific floor's data entry
+  clientLocation: string; // Will be filled from ClientInfo when saving
+  clientCode: string; // Will be filled from ClientInfo when saving
+  inspectionNumber: string; // Will be filled from ClientInfo when saving
+  floor: string; // Specific to this floor entry
   categories: InspectionCategoryState[];
   timestamp?: number; // For sorting saved inspections
 }
 
-// Defines the static configuration for each category type
+// Represents the overall client and main inspection identifier
+export interface ClientInfo {
+  clientLocation: string;
+  clientCode: string;
+  inspectionNumber: string; 
+}
+
+
 export interface InspectionCategoryConfig {
   id: string;
   title: string;
   type: 'standard' | 'special' | 'pressure';
-  subItems?: Array<{ id: string; name: string }>; // Only for 'standard' type
+  subItems?: Array<{ id: string; name: string }>; 
 }
 
-// Payload for updating category items, used in callbacks
+
 export type CategoryUpdatePayload =
   | { field: 'isExpanded'; value: boolean }
-  | { field: 'status'; value: StatusOption | undefined } // For 'special' items, updated
-  | { field: 'observation'; value: string } // For 'special' or 'pressure' items (main observation)
-  | { field: 'showObservation'; value: boolean } // For 'special' or 'pressure' items (main observation)
+  | { field: 'status'; value: StatusOption | undefined } 
+  | { field: 'observation'; value: string } 
+  | { field: 'showObservation'; value: boolean } 
   | { field: 'pressureValue'; value: string }
   | { field: 'pressureUnit'; value: InspectionCategoryState['pressureUnit'] }
-  | { field: 'subItemStatus'; subItemId: string; value: StatusOption | undefined } // Updated
+  | { field: 'subItemStatus'; subItemId: string; value: StatusOption | undefined } 
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean };
-
