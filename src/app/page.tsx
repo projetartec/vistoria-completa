@@ -33,14 +33,15 @@ export default function FireCheckPage() {
       id: Date.now().toString(),
       ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA))
     });
-  }, []); // Empty dependency array, runs once on mount
+  }, []);
 
 
   const handleClientDataChange = useCallback((field: keyof InspectionData, value: string) => {
     setCurrentInspection(prev => {
       if (!prev) return null;
-      // Check if the value actually changed to prevent unnecessary re-renders
-      if (prev[field] === value) return prev; // Return previous state if no change
+      // @ts-ignore
+      if (prev[field] === value) return prev;
+      // @ts-ignore
       return ({ ...prev, [field]: value });
     });
   }, []);
@@ -54,10 +55,9 @@ export default function FireCheckPage() {
 
         const newCategories = prevInspection.categories.map(cat => {
           if (cat.id !== categoryId) {
-            return cat; // Return original category if not the target
+            return cat; 
           }
 
-          // Shallow copy the target category
           let updatedCatData = { ...cat };
           let categoryStructurallyChanged = false;
 
@@ -68,31 +68,31 @@ export default function FireCheckPage() {
                 categoryStructurallyChanged = true;
               }
               break;
-            case 'status': // For special type
+            case 'status': 
               if (updatedCatData.status !== update.value) {
                 updatedCatData.status = update.value;
                 categoryStructurallyChanged = true;
               }
               break;
-            case 'observation': // For special type
+            case 'observation': 
               if (updatedCatData.observation !== update.value) {
                 updatedCatData.observation = update.value;
                 categoryStructurallyChanged = true;
               }
               break;
-            case 'showObservation': // For special type
+            case 'showObservation': 
               if (updatedCatData.showObservation !== update.value) {
                 updatedCatData.showObservation = update.value;
                 categoryStructurallyChanged = true;
               }
               break;
-            case 'pressureValue': // For pressure type
+            case 'pressureValue': 
               if (updatedCatData.pressureValue !== update.value) {
                 updatedCatData.pressureValue = update.value;
                 categoryStructurallyChanged = true;
               }
               break;
-            case 'pressureUnit': // For pressure type
+            case 'pressureUnit': 
               if (updatedCatData.pressureUnit !== (update.value as InspectionCategoryState['pressureUnit'])) {
                 updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit'];
                 categoryStructurallyChanged = true;
@@ -101,14 +101,14 @@ export default function FireCheckPage() {
             case 'subItemStatus':
             case 'subItemObservation':
             case 'subItemShowObservation':
-              if (cat.subItems) { // Use original cat.subItems for mapping
+              if (cat.subItems) { 
                 let subItemsArrayChangedInternally = false;
                 const newSubItems = cat.subItems.map(sub => {
                   if (sub.id !== update.subItemId) {
-                    return sub; // Return original sub-item if not the target
+                    return sub; 
                   }
 
-                  let updatedSubData = { ...sub }; // Shallow copy the target sub-item
+                  let updatedSubData = { ...sub }; 
                   let subItemStructurallyChanged = false;
 
                   if (update.field === 'subItemStatus' && updatedSubData.status !== (update.value as StatusOption)) {
@@ -124,49 +124,53 @@ export default function FireCheckPage() {
 
                   if (subItemStructurallyChanged) {
                     subItemsArrayChangedInternally = true;
-                    return updatedSubData; // Return new sub-item data if changed
+                    return updatedSubData; 
                   }
-                  return sub; // Return original sub-item if no change
+                  return sub; 
                 });
 
                 if (subItemsArrayChangedInternally) {
-                  updatedCatData.subItems = newSubItems; // Assign new array of sub-items
+                  updatedCatData.subItems = newSubItems; 
                   categoryStructurallyChanged = true;
                 } else {
-                  // If no sub-item changed, ensure subItems ref is the original one
                   updatedCatData.subItems = cat.subItems; 
                 }
               }
               break;
             default:
-              // Should not happen with defined CategoryUpdatePayload types
               break;
           }
 
           if (categoryStructurallyChanged) {
             inspectionChangedOverall = true;
-            return updatedCatData; // Return new category data if changed
+            return updatedCatData; 
           }
-          return cat; // Return original category if no structural change
+          return cat; 
         });
 
         if (inspectionChangedOverall) {
           return { ...prevInspection, categories: newCategories };
         }
-        return prevInspection; // Return previous inspection state if no overall change
+        return prevInspection; 
       });
     },
-    [] // This callback itself is stable
+    [] 
   );
 
 
   const handleHosesChange = useCallback((updatedHoses: HoseEntry[]) => {
     setCurrentInspection(prev => {
       if (!prev) return null;
-      // Check if hoses actually changed to prevent unnecessary re-renders
-      if (prev.hoses === updatedHoses) return prev; // Basic reference check first
-      // Deeper check if lengths are different or content differs (can be expensive)
-      // For now, assume if updatedHoses is a new array, it's a change.
+      // Basic reference check first
+      if (prev.hoses === updatedHoses) return prev;
+      // More thorough check could be JSON.stringify(prev.hoses) === JSON.stringify(updatedHoses)
+      // For simplicity, if it's a new array reference and lengths are same, assume it might be the same.
+      // This is a common pattern for simple list updates but can be made more robust.
+      // For now, if it's a new array, we assume it's a change.
+      if (prev.hoses.length === updatedHoses.length && 
+          prev.hoses.every((h, i) => h === updatedHoses[i])) { // shallow compare items
+        return prev;
+      }
       return { ...prev, hoses: updatedHoses };
     });
   }, []);
@@ -175,13 +179,17 @@ export default function FireCheckPage() {
      setCurrentInspection(prev => {
       if (!prev) return null;
       if (prev.extinguishers === updatedExtinguishers) return prev;
+       if (prev.extinguishers.length === updatedExtinguishers.length &&
+           prev.extinguishers.every((e, i) => e === updatedExtinguishers[i])) {
+         return prev;
+       }
       return { ...prev, extinguishers: updatedExtinguishers };
     });
   }, []);
 
   const resetInspectionForm = useCallback(() => {
     setCurrentInspection({
-      id: Date.now().toString(), // New ID for new form
+      id: Date.now().toString(), 
       ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA))
     });
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
@@ -199,12 +207,14 @@ export default function FireCheckPage() {
 
     setSavedInspections(prev => {
       const existingIndex = prev.findIndex(insp => insp.id === inspectionToSave.id);
+      let newSavedInspections;
       if (existingIndex > -1) {
-        const updated = [...prev];
-        updated[existingIndex] = inspectionToSave;
-        return updated.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        newSavedInspections = [...prev];
+        newSavedInspections[existingIndex] = inspectionToSave;
+      } else {
+        newSavedInspections = [...prev, inspectionToSave];
       }
-      return [...prev, inspectionToSave].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      return newSavedInspections.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
     toast({ title: "Vistoria Salva", description: `Vistoria ${inspectionToSave.inspectionNumber} salva com sucesso.` });
   };
@@ -212,7 +222,6 @@ export default function FireCheckPage() {
   const handleLoadInspection = (inspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === inspectionId);
     if (inspectionToLoad) {
-      // Deep clone when loading to prevent shared references if it's edited then loaded again
       setCurrentInspection(JSON.parse(JSON.stringify(inspectionToLoad)));
       setIsSavedInspectionsVisible(false);
       toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.inspectionNumber} carregada.` });
@@ -220,7 +229,9 @@ export default function FireCheckPage() {
   };
 
   const handleDeleteInspection = (inspectionId: string) => {
-    if (confirm('Tem certeza que deseja excluir esta vistoria? Esta ação não pode ser desfeita.')) {
+    // Consider adding a confirmation dialog here using ShadCN's AlertDialog
+    // For now, using window.confirm for simplicity
+    if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja excluir esta vistoria? Esta ação não pode ser desfeita.')) {
       setSavedInspections(prev => prev.filter(insp => insp.id !== inspectionId));
       toast({ title: "Vistoria Excluída", description: "A vistoria foi excluída com sucesso.", variant: "destructive" });
       if (currentInspection && currentInspection.id === inspectionId) {
@@ -237,6 +248,7 @@ export default function FireCheckPage() {
     }
     try {
       await generateInspectionPdf(currentInspection);
+      // Toast for PDF generation success can be added in generateInspectionPdf or here
     } catch (error) {
       console.error("PDF generation error:", error);
       toast({ title: "Erro no PDF", description: "Falha ao gerar o PDF.", variant: "destructive" });
@@ -249,14 +261,15 @@ export default function FireCheckPage() {
   
   if (!currentInspection) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <p>Carregando...</p>
+      <div className="flex justify-center items-center h-screen bg-background">
+        <p className="text-foreground">Carregando dados da vistoria...</p>
+        {/* Optionally, add a spinner here */}
       </div>
     );
   }
 
   return (
-    <ScrollArea className="h-screen">
+    <ScrollArea className="h-screen bg-background">
       <div className="container mx-auto p-4 md:p-8 max-w-4xl">
         <AppHeader />
 
@@ -285,7 +298,7 @@ export default function FireCheckPage() {
           <Button
             onClick={() => setIsChecklistVisible(!isChecklistVisible)}
             variant="ghost"
-            className="w-full flex justify-between items-center text-left mb-4 text-xl font-semibold font-headline"
+            className="w-full flex justify-between items-center text-left mb-4 text-xl font-semibold font-headline text-primary hover:bg-accent/10"
           >
             Checklist da Vistoria
             {isChecklistVisible ? <ChevronUp className="h-6 w-6" /> : <ChevronDown className="h-6 w-6" />}
@@ -313,4 +326,6 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+    
+
     
