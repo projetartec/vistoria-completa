@@ -13,6 +13,7 @@ export function AppHeader() {
             height={60}
             data-ai-hint="company logo"
             className="rounded"
+            priority // Adicionando priority pode ajudar em alguns casos
           />
         </div>
         <div className="flex flex-col text-left">
