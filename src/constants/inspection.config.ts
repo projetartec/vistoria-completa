@@ -66,7 +66,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
       { id: 'hidrantes_chaves', name: 'Chaves' },
       { id: 'hidrantes_esguichos', name: 'Esguichos' },
       { id: 'hidrantes_caixa_abrigo', name: 'Caixa Abrigo' },
-      { id: 'hidrantes_sinalizacao', name: 'Sinalização' }, // Alterado de 'Sinalização De Solo' e id 'hidrantes_sinalizacao_solo'
+      { id: 'hidrantes_sinalizacao_solo', name: 'Sinalização De Solo' },
       { id: 'hidrantes_placa_sinalizacao', name: 'Placa De Sinalização' },
       { id: 'hidrantes_vazamento', name: 'Vazamento' },
       { id: 'hidrantes_teste_hidrostatico', name: 'Teste Hidrostático' },
