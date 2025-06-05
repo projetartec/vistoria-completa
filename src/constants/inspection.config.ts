@@ -19,7 +19,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
       { id: 'extintor_pressao', name: 'Pressão' },
       { id: 'extintor_fixacao', name: 'Fixação' },
       { id: 'extintor_pintura_solo', name: 'Pintura De Solo' },
-      { id: 'extintor_obstrucao_protecao_intemperies', name: 'Obstr/ Proteção Int.' },
+      { id: 'extintor_sinalizacao', name: 'Sinalização' },
       { id: 'extintor_teste_hidrostatico', name: 'Teste Hidrostático' },
       { id: 'extintor_cadastro', name: 'Cadastro de Extintores', isRegistry: true },
     ],
