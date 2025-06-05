@@ -80,6 +80,10 @@ export default function FireCheckPage() {
   const initialSavedFullInspections = useMemo(() => [], []);
   const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v2', initialSavedFullInspections);
 
+  const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
+  const [newLocationInput, setNewLocationInput] = useState('');
+
+
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
   const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
@@ -127,6 +131,22 @@ export default function FireCheckPage() {
       return newClientInfoState;
     });
   }, []);
+
+  const handleAddNewLocation = useCallback(() => {
+    const trimmedLocation = newLocationInput.trim();
+    if (!trimmedLocation) {
+      toast({ title: "Erro", description: "O nome do local não pode ser vazio.", variant: "destructive" });
+      return;
+    }
+    if (savedLocations.some(loc => loc.toLowerCase() === trimmedLocation.toLowerCase())) {
+      toast({ title: "Local Existente", description: "Este local já está cadastrado.", variant: "destructive" });
+      return;
+    }
+    setSavedLocations(prevLocations => [...prevLocations, trimmedLocation].sort((a, b) => a.localeCompare(b)));
+    setNewLocationInput('');
+    toast({ title: "Local Adicionado", description: `"${trimmedLocation}" foi adicionado à lista de locais.` });
+  }, [newLocationInput, savedLocations, setSavedLocations, toast]);
+
 
   const handleFloorSpecificFieldChange = useCallback((floorIndex: number, field: keyof Pick<InspectionData, 'floor'>, value: string) => {
     setActiveFloorsData(prevFloors =>
@@ -266,7 +286,6 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
     setBlockAutoSaveOnce(true); 
-    // uploadedLogoDataUrl is intentionally not reset here
     toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
   }, [toast]);
 
@@ -430,7 +449,6 @@ export default function FireCheckPage() {
     console.log('Attempting to delete inspection IDs:', inspectionIds);
     setSavedInspections(prev => {
       const filteredList = prev.filter(insp => !inspectionIds.includes(insp.id));
-      // Explicitly create a new array from the filtered list to ensure reference change
       const newList = [...filteredList];
       console.log('New list after filtering (and spreading):', newList.length, 'items. Previous list:', prev.length, 'items.');
       return newList;
@@ -511,6 +529,10 @@ export default function FireCheckPage() {
         <ClientDataForm
           clientInfoData={clientInfo}
           onClientInfoChange={handleClientInfoChange}
+          savedLocations={savedLocations}
+          newLocationInput={newLocationInput}
+          onNewLocationInputChange={setNewLocationInput}
+          onAddNewLocation={handleAddNewLocation}
         />
 
         <div className="my-6 p-4 bg-card shadow-lg rounded-lg">
@@ -607,3 +629,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+

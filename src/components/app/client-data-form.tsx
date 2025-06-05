@@ -1,20 +1,29 @@
 
 import type React from 'react';
-// import { useEffect } from 'react'; // Removido pois a lógica foi centralizada
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ClientInfo } from '@/lib/types';
 
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
   onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
+  savedLocations: string[];
+  newLocationInput: string;
+  onNewLocationInputChange: (value: string) => void;
+  onAddNewLocation: () => void;
 }
 
-export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDataFormProps) {
-  
-  // Removido o useEffect que tentava controlar inspectionNumber.
-  // Essa lógica agora é tratada centralmente em page.tsx
+export function ClientDataForm({ 
+  clientInfoData, 
+  onClientInfoChange,
+  savedLocations,
+  newLocationInput,
+  onNewLocationInputChange,
+  onAddNewLocation,
+}: ClientDataFormProps) {
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -25,15 +34,45 @@ export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDat
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-6 border-b pb-6">
+          <Label htmlFor="newLocationInput" className="text-base font-medium">Cadastrar Novo Local</Label>
+          <div className="flex space-x-2 mt-2">
+            <Input
+              id="newLocationInput"
+              value={newLocationInput}
+              onChange={(e) => onNewLocationInputChange(e.target.value)}
+              placeholder="Digite o nome do novo local"
+              className="flex-grow"
+            />
+            <Button onClick={onAddNewLocation} variant="outline">Adicionar Local</Button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="clientLocation">LOCAL (Nome do Cliente)</Label>
-            <Input
-              id="clientLocation"
+            <Label htmlFor="clientLocationSelect">LOCAL (Nome do Cliente)</Label>
+            <Select
+              id="clientLocationSelect"
               value={clientInfoData.clientLocation}
-              onChange={(e) => onClientInfoChange('clientLocation', e.target.value)}
-              placeholder="Nome do Cliente"
-            />
+              onValueChange={(value) => onClientInfoChange('clientLocation', value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione ou cadastre um local" />
+              </SelectTrigger>
+              <SelectContent>
+                {savedLocations.length === 0 ? (
+                  <SelectItem value="NO_LOCATIONS_PLACEHOLDER" disabled>
+                    Nenhum local cadastrado. Adicione acima.
+                  </SelectItem>
+                ) : (
+                  savedLocations.map((loc) => (
+                    <SelectItem key={loc} value={loc}>
+                      {loc}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="clientCode">CÓDIGO DO CLIENTE</Label>
@@ -52,7 +91,6 @@ export function ClientDataForm({ clientInfoData, onClientInfoChange }: ClientDat
             />
           </div>
           
-          {/* Container for Inspection Number and Date to be side-by-side on larger screens */}
           <div className="md:col-span-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
