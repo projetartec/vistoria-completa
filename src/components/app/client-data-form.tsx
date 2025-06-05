@@ -1,10 +1,12 @@
 
 import type React from 'react';
+import { useState } from 'react'; // Adicionado para controle de visibilidade
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronDown, ChevronUp } from 'lucide-react'; // Adicionado para ícones do botão
 import type { ClientInfo } from '@/lib/types';
 
 interface ClientDataFormProps {
@@ -24,6 +26,7 @@ export function ClientDataForm({
   onNewLocationInputChange,
   onAddNewLocation,
 }: ClientDataFormProps) {
+  const [isAddLocationSectionVisible, setIsAddLocationSectionVisible] = useState(false); // Iniciar escondido
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -34,19 +37,30 @@ export function ClientDataForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mb-6 border-b pb-6">
-          <Label htmlFor="newLocationInput" className="text-base font-medium">Cadastrar Novo Local</Label>
-          <div className="flex space-x-2 mt-2">
-            <Input
-              id="newLocationInput"
-              value={newLocationInput}
-              onChange={(e) => onNewLocationInputChange(e.target.value)}
-              placeholder="Digite o nome do novo local"
-              className="flex-grow"
-            />
-            <Button onClick={onAddNewLocation} variant="outline">Adicionar Local</Button>
+        <Button
+          onClick={() => setIsAddLocationSectionVisible(!isAddLocationSectionVisible)}
+          variant="ghost"
+          className="w-full flex justify-between items-center text-left mb-4 text-lg font-semibold text-primary hover:bg-accent/10"
+        >
+          <span>{isAddLocationSectionVisible ? 'Ocultar Cadastro de Local' : 'Cadastrar Novo Local'}</span>
+          {isAddLocationSectionVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+        </Button>
+
+        {isAddLocationSectionVisible && (
+          <div className="mb-6 border-b pb-6 pt-2">
+            <Label htmlFor="newLocationInput" className="text-base font-medium">Nome do Novo Local</Label>
+            <div className="flex space-x-2 mt-2">
+              <Input
+                id="newLocationInput"
+                value={newLocationInput}
+                onChange={(e) => onNewLocationInputChange(e.target.value)}
+                placeholder="Digite o nome do novo local"
+                className="flex-grow"
+              />
+              <Button onClick={onAddNewLocation} variant="outline">Adicionar Local</Button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
