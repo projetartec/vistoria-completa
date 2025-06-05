@@ -1,32 +1,27 @@
 
 import type React from 'react';
-import { useState } from 'react';
+// Removed useState as it's no longer needed after removing the toggle section
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-// Select foi removido pois o campo LOCAL agora é um Input com datalist
-import { ChevronDown, ChevronUp } from 'lucide-react';
+// Removed Button as it was only used for the removed "Cadastrar Novo Local" feature
+// Removed ChevronDown and ChevronUp as they were used for the toggle button
 import type { ClientInfo } from '@/lib/types';
 
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
   onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
   savedLocations: string[];
-  newLocationInput: string;
-  onNewLocationInputChange: (value: string) => void;
-  onAddNewLocation: () => void;
+  // Removed props related to new location input and adding
 }
 
 export function ClientDataForm({ 
   clientInfoData, 
   onClientInfoChange,
   savedLocations,
-  newLocationInput,
-  onNewLocationInputChange,
-  onAddNewLocation,
+  // Removed props destructuring
 }: ClientDataFormProps) {
-  const [isAddLocationSectionVisible, setIsAddLocationSectionVisible] = useState(false);
+  // Removed isAddLocationSectionVisible state
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -37,30 +32,7 @@ export function ClientDataForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button
-          onClick={() => setIsAddLocationSectionVisible(!isAddLocationSectionVisible)}
-          variant="ghost"
-          className="w-full flex justify-between items-center text-left mb-4 text-lg font-semibold text-primary hover:bg-accent/10"
-        >
-          <span>{isAddLocationSectionVisible ? 'Ocultar Cadastro de Local' : 'Cadastrar Novo Local'}</span>
-          {isAddLocationSectionVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-        </Button>
-
-        {isAddLocationSectionVisible && (
-          <div className="mb-6 border-b pb-6 pt-2">
-            <Label htmlFor="newLocationInput" className="text-base font-medium">Nome do Novo Local</Label>
-            <div className="flex space-x-2 mt-2">
-              <Input
-                id="newLocationInput"
-                value={newLocationInput}
-                onChange={(e) => onNewLocationInputChange(e.target.value)}
-                placeholder="Digite o nome do novo local"
-                className="flex-grow"
-              />
-              <Button onClick={onAddNewLocation} variant="outline">Adicionar Local</Button>
-            </div>
-          </div>
-        )}
+        {/* Removed the toggle button and the conditional section for adding new location */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>

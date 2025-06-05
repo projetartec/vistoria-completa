@@ -81,7 +81,8 @@ export default function FireCheckPage() {
   const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v2', initialSavedFullInspections);
 
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
-  const [newLocationInput, setNewLocationInput] = useState('');
+  // Removed newLocationInput state
+  // const [newLocationInput, setNewLocationInput] = useState('');
 
 
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
@@ -132,6 +133,8 @@ export default function FireCheckPage() {
     });
   }, []);
 
+  // Removed handleAddNewLocation function
+  /*
   const handleAddNewLocation = useCallback(() => {
     const trimmedLocation = newLocationInput.trim();
     if (!trimmedLocation) {
@@ -146,6 +149,7 @@ export default function FireCheckPage() {
     setNewLocationInput('');
     toast({ title: "Local Adicionado", description: `"${trimmedLocation}" foi adicionado à lista de locais.` });
   }, [newLocationInput, savedLocations, setSavedLocations, toast]);
+  */
 
 
   const handleFloorSpecificFieldChange = useCallback((floorIndex: number, field: keyof Pick<InspectionData, 'floor'>, value: string) => {
@@ -543,9 +547,7 @@ export default function FireCheckPage() {
           clientInfoData={clientInfo}
           onClientInfoChange={handleClientInfoChange}
           savedLocations={savedLocations}
-          newLocationInput={newLocationInput}
-          onNewLocationInputChange={setNewLocationInput}
-          onAddNewLocation={handleAddNewLocation}
+          // Removed props related to new location input and adding
         />
 
         <div className="my-6 p-4 bg-card shadow-lg rounded-lg">
