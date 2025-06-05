@@ -17,8 +17,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface InspectionCategoryItemProps {
   category: InspectionCategoryState;
-  onCategoryItemUpdate: (categoryId: string, update: CategoryUpdatePayload) => void;
+  onCategoryItemUpdate: (floorIndex: number, categoryId: string, update: CategoryUpdatePayload) => void;
   overallStatus: CategoryOverallStatus;
+  floorIndex: number;
 }
 
 const ExtinguisherRegistrySubItem: React.FC<{
@@ -116,6 +117,7 @@ const ExtinguisherRegistrySubItem: React.FC<{
     </Card>
   );
 };
+const MemoizedExtinguisherRegistrySubItem = React.memo(ExtinguisherRegistrySubItem);
 
 const HoseRegistrySubItem: React.FC<{
   subItem: SubItemState;
@@ -225,9 +227,10 @@ const HoseRegistrySubItem: React.FC<{
     </Card>
   );
 };
+const MemoizedHoseRegistrySubItem = React.memo(HoseRegistrySubItem);
 
 
-const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overallStatus }: InspectionCategoryItemProps) => {
+const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overallStatus, floorIndex }: InspectionCategoryItemProps) => {
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
@@ -244,11 +247,17 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
       else return;
     } else {
       if (field === 'status') payload = { field, value: value as StatusOption | undefined };
-      else payload = { field, value } as CategoryUpdatePayload; // Cast for other direct category updates
+      else payload = { field, value } as CategoryUpdatePayload;
     }
-    onCategoryItemUpdate(category.id, payload);
-  }, [category.id, onCategoryItemUpdate]);
+    onCategoryItemUpdate(floorIndex, category.id, payload);
+  }, [floorIndex, category.id, onCategoryItemUpdate]);
 
+  const handleSubItemRegistryUpdate = useCallback(
+    (updatePayload: CategoryUpdatePayload) => {
+      onCategoryItemUpdate(floorIndex, category.id, updatePayload);
+    },
+    [floorIndex, category.id, onCategoryItemUpdate]
+  );
 
   const handleAccordionValueChange = useCallback((openItemId: string) => {
     const newIsExpanded = openItemId === category.id;
@@ -307,18 +316,18 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
             if (subItem.isRegistry) {
               if (subItem.id === 'extintor_cadastro') {
                 return (
-                  <ExtinguisherRegistrySubItem
+                  <MemoizedExtinguisherRegistrySubItem
                     key={subItem.id}
                     subItem={subItem}
-                    onUpdate={(updatePayload) => onCategoryItemUpdate(category.id, updatePayload)}
+                    onUpdate={handleSubItemRegistryUpdate}
                   />
                 );
               } else if (subItem.id === 'hidrantes_cadastro_mangueiras') {
                 return (
-                  <HoseRegistrySubItem
+                  <MemoizedHoseRegistrySubItem
                     key={subItem.id}
                     subItem={subItem}
-                    onUpdate={(updatePayload) => onCategoryItemUpdate(category.id, updatePayload)}
+                    onUpdate={handleSubItemRegistryUpdate}
                   />
                 );
               }
@@ -358,7 +367,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                   </div>
                 </div>
                 {subItem.showObservation && (
-                  <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> {/* Ajuste para alinhar com os inputs de RadioGroup */}
+                  <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> 
                     <Textarea
                       value={subItem.observation}
                       onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
@@ -405,7 +414,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                 </div>
               </div>
               {category.showObservation && (
-                 <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> {/* Ajuste para alinhar */}
+                 <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> 
                   <Textarea
                     value={category.observation}
                     onChange={(e) => handleUpdate('observation', e.target.value, undefined)}
