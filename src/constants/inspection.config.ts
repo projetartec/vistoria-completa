@@ -110,6 +110,7 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id'> = {
       showObservation: false,
     }),
     ...(category.type === 'pressure' && {
+      status: undefined, // Added status for pressure type
       pressureValue: '',
       pressureUnit: '' as InspectionCategoryState['pressureUnit'],
       observation: '',

@@ -358,7 +358,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                   </div>
                 </div>
                 {subItem.showObservation && (
-                  <div className="mt-1 sm:ml-[calc(33%+0.5rem)]">
+                  <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> {/* Ajuste para alinhar com os inputs de RadioGroup */}
                     <Textarea
                       value={subItem.observation}
                       onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
@@ -405,7 +405,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
                 </div>
               </div>
               {category.showObservation && (
-                 <div className="mt-1 sm:ml-[calc(33%+0.5rem)]">
+                 <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> {/* Ajuste para alinhar */}
                   <Textarea
                     value={category.observation}
                     onChange={(e) => handleUpdate('observation', e.target.value, undefined)}
@@ -419,34 +419,62 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
 
           {category.type === 'pressure' && (
             <div className="py-3 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                <div>
-                  <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label>
-                  <Input
-                    id={`${category.id}-pressureValue`}
-                    type="text"
-                    value={category.pressureValue || ''}
-                    onChange={(e) => handleUpdate('pressureValue', e.target.value, undefined)}
-                    placeholder="Ex: 7.5"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`${category.id}-pressureUnit`}>Unidade</Label>
-                  <Select
-                    value={category.pressureUnit || ''}
-                    onValueChange={(value) => handleUpdate('pressureUnit', value as InspectionCategoryState['pressureUnit'], undefined)}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
+                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
+                  <RadioGroup
+                    value={category.status || ''}
+                    onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)}
+                    className="flex items-center space-x-2"
                   >
-                    <SelectTrigger id={`${category.id}-pressureUnit`}>
-                      <SelectValue placeholder="Selecione Unidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PRESSURE_UNITS.map(unit => (
-                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {STATUS_OPTIONS.map(opt => (
+                      <div key={`${category.id}-${opt}-pressure`} className="flex items-center space-x-1">
+                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-pressure-rg-item`} />
+                        <Label
+                          htmlFor={`${category.id}-${opt}-pressure-rg-item`}
+                          className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
+                        >
+                          {opt}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
                 </div>
               </div>
+
+              {category.status !== 'N/A' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                  <div>
+                    <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label>
+                    <Input
+                      id={`${category.id}-pressureValue`}
+                      type="text"
+                      value={category.pressureValue || ''}
+                      onChange={(e) => handleUpdate('pressureValue', e.target.value, undefined)}
+                      placeholder="Ex: 7.5"
+                      disabled={category.status === 'N/A'}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`${category.id}-pressureUnit`}>Unidade</Label>
+                    <Select
+                      value={category.pressureUnit || ''}
+                      onValueChange={(value) => handleUpdate('pressureUnit', value as InspectionCategoryState['pressureUnit'], undefined)}
+                      disabled={category.status === 'N/A'}
+                    >
+                      <SelectTrigger id={`${category.id}-pressureUnit`}>
+                        <SelectValue placeholder="Selecione Unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRESSURE_UNITS.map(unit => (
+                          <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
               <Button
                 variant="outline"
                 size="sm"

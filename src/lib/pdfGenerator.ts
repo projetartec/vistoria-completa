@@ -13,7 +13,8 @@ const getCategoryOverallStatusForPdf = (category: InspectionCategoryState): Cate
     const allSelected = relevantSubItems.every(subItem => subItem.status !== undefined);
     return allSelected ? 'all-items-selected' : 'some-items-pending';
   } else if (category.type === 'special' || category.type === 'pressure') {
-    return category.status !== undefined ? 'all-items-selected' : 'some-items-pending';
+    // For special/pressure, 'all-items-selected' now also means status is defined (and not N/A for PDF)
+    return category.status !== undefined && category.status !== 'N/A' ? 'all-items-selected' : 'some-items-pending';
   }
   return 'some-items-pending';
 };
@@ -312,6 +313,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     pdfHtml += `<h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
 
     floor.categories.forEach(category => {
+      // Skip 'special' or 'pressure' categories if their status is 'N/A'
+      if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/A') {
+        return; // Skip this category
+      }
+
       const overallStatus = getCategoryOverallStatusForPdf(category);
       const statusIcon = overallStatus === 'all-items-selected' ? checkCircleSvg : xCircleSvg;
 
@@ -364,6 +370,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           // Subitens normais com status 'N/A' são omitidos
         });
       } else if (category.type === 'special') {
+        // 'special' items are now skipped if status is N/A by the check at the start of the loop
         pdfHtml += `<div class="pdf-special-details pdf-subitem-wrapper">`; 
         pdfHtml += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
         if (category.showObservation && category.observation) {
@@ -371,8 +378,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         }
         pdfHtml += `</div>`;
       } else if (category.type === 'pressure') {
-        pdfHtml += `<div class="pdf-pressure-details pdf-subitem-wrapper">`; 
-        pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
+        // 'pressure' items are now skipped if status is N/A by the check at the start of the loop
+        pdfHtml += `<div class="pdf-pressure-details pdf-subitem-wrapper">`;
+        pdfHtml += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
+        // Only show pressure value and unit if status is not N/A (already handled by the main category skip)
+        // This inner check is somewhat redundant now but harmless
+        if (category.status !== 'N/A') {
+            pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
+        }
         if (category.showObservation && category.observation) {
           pdfHtml += `<div class="pdf-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
         }
@@ -411,9 +424,3 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
-
-    
-
-    
-
-    

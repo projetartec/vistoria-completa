@@ -40,7 +40,7 @@ export interface InspectionCategoryState {
   isExpanded: boolean;
   type: 'standard' | 'special' | 'pressure';
   subItems?: SubItemState[];
-  status?: StatusOption | undefined;
+  status?: StatusOption | undefined; // Agora aplicável a special e pressure
   observation?: string;
   showObservation?: boolean;
   pressureValue?: string;
