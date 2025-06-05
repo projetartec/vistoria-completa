@@ -80,22 +80,21 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           .pdf-header-main {
             display: flex;
-            flex-direction: row; /* Align content wrapper (which is the single child) */
-            justify-content: center; /* Center the content wrapper */
+            flex-direction: row; 
+            justify-content: center; 
             align-items: center; 
             border-bottom: 2px solid #D1D5DB;
             padding-bottom: 15px;
             margin-bottom: 25px;
           }
 
-          .pdf-header-content-wrapper { /* New wrapper for logo and company info */
+          .pdf-header-content-wrapper { 
             display: flex;
-            align-items: center; /* Vertically align logo and company info */
-            gap: 20px; /* Space between logo and company info */
+            align-items: center; 
+            gap: 20px; 
           }
 
           .pdf-logo-container {
-            /* margin-right removed, gap is used in wrapper */
             flex-shrink: 0; 
           }
 
@@ -108,7 +107,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           
           .pdf-company-info-container {
              text-align: left; 
-             /* flex-grow: 1; removed to prevent expansion when centered */
           }
 
           .pdf-header-main .company-name {
@@ -326,9 +324,10 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
       if (category.type === 'standard' && category.subItems) {
         category.subItems.forEach(subItem => {
-          pdfHtml += `<div class="pdf-subitem-wrapper">`; 
           if (subItem.isRegistry) {
-             pdfHtml += `<div class="pdf-registry-container">`;
+            // Subitens de registro são sempre incluídos
+            pdfHtml += `<div class="pdf-subitem-wrapper">`;
+            pdfHtml += `<div class="pdf-registry-container">`;
             if (subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers && subItem.registeredExtinguishers.length > 0) {
               pdfHtml += `<span class="pdf-registry-title">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span>`;
               pdfHtml += `<ul class="pdf-registry-list">`;
@@ -348,8 +347,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                  pdfHtml += `  <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span> <span style="color: #6B7280; font-style: italic;">Nenhum item cadastrado.</span>`;
                  pdfHtml += `</div>`;
             }
-             pdfHtml += `</div>`;
-          } else {
+            pdfHtml += `</div>`;
+            pdfHtml += `</div>`;
+          } else if (subItem.status !== 'N/A') {
+            // Subitens normais não-N/A são incluídos
+            pdfHtml += `<div class="pdf-subitem-wrapper">`;
             pdfHtml += `<div class="pdf-subitem">`;
             pdfHtml += `  <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`;
             pdfHtml += `  <span class="pdf-status ${getStatusClass(subItem.status)}">${getStatusLabel(subItem.status)}</span>`;
@@ -357,8 +359,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             if (subItem.showObservation && subItem.observation) {
               pdfHtml += `<div class="pdf-observation">${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
             }
+            pdfHtml += `</div>`;
           }
-          pdfHtml += `</div>`; 
+          // Subitens normais com status 'N/A' são omitidos
         });
       } else if (category.type === 'special') {
         pdfHtml += `<div class="pdf-special-details pdf-subitem-wrapper">`; 
@@ -408,6 +411,8 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
+    
 
     
 
