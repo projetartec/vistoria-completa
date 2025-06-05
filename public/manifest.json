@@ -1,24 +1,25 @@
 
 {
   "name": "FireCheck Brazil",
-  "short_name": "FireCheck",
-  "description": "App de Vistoria Técnica para Brazil Extintores",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#F5F5F5",
-  "theme_color": "#64B5F6",
+  "short_name": "FireCheckBR",
+  "description": "Aplicativo de Vistoria Técnica para Brazil Extintores.",
   "icons": [
     {
       "src": "https://placehold.co/192x192.png",
-      "sizes": "192x192",
       "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
       "src": "https://placehold.co/512x512.png",
-      "sizes": "512x512",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F5F5",
+  "theme_color": "#64B5F6",
+  "scope": "/"
 }
