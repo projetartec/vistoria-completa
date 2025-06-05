@@ -1,12 +1,12 @@
 
 import type React from 'react';
-import { useState } from 'react'; // Adicionado para controle de visibilidade
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronDown, ChevronUp } from 'lucide-react'; // Adicionado para ícones do botão
+// Select foi removido pois o campo LOCAL agora é um Input com datalist
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { ClientInfo } from '@/lib/types';
 
 interface ClientDataFormProps {
@@ -26,7 +26,7 @@ export function ClientDataForm({
   onNewLocationInputChange,
   onAddNewLocation,
 }: ClientDataFormProps) {
-  const [isAddLocationSectionVisible, setIsAddLocationSectionVisible] = useState(false); // Iniciar escondido
+  const [isAddLocationSectionVisible, setIsAddLocationSectionVisible] = useState(false);
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -64,29 +64,19 @@ export function ClientDataForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="clientLocationSelect">LOCAL (Nome do Cliente)</Label>
-            <Select
-              id="clientLocationSelect"
+            <Label htmlFor="clientLocationInput">LOCAL (Nome do Cliente)</Label>
+            <Input
+              id="clientLocationInput"
               value={clientInfoData.clientLocation}
-              onValueChange={(value) => onClientInfoChange('clientLocation', value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione ou cadastre um local" />
-              </SelectTrigger>
-              <SelectContent>
-                {savedLocations.length === 0 ? (
-                  <SelectItem value="NO_LOCATIONS_PLACEHOLDER" disabled>
-                    Nenhum local cadastrado. Adicione acima.
-                  </SelectItem>
-                ) : (
-                  savedLocations.map((loc) => (
-                    <SelectItem key={loc} value={loc}>
-                      {loc}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+              onChange={(e) => onClientInfoChange('clientLocation', e.target.value)}
+              placeholder="Digite ou selecione um local"
+              list="client-locations-list" 
+            />
+            <datalist id="client-locations-list">
+              {savedLocations.map((loc) => (
+                <option key={loc} value={loc} />
+              ))}
+            </datalist>
           </div>
           <div>
             <Label htmlFor="clientCode">CÓDIGO DO CLIENTE</Label>
