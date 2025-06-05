@@ -260,6 +260,19 @@ export default function FireCheckPage() {
                 });
               }
               break;
+            case 'markAllSubItemsNA':
+              if (cat.subItems && cat.type === 'standard') {
+                let atLeastOneSubItemChanged = false;
+                updatedCatData.subItems = cat.subItems.map(sub => {
+                  if (!sub.isRegistry && sub.status !== 'N/A') {
+                    atLeastOneSubItemChanged = true;
+                    return { ...sub, status: 'N/A' as StatusOption, showObservation: false, observation: '' };
+                  }
+                  return sub;
+                });
+                if (atLeastOneSubItemChanged) categoryStructurallyChanged = true;
+              }
+              break;
             default: break;
           }
           if (categoryStructurallyChanged) inspectionChangedOverall = true;
@@ -449,7 +462,7 @@ export default function FireCheckPage() {
     console.log('Attempting to delete inspection IDs:', inspectionIds);
     setSavedInspections(prev => {
       const filteredList = prev.filter(insp => !inspectionIds.includes(insp.id));
-      const newList = [...filteredList];
+      const newList = [...filteredList]; // Explicitly create a new array reference
       console.log('New list after filtering (and spreading):', newList.length, 'items. Previous list:', prev.length, 'items.');
       return newList;
     });
@@ -629,4 +642,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-

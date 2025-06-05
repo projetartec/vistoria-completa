@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -229,9 +229,11 @@ const HoseRegistrySubItem: React.FC<{
 
 const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overallStatus }: InspectionCategoryItemProps) => {
 
-  const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value: any, subItemId?: string, itemId?: string) => { // itemId for extinguisherId or hoseId
+  const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
-    if (subItemId) {
+    if (field === 'markAllSubItemsNA') {
+      payload = { field };
+    } else if (subItemId) {
       if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
       else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
       else if (field === 'subItemShowObservation') payload = { field, subItemId, value: value as boolean };
@@ -242,7 +244,7 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
       else return;
     } else {
       if (field === 'status') payload = { field, value: value as StatusOption | undefined };
-      else payload = { field, value } as CategoryUpdatePayload;
+      else payload = { field, value } as CategoryUpdatePayload; // Cast for other direct category updates
     }
     onCategoryItemUpdate(category.id, payload);
   }, [category.id, onCategoryItemUpdate]);
@@ -264,6 +266,10 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
     }
   };
 
+  const hasNonRegistrySubItems = useMemo(() => {
+    return category.type === 'standard' && category.subItems && category.subItems.some(sub => !sub.isRegistry);
+  }, [category.subItems, category.type]);
+
   return (
     <Accordion
       type="single"
@@ -284,6 +290,19 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
+          {category.type === 'standard' && hasNonRegistrySubItems && (
+            <div className="mb-3 mt-1 flex justify-start">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleUpdate('markAllSubItemsNA')}
+                className="text-yellow-600 border-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-700"
+              >
+                <ListX className="mr-2 h-4 w-4" /> Marcar Todos N/A
+              </Button>
+            </div>
+          )}
+
           {category.type === 'standard' && category.subItems?.map((subItem) => {
             if (subItem.isRegistry) {
               if (subItem.id === 'extintor_cadastro') {
