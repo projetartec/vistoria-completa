@@ -71,7 +71,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           body {
             font-family: 'PT Sans', Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 20px; /* Default padding for screen view */
             line-height: 1.6;
             font-size: 10pt; 
             background-color: #FFFFFF;
@@ -159,7 +159,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           .pdf-client-info-grid div { padding: 3px 0; }
           .pdf-client-info-grid strong { color: #111827; font-weight: 600; }
 
-          .pdf-floor-section { margin-bottom: 30px; }
+          .pdf-floor-section { 
+            margin-bottom: 30px; 
+          }
           .pdf-floor-title {
             font-size: 18pt; 
             font-weight: 700;
@@ -177,7 +179,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             border-radius: 8px;
             margin-bottom: 20px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-            page-break-inside: avoid;
+            page-break-inside: avoid; /* This is important */
           }
           .pdf-category-header {
             display: flex;
@@ -204,6 +206,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
              margin-bottom: 10px;
              padding-bottom: 10px;
              border-bottom: 1px dashed #E5E7EB;
+             page-break-inside: avoid; /* Important to keep subitem with its details */
           }
           .pdf-subitem-wrapper:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
@@ -268,9 +271,61 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           }
 
           @media print {
-            body { background-color: #FFFFFF; margin:0; padding: 10mm 8mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            .pdf-container { box-shadow: none; padding: 0; border: none; }
-            .pdf-category-card { box-shadow: none; border: 1px solid #E5E7EB; }
+            html, body {
+                height: auto; /* Allow content to determine height */
+                background-color: #FFFFFF !important; /* Ensure white background for printing */
+                margin: 0 !important; /* Reset margins for printing */
+                padding: 10mm 8mm !important; /* Standard print margins */
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
+                font-size: 10pt; /* Ensure consistent font size */
+            }
+            .pdf-container {
+                width: 100%;
+                box-shadow: none !important;
+                padding: 0 !important;
+                border: none !important;
+                margin: 0 !important;
+            }
+            .pdf-header-main, .pdf-client-info {
+                page-break-after: avoid; /* Try to keep these with following content */
+            }
+             .pdf-footer {
+                page-break-before: auto; /* Allow break before footer if needed, but prefer it on last page */
+                page-break-inside: avoid;
+            }
+            .pdf-floor-section {
+                page-break-inside: avoid; /* Try to keep content of a floor together */
+                page-break-before: auto; /* Allow a floor to start on a new page */
+            }
+            .pdf-floor-section:first-of-type {
+                page-break-before: avoid; /* Don't break before the very first floor section */
+            }
+            .pdf-category-card {
+                page-break-inside: avoid !important; /* Enforce no break inside category card */
+                box-shadow: none !important;
+                border: 1px solid #E5E7EB !important;
+            }
+            .pdf-subitem-wrapper {
+                page-break-inside: avoid !important; /* Keep subitem with its observation */
+            }
+            /* Re-apply specific colors for print if they are themed by CSS vars that might not translate */
+            .pdf-header-main .company-name { color: #2563EB !important; }
+            .pdf-header-main .company-details p { color: #374151 !important; }
+            .pdf-client-info .pdf-main-title { color: #2563EB !important; }
+            .pdf-client-info .pdf-subtitle { color: #6B7280 !important; }
+            .pdf-client-info-grid strong { color: #111827 !important; }
+            .pdf-floor-title { color: #1F2937 !important; border-bottom: 3px solid #2563EB !important; }
+            .icon-status-completed { stroke: #059669 !important; }
+            .icon-status-incomplete { stroke: #DC2626 !important; }
+            .pdf-category-title-text { color: #111827 !important; }
+            .pdf-subitem-name { color: #1F2937 !important; }
+            .pdf-observation { color: #4B5563 !important; border-left: 3px solid #9CA3AF !important; background-color: #F9FAFB !important; }
+            .pdf-registry-title { color: #374151 !important; }
+            .status-ok { background-color: #ECFDF5 !important; color: #047857 !important; border: 1px solid #A7F3D0 !important; }
+            .status-nc { background-color: #FEF2F2 !important; color: #B91C1C !important; border: 1px solid #FECACA !important; }
+            .status-na { background-color: #FFFBEB !important; color: #B45309 !important; border: 1px solid #FDE68A !important; }
+            .status-pending { background-color: #F3F4F6 !important; color: #4B5563 !important; border: 1px solid #D1D5DB !important; }
           }
         </style>
       </head>
@@ -333,7 +388,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         category.subItems.forEach(subItem => {
           if (subItem.isRegistry) {
             // Subitens de registro são sempre incluídos
-            pdfHtml += `<div class="pdf-subitem-wrapper">`;
+            pdfHtml += `<div class="pdf-subitem-wrapper">`; // wrapper for page-break control
             pdfHtml += `<div class="pdf-registry-container">`;
             if (subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers && subItem.registeredExtinguishers.length > 0) {
               pdfHtml += `<span class="pdf-registry-title">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span>`;
@@ -355,7 +410,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                  pdfHtml += `</div>`;
             }
             pdfHtml += `</div>`;
-            pdfHtml += `</div>`;
+            pdfHtml += `</div>`; // closing pdf-subitem-wrapper
           } else if (subItem.status !== 'N/A') {
             // Subitens normais não-N/A são incluídos
             pdfHtml += `<div class="pdf-subitem-wrapper">`;
@@ -425,3 +480,4 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
