@@ -59,6 +59,7 @@ export interface ClientInfo {
   clientCode: string;
   inspectionNumber: string;
   inspectionDate: string;
+  inspectedBy?: string; // Added field
 }
 
 // Represents a full inspection, including client info and all its floors

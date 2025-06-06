@@ -1,27 +1,21 @@
 
 import type React from 'react';
-// Removed useState as it's no longer needed after removing the toggle section
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Removed Button as it was only used for the removed "Cadastrar Novo Local" feature
-// Removed ChevronDown and ChevronUp as they were used for the toggle button
 import type { ClientInfo } from '@/lib/types';
 
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
   onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
   savedLocations: string[];
-  // Removed props related to new location input and adding
 }
 
 export function ClientDataForm({ 
   clientInfoData, 
   onClientInfoChange,
   savedLocations,
-  // Removed props destructuring
 }: ClientDataFormProps) {
-  // Removed isAddLocationSectionVisible state
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -32,8 +26,6 @@ export function ClientDataForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Removed the toggle button and the conditional section for adding new location */}
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <Label htmlFor="clientLocationInput">LOCAL (Nome do Cliente)</Label>
@@ -89,6 +81,15 @@ export function ClientDataForm({
                 />
               </div>
             </div>
+          </div>
+          <div className="md:col-span-2">
+            <Label htmlFor="inspectedBy">Vistoriado por</Label>
+            <Input
+              id="inspectedBy"
+              value={clientInfoData.inspectedBy || ''}
+              onChange={(e) => onClientInfoChange('inspectedBy', e.target.value)}
+              placeholder="Nome do técnico responsável"
+            />
           </div>
         </div>
       </CardContent>

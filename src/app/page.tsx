@@ -72,6 +72,7 @@ export default function FireCheckPage() {
     clientCode: '',
     inspectionNumber: '',
     inspectionDate: new Date().toISOString().split('T')[0],
+    inspectedBy: '',
   });
 
   const [activeFloorsData, setActiveFloorsData] = useState<InspectionData[]>([]);
@@ -279,6 +280,7 @@ export default function FireCheckPage() {
       clientCode: '',
       inspectionNumber: '', 
       inspectionDate: defaultInspectionDate,
+      inspectedBy: '',
     };
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
@@ -336,7 +338,7 @@ export default function FireCheckPage() {
 
     const fullInspectionToSave: FullInspectionData = {
       id: clientInfo.inspectionNumber, 
-      clientInfo: { ...clientInfo },
+      clientInfo: { ...clientInfo }, // Save the entire clientInfo, including inspectedBy
       floors: namedFloors.map(floor => ({
         id: floor.id,
         floor: floor.floor,
@@ -396,7 +398,10 @@ export default function FireCheckPage() {
     const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
       setBlockAutoSaveOnce(true); 
-      setClientInfo({ ...inspectionToLoad.clientInfo }); 
+      setClientInfo({ 
+        ...inspectionToLoad.clientInfo,
+        inspectedBy: inspectionToLoad.clientInfo.inspectedBy || '', // Ensure inspectedBy is loaded or defaults to empty string
+      }); 
       setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
