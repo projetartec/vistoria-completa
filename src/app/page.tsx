@@ -127,10 +127,20 @@ export default function FireCheckPage() {
           newClientInfoState.clientCode,
           newClientInfoState.clientLocation
         );
+        if (value && field === 'clientLocation') {
+            setSavedLocations(prevLocs => {
+                const lowerCaseValue = value.trim().toLowerCase();
+                const exists = prevLocs.some(loc => loc.toLowerCase() === lowerCaseValue);
+                if (!exists && value.trim()) {
+                    return [...prevLocs, value.trim()].sort((a,b) => a.localeCompare(b));
+                }
+                return prevLocs;
+            });
+        }
       }
       return newClientInfoState;
     });
-  }, []);
+  }, [setSavedLocations]);
 
 
   const handleFloorSpecificFieldChange = useCallback((floorIndex: number, field: keyof Pick<InspectionData, 'floor'>, value: string) => {
@@ -153,21 +163,38 @@ export default function FireCheckPage() {
             return cat;
           }
           let updatedCatData = { ...cat };
-          let categoryStructurallyChanged = false;
+          let categoryStructurallyChanged = false; // Tracks changes other than isExpanded
 
           switch (update.field) {
             case 'isExpanded':
-              updatedCatData.isExpanded = update.value; categoryStructurallyChanged = true; break;
+              updatedCatData.isExpanded = update.value;
+              // This change is handled separately for overall state, doesn't trigger auto-collapse
+              break;
             case 'status':
-              updatedCatData.status = update.value; categoryStructurallyChanged = true; break;
+              if (updatedCatData.status !== update.value) {
+                updatedCatData.status = update.value; categoryStructurallyChanged = true;
+              }
+              break;
             case 'observation':
-              updatedCatData.observation = update.value; categoryStructurallyChanged = true; break;
+              if (updatedCatData.observation !== update.value) {
+                updatedCatData.observation = update.value; categoryStructurallyChanged = true;
+              }
+              break;
             case 'showObservation':
-              updatedCatData.showObservation = update.value; categoryStructurallyChanged = true; break;
+              if (updatedCatData.showObservation !== update.value) {
+                updatedCatData.showObservation = update.value; categoryStructurallyChanged = true;
+              }
+              break;
             case 'pressureValue':
-              updatedCatData.pressureValue = update.value; categoryStructurallyChanged = true; break;
+              if (updatedCatData.pressureValue !== update.value) {
+                updatedCatData.pressureValue = update.value; categoryStructurallyChanged = true;
+              }
+              break;
             case 'pressureUnit':
-              updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; categoryStructurallyChanged = true; break;
+              if (updatedCatData.pressureUnit !== update.value) {
+                updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; categoryStructurallyChanged = true;
+              }
+              break;
             case 'subItemStatus':
             case 'subItemObservation':
             case 'subItemShowObservation':
@@ -204,9 +231,6 @@ export default function FireCheckPage() {
                   };
                   const newExtinguishersArray = [...(sub.registeredExtinguishers || []), newExtinguisher];
                   categoryStructurallyChanged = true;
-                   if (typeof window !== 'undefined') {
-                     console.log('[ADD EXT]', JSON.stringify(newExtinguisher), 'Current items in array for this subitem:', newExtinguishersArray.length, 'Existing items before add:', (sub.registeredExtinguishers || []).length);
-                  }
                   return { ...sub, registeredExtinguishers: newExtinguishersArray };
                 });
               }
@@ -261,17 +285,22 @@ export default function FireCheckPage() {
             default: break;
           }
           
-          if (categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
+          // Auto-collapse logic: only if the update was NOT for 'isExpanded' AND there was a structural change
+          if (update.field !== 'isExpanded' && categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
             const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
             if (relevantSubItems.length > 0) {
                 const allRelevantSubItemsCompleted = relevantSubItems.every(sub => sub.status !== undefined);
                 if (allRelevantSubItemsCompleted) {
-                    updatedCatData.isExpanded = false;
+                    updatedCatData.isExpanded = false; 
                 }
             }
           }
 
-          if (categoryStructurallyChanged) inspectionChangedOverall = true;
+          // Determine if overall inspection data has changed for this floor
+          if (categoryStructurallyChanged || (update.field === 'isExpanded' && cat.isExpanded !== updatedCatData.isExpanded)) {
+            inspectionChangedOverall = true;
+          }
+          
           return updatedCatData;
         });
 
