@@ -260,6 +260,17 @@ export default function FireCheckPage() {
               break;
             default: break;
           }
+          
+          if (categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
+            const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
+            if (relevantSubItems.length > 0) {
+                const allRelevantSubItemsCompleted = relevantSubItems.every(sub => sub.status !== undefined);
+                if (allRelevantSubItemsCompleted) {
+                    updatedCatData.isExpanded = false;
+                }
+            }
+          }
+
           if (categoryStructurallyChanged) inspectionChangedOverall = true;
           return updatedCatData;
         });
@@ -338,7 +349,7 @@ export default function FireCheckPage() {
 
     const fullInspectionToSave: FullInspectionData = {
       id: clientInfo.inspectionNumber, 
-      clientInfo: { ...clientInfo }, // Save the entire clientInfo, including inspectedBy
+      clientInfo: { ...clientInfo }, 
       floors: namedFloors.map(floor => ({
         id: floor.id,
         floor: floor.floor,
@@ -400,7 +411,7 @@ export default function FireCheckPage() {
       setBlockAutoSaveOnce(true); 
       setClientInfo({ 
         ...inspectionToLoad.clientInfo,
-        inspectedBy: inspectionToLoad.clientInfo.inspectedBy || '', // Ensure inspectedBy is loaded or defaults to empty string
+        inspectedBy: inspectionToLoad.clientInfo.inspectedBy || '', 
       }); 
       setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
@@ -629,3 +640,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
