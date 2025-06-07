@@ -38,7 +38,7 @@ export function ActionButtonsPanel({
           onClick={onGeneratePdf}
           className="bg-orange-500 hover:bg-orange-600 text-white"
         >
-          <FileText className="mr-2 h-4 w-4" /> Gerar PDF
+          <FileText className="mr-2 h-4 w-4" /> Relatório
         </Button>
         <Button
           onClick={onPrint}
