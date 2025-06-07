@@ -58,7 +58,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     ...floor,
     categories: floor.categories.map(category => {
       let hasVerifiedItemsFloor = false;
-      let hasNonConformingOrNAItemsFloor = false;
+      let hasNonConformingItemsFloor = false; // Changed from hasNonConformingOrNAItemsFloor
 
       if (category.type === 'standard' && category.subItems) {
         const processedSubItems = category.subItems.map(subItem => {
@@ -68,22 +68,22 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             verifiedCategoriesOverall.add(category.id);
             verifiedSubItemsOverall.add(`${category.id}_${subItem.id}`);
           }
-          if (isVerified && (subItem.status === 'N/C' || subItem.status === 'N/A')) {
-            hasNonConformingOrNAItemsFloor = true;
+          if (isVerified && subItem.status === 'N/C') { // Only N/C now
+            hasNonConformingItemsFloor = true;
           }
           return { ...subItem, isVerified };
         });
-        return { ...category, subItems: processedSubItems, hasVerifiedItemsFloor, hasNonConformingOrNAItemsFloor };
+        return { ...category, subItems: processedSubItems, hasVerifiedItemsFloor, hasNonConformingItemsFloor };
       } else if (category.type === 'special' || category.type === 'pressure') {
         if (category.status !== undefined) {
           hasVerifiedItemsFloor = true;
           verifiedCategoriesOverall.add(category.id);
         }
-        if (category.status === 'N/C' || category.status === 'N/A') {
-          hasNonConformingOrNAItemsFloor = true;
+        if (category.status === 'N/C') { // Only N/C now
+          hasNonConformingItemsFloor = true;
         }
       }
-      return { ...category, hasVerifiedItemsFloor, hasNonConformingOrNAItemsFloor };
+      return { ...category, hasVerifiedItemsFloor, hasNonConformingItemsFloor };
     })
   }));
 
@@ -211,7 +211,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           <section class="pdf-verified-summary-overall">
             <h3 class="pdf-section-title">Itens e Subitens Verificados na Vistoria (Geral)</h3>`;
             
-  // Use INSPECTION_CONFIG to maintain the original order of categories
   INSPECTION_CONFIG.forEach(configCategory => {
     if (verifiedCategoriesOverall.has(configCategory.id)) {
       pdfHtml += `<div class="pdf-verified-summary-category-overall">
@@ -228,7 +227,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           pdfHtml += `</ul>`;
         }
       }
-      // For 'special' or 'pressure' types, just listing the category title is enough if it was verified.
       pdfHtml += `</div>`;
     }
   });
@@ -237,16 +235,16 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
             <div class="page-break-before"></div>
 
-            <!-- Seção 2: Detalhes de Itens Não Conformes (N/C) e Não Aplicáveis (N/A) -->
+            <!-- Seção 2: Detalhes de Itens Não Conformes (N/C) -->
             <section class="pdf-non-compliant-details">
-              <h3 class="pdf-section-title">Detalhes de Itens Não Conformes (N/C) e Não Aplicáveis (N/A)</h3>`;
+              <h3 class="pdf-section-title">Detalhes de Itens Não Conformes (N/C)</h3>`;
 
   processedFloorsData.forEach((floor) => {
-    if (floor.categories.some(cat => cat.hasNonConformingOrNAItemsFloor)) {
+    if (floor.categories.some(cat => cat.hasNonConformingItemsFloor)) { // Use the updated flag
       pdfHtml += `<div class="pdf-floor-section">
                     <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
       floor.categories.forEach(category => {
-        if (category.hasNonConformingOrNAItemsFloor) {
+        if (category.hasNonConformingItemsFloor) { // Use the updated flag
           pdfHtml += `<article class="pdf-category-card">
                         <header class="pdf-category-header">
                           <span class="pdf-category-title-text">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -255,7 +253,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           
           if (category.type === 'standard' && category.subItems) {
             category.subItems.forEach(subItem => {
-              if (!subItem.isRegistry && (subItem.status === 'N/C' || subItem.status === 'N/A')) {
+              if (!subItem.isRegistry && subItem.status === 'N/C') { // Only N/C
                 pdfHtml += `<div class="pdf-subitem-wrapper">
                               <div class="pdf-subitem">
                                 <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -267,11 +265,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 pdfHtml += `</div>`;
               }
             });
-          } else if ((category.type === 'special' || category.type === 'pressure') && (category.status === 'N/C' || category.status === 'N/A')) {
+          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') { // Only N/C
             const detailsClass = category.type === 'special' ? 'pdf-special-details' : 'pdf-pressure-details';
             pdfHtml += `<div class="${detailsClass}">
                           <p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-            if (category.type === 'pressure' && category.status !== 'N/A') { 
+            if (category.type === 'pressure' && category.status !== 'N/A') { // This condition is fine: if it's N/C, it's not N/A, so pressure details should show if available.
                  pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
             }
             if (category.showObservation && category.observation) {
@@ -315,3 +313,4 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
