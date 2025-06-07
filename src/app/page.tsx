@@ -153,25 +153,27 @@ export default function FireCheckPage() {
 
   const handleCategoryItemUpdateForFloor = useCallback((floorIndex: number, categoryId: string, update: CategoryUpdatePayload) => {
     setActiveFloorsData(prevFloors => {
-      return prevFloors.map((currentFloorData, index) => {
-        if (index !== floorIndex) {
+      return prevFloors.map((currentFloorData, fIndex) => {
+        if (fIndex !== floorIndex) {
           return currentFloorData;
         }
+        
         let inspectionChangedOverall = false;
-        const newCategories = currentFloorData.categories.map(cat => {
+        let autoCollapsedCategoryId: string | null = null;
+
+        const intermediateCategories = currentFloorData.categories.map(cat => {
           if (cat.id !== categoryId) {
             return cat;
           }
+          
           let updatedCatData = { ...cat };
           let categoryStructurallyChanged = false; 
+          const explicitExpansionChange = update.field === 'isExpanded';
 
           switch (update.field) {
             case 'isExpanded':
               if (updatedCatData.isExpanded !== update.value) {
                 updatedCatData.isExpanded = update.value;
-                // Explicit expansion/collapse should not trigger auto-collapse logic
-                // So, we don't set categoryStructurallyChanged = true here IF it's the only change.
-                // But we do want to mark the overall inspection as changed for autosave.
                 inspectionChangedOverall = true; 
               }
               break;
@@ -306,7 +308,6 @@ export default function FireCheckPage() {
               break;
             case 'removeSubItem':
               if (cat.subItems && update.subItemId) {
-                // No window.confirm needed here anymore
                 updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
                 categoryStructurallyChanged = true;
                 setTimeout(() => {
@@ -317,15 +318,25 @@ export default function FireCheckPage() {
             default: break;
           }
           
-          // Auto-collapse logic: only apply if the update was not an explicit 'isExpanded' change
-          // and if the category structure actually changed (e.g. a subitem status update)
-          if (update.field !== 'isExpanded' && categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
-            const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
-            if (relevantSubItems.length > 0) {
-                const allRelevantSubItemsCompleted = relevantSubItems.every(sub => sub.status !== undefined);
-                if (allRelevantSubItemsCompleted) {
-                    updatedCatData.isExpanded = false; 
+          if (!explicitExpansionChange && categoryStructurallyChanged) {
+            let shouldAutoCollapse = false;
+            if (updatedCatData.type === 'standard' && updatedCatData.subItems) {
+              const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
+              if (relevantSubItems.length > 0) {
+                  const allRelevantSubItemsCompleted = relevantSubItems.every(sub => sub.status !== undefined);
+                  if (allRelevantSubItemsCompleted) {
+                      shouldAutoCollapse = true;
+                  }
+              }
+            } else if (updatedCatData.type === 'special' || updatedCatData.type === 'pressure') {
+                if (updatedCatData.status !== undefined) {
+                    shouldAutoCollapse = true;
                 }
+            }
+
+            if (shouldAutoCollapse && cat.isExpanded) { // Only auto-collapse if it was expanded
+                updatedCatData.isExpanded = false;
+                autoCollapsedCategoryId = cat.id; 
             }
           }
 
@@ -336,8 +347,22 @@ export default function FireCheckPage() {
           return updatedCatData;
         });
 
+        let finalCategories = intermediateCategories;
+        if (autoCollapsedCategoryId) {
+          const collapsedCategoryIndex = intermediateCategories.findIndex(c => c.id === autoCollapsedCategoryId);
+          if (collapsedCategoryIndex !== -1 && collapsedCategoryIndex + 1 < intermediateCategories.length) {
+            finalCategories = intermediateCategories.map((cat, idx) => {
+              if (idx === collapsedCategoryIndex + 1) {
+                return { ...cat, isExpanded: true };
+              }
+              return cat;
+            });
+            inspectionChangedOverall = true; 
+          }
+        }
+        
         if (inspectionChangedOverall) {
-          return { ...currentFloorData, categories: newCategories };
+          return { ...currentFloorData, categories: finalCategories };
         }
         return currentFloorData;
       });
@@ -380,24 +405,26 @@ export default function FireCheckPage() {
   
           if (lastFloorCat.type === 'standard' && lastFloorCat.subItems) {
             newCatState.subItems = JSON.parse(JSON.stringify(lastFloorCat.subItems)).map((subItem: SubItemState) => {
-              // Copy the subItem structure from the last floor, including registeredExtinguishers and registeredHoses.
-              // Then, reset only the non-registry specific fields.
               const copiedSubItem = { ...subItem }; 
               
-              // Reset general status and observation for all subitems (registry and non-registry)
               copiedSubItem.status = undefined;
               copiedSubItem.observation = '';
               copiedSubItem.showObservation = false;
               
-              // registeredExtinguishers and registeredHoses are preserved by the ...subItem spread if they existed on the previous floor.
-              // If they didn't exist (e.g., for non-registry items), they won't be added here.
+              // For registry items, keep the registered items if they exist
+              if (subItem.isRegistry) {
+                if (subItem.id === 'extintor_cadastro') {
+                   copiedSubItem.registeredExtinguishers = subItem.registeredExtinguishers ? JSON.parse(JSON.stringify(subItem.registeredExtinguishers)) : [];
+                } else if (subItem.id === 'hidrantes_cadastro_mangueiras') {
+                   copiedSubItem.registeredHoses = subItem.registeredHoses ? JSON.parse(JSON.stringify(subItem.registeredHoses)) : [];
+                }
+              }
               return copiedSubItem;
             });
           }
           return newCatState;
         });
       } else {
-        // No previous floor, use deep copy of INITIAL_INSPECTION_DATA.categories
         newFloorCategories = JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories));
       }
   
@@ -412,7 +439,7 @@ export default function FireCheckPage() {
   
     toast({
       title: "Novo Andar Adicionado",
-      description: "Estrutura, ordem e itens cadastrados (extintores/mangueiras) foram copiados do andar anterior. Outros itens foram reiniciados.",
+      description: "Estrutura, ordem, itens cadastrados (extintores/mangueiras) e subitens personalizados foram copiados do andar anterior. Outros itens foram reiniciados.",
     });
   }, [toast]);
 
@@ -421,7 +448,6 @@ export default function FireCheckPage() {
       toast({ title: "Ação Inválida", description: "Deve haver pelo menos um andar.", variant: "destructive" });
       return;
     }
-    // No window.confirm needed here anymore
     setActiveFloorsData(prev => prev.filter((_, index) => index !== floorIndex));
     toast({ title: "Andar Removido", description: "O formulário do andar foi removido.", variant: "default" });
   }, [activeFloorsData.length, toast]);
@@ -559,7 +585,6 @@ export default function FireCheckPage() {
   };
 
   const handleDeleteInspection = useCallback((fullInspectionId: string) => {
-    // No window.confirm needed here anymore
     setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
     toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
 
@@ -570,7 +595,6 @@ export default function FireCheckPage() {
 
   const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
     console.log('Attempting to delete inspection IDs:', inspectionIds);
-    // No window.confirm needed here anymore
     setSavedInspections(prev => {
       const filteredList = prev.filter(insp => !inspectionIds.includes(insp.id));
       const newList = [...filteredList]; 
@@ -659,7 +683,6 @@ export default function FireCheckPage() {
   }, []);
 
   const handleRemoveCategoryFromFloor = useCallback((floorIndex: number, categoryId: string) => {
-    // No window.confirm needed here anymore
     setActiveFloorsData(prevFloors =>
       prevFloors.map((floor, fIndex) => {
         if (fIndex !== floorIndex) {
