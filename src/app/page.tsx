@@ -296,7 +296,9 @@ export default function FireCheckPage() {
                 };
                 updatedCatData.subItems = [...(updatedCatData.subItems || []), newSubItem];
                 categoryStructurallyChanged = true;
-                toast({ title: "Subitem Adicionado", description: `Subitem "${newSubItem.name}" adicionado.`});
+                setTimeout(() => {
+                  toast({ title: "Subitem Adicionado", description: `Subitem "${newSubItem.name}" adicionado.`});
+                }, 0);
               }
               break;
             case 'removeSubItem':
@@ -304,13 +306,16 @@ export default function FireCheckPage() {
                  if (window.confirm('Tem certeza que deseja remover este subitem?')) {
                     updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
                     categoryStructurallyChanged = true;
-                    toast({ title: "Subitem Removido", variant: "destructive" });
+                    setTimeout(() => {
+                      toast({ title: "Subitem Removido", variant: "destructive" });
+                    }, 0);
                  }
               }
               break;
             default: break;
           }
           
+          // Auto-collapse logic: only apply if the update was not an explicit 'isExpanded' change
           if (update.field !== 'isExpanded' && categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
             const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
             if (relevantSubItems.length > 0) {
@@ -361,32 +366,26 @@ export default function FireCheckPage() {
         const lastFloor = prevFloors[prevFloors.length - 1];
         newFloorCategories = lastFloor.categories.map(lastFloorCat => {
           const newCatState: InspectionCategoryState = {
-            ...lastFloorCat, // Copy category structure (id, title, type, isExpanded)
-            isExpanded: false, // Always start new floor categories collapsed
-            status: undefined, // Reset status for special/pressure
-            observation: '',   // Reset observation
-            showObservation: false, // Reset showObservation
-            pressureValue: '', // Reset pressure specifics
+            ...lastFloorCat, 
+            isExpanded: false, 
+            status: undefined, 
+            observation: '',  
+            showObservation: false, 
+            pressureValue: '', 
             pressureUnit: '',
           };
   
           if (lastFloorCat.type === 'standard' && lastFloorCat.subItems) {
-            newCatState.subItems = lastFloorCat.subItems.map(lastFloorSubItem => {
-              const newSubItem: SubItemState = {
-                ...lastFloorSubItem, // Copy subitem structure (id, name, isRegistry)
-                status: undefined,
-                observation: '',
-                showObservation: false,
-              };
-              if (lastFloorSubItem.isRegistry) {
-                if (lastFloorSubItem.id === 'extintor_cadastro') {
-                  newSubItem.registeredExtinguishers = [];
-                } else if (lastFloorSubItem.id === 'hidrantes_cadastro_mangueiras') {
-                  newSubItem.registeredHoses = [];
-                }
-              }
-              return newSubItem;
-            });
+            // Deep copy subItems structure from the last floor
+            newCatState.subItems = JSON.parse(JSON.stringify(lastFloorCat.subItems)).map((subItem: SubItemState) => ({
+              ...subItem, // This includes custom-added or pre-removed subitems
+              status: undefined,
+              observation: '',
+              showObservation: false,
+              // Reset registry arrays for the new floor
+              ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
+              ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
+            }));
           }
           return newCatState;
         });
@@ -397,7 +396,7 @@ export default function FireCheckPage() {
   
       const newFloorEntry: InspectionData = {
         id: newFloorId,
-        floor: '', // New floor name is empty initially
+        floor: '', 
         categories: newFloorCategories,
       };
   
