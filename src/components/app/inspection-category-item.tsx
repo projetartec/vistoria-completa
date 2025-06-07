@@ -1,7 +1,8 @@
 
 import * as React from 'react';
 import { useCallback, useState, useMemo } from 'react';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import { Accordion, AccordionContent } from '@/components/ui/accordion'; // Keep Accordion wrapper and AccordionContent
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -298,19 +299,26 @@ const InspectionCategoryItemComponent = ({
       onValueChange={handleAccordionValueChange}
       className="mb-4 bg-card shadow-md rounded-lg group/item"
     >
-      <AccordionItem value={category.id} className="border-b-0">
-        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-          <div className="flex items-center flex-1 mr-2"> {/* Status Icon & Title */}
-            {overallStatus === 'all-items-selected' ? (
-              <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
-            ) : (
-              <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
+      <AccordionPrimitive.Item value={category.id} className="border-b-0">
+        <AccordionPrimitive.Header className="flex items-center justify-between px-4 py-3 group/item">
+          <AccordionPrimitive.Trigger
+            className={cn(
+              "flex flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none",
+              "[&[data-state=open]>svg]:rotate-180" // Handles chevron rotation
             )}
-            <h3 className="text-lg font-semibold font-headline text-left flex-1">{category.title}</h3>
-          </div>
+          >
+            <div className="flex items-center flex-1 mr-2"> {/* Status Icon & Title */}
+              {overallStatus === 'all-items-selected' ? (
+                <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
+              )}
+              <h3 className="text-lg font-semibold font-headline">{category.title}</h3>
+            </div>
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+          </AccordionPrimitive.Trigger>
 
-          {/* Reorder buttons container */}
-          <div className="flex flex-col items-center justify-center opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 mx-1">
+          <div className="flex flex-col items-center justify-center opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2">
             <Button
               variant="ghost"
               size="icon"
@@ -332,8 +340,8 @@ const InspectionCategoryItemComponent = ({
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
-          {/* Default accordion chevron is rendered by AccordionTrigger itself */}
-        </AccordionTrigger>
+        </AccordionPrimitive.Header>
+        
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && hasNonRegistrySubItems && (
             <div className="mb-3 mt-1 flex justify-start">
@@ -540,7 +548,7 @@ const InspectionCategoryItemComponent = ({
             </div>
           )}
         </AccordionContent>
-      </AccordionItem>
+      </AccordionPrimitive.Item>
     </Accordion>
   );
 };
