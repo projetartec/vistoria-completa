@@ -169,6 +169,9 @@ export default function FireCheckPage() {
             case 'isExpanded':
               if (updatedCatData.isExpanded !== update.value) {
                 updatedCatData.isExpanded = update.value;
+                // Explicit expansion/collapse should not trigger auto-collapse logic
+                // So, we don't set categoryStructurallyChanged = true here IF it's the only change.
+                // But we do want to mark the overall inspection as changed for autosave.
                 inspectionChangedOverall = true; 
               }
               break;
@@ -296,17 +299,18 @@ export default function FireCheckPage() {
                 };
                 updatedCatData.subItems = [...(updatedCatData.subItems || []), newSubItem];
                 categoryStructurallyChanged = true;
-                setTimeout(() => {
-                  toast({ title: "Subitem Adicionado", description: `Subitem "${newSubItem.name}" adicionado.`});
+                 setTimeout(() => {
+                    toast({ title: "Subitem Adicionado", description: `Subitem "${newSubItem.name}" adicionado.`});
                 }, 0);
               }
               break;
             case 'removeSubItem':
               if (cat.subItems && update.subItemId) {
+                // No window.confirm needed here anymore
                 updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
                 categoryStructurallyChanged = true;
                 setTimeout(() => {
-                  toast({ title: "Subitem Removido", variant: "destructive" });
+                    toast({ title: "Subitem Removido", variant: "destructive" });
                 }, 0);
               }
               break;
@@ -314,6 +318,7 @@ export default function FireCheckPage() {
           }
           
           // Auto-collapse logic: only apply if the update was not an explicit 'isExpanded' change
+          // and if the category structure actually changed (e.g. a subitem status update)
           if (update.field !== 'isExpanded' && categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
             const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
             if (relevantSubItems.length > 0) {
@@ -374,16 +379,20 @@ export default function FireCheckPage() {
           };
   
           if (lastFloorCat.type === 'standard' && lastFloorCat.subItems) {
-            // Deep copy subItems structure from the last floor
-            newCatState.subItems = JSON.parse(JSON.stringify(lastFloorCat.subItems)).map((subItem: SubItemState) => ({
-              ...subItem, // This includes custom-added or pre-removed subitems
-              status: undefined,
-              observation: '',
-              showObservation: false,
-              // Reset registry arrays for the new floor
-              ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
-              ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
-            }));
+            newCatState.subItems = JSON.parse(JSON.stringify(lastFloorCat.subItems)).map((subItem: SubItemState) => {
+              // Copy the subItem structure from the last floor, including registeredExtinguishers and registeredHoses.
+              // Then, reset only the non-registry specific fields.
+              const copiedSubItem = { ...subItem }; 
+              
+              // Reset general status and observation for all subitems (registry and non-registry)
+              copiedSubItem.status = undefined;
+              copiedSubItem.observation = '';
+              copiedSubItem.showObservation = false;
+              
+              // registeredExtinguishers and registeredHoses are preserved by the ...subItem spread if they existed on the previous floor.
+              // If they didn't exist (e.g., for non-registry items), they won't be added here.
+              return copiedSubItem;
+            });
           }
           return newCatState;
         });
@@ -403,7 +412,7 @@ export default function FireCheckPage() {
   
     toast({
       title: "Novo Andar Adicionado",
-      description: "Um novo formulário de andar foi adicionado. A estrutura (categorias, subitens e sua ordem) foi copiada do andar anterior, se existente. Todos os itens foram reiniciados.",
+      description: "Estrutura, ordem e itens cadastrados (extintores/mangueiras) foram copiados do andar anterior. Outros itens foram reiniciados.",
     });
   }, [toast]);
 
@@ -412,6 +421,7 @@ export default function FireCheckPage() {
       toast({ title: "Ação Inválida", description: "Deve haver pelo menos um andar.", variant: "destructive" });
       return;
     }
+    // No window.confirm needed here anymore
     setActiveFloorsData(prev => prev.filter((_, index) => index !== floorIndex));
     toast({ title: "Andar Removido", description: "O formulário do andar foi removido.", variant: "default" });
   }, [activeFloorsData.length, toast]);
@@ -549,18 +559,18 @@ export default function FireCheckPage() {
   };
 
   const handleDeleteInspection = useCallback((fullInspectionId: string) => {
-    if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja excluir esta vistoria salva? Esta ação não pode ser desfeita.')) {
-      setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
-      toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
+    // No window.confirm needed here anymore
+    setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
+    toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
 
-      if (clientInfo.inspectionNumber === fullInspectionId) {
-        resetInspectionForm();
-      }
+    if (clientInfo.inspectionNumber === fullInspectionId) {
+      resetInspectionForm();
     }
   }, [setSavedInspections, toast, clientInfo.inspectionNumber, resetInspectionForm]);
 
   const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
     console.log('Attempting to delete inspection IDs:', inspectionIds);
+    // No window.confirm needed here anymore
     setSavedInspections(prev => {
       const filteredList = prev.filter(insp => !inspectionIds.includes(insp.id));
       const newList = [...filteredList]; 
@@ -649,6 +659,7 @@ export default function FireCheckPage() {
   }, []);
 
   const handleRemoveCategoryFromFloor = useCallback((floorIndex: number, categoryId: string) => {
+    // No window.confirm needed here anymore
     setActiveFloorsData(prevFloors =>
       prevFloors.map((floor, fIndex) => {
         if (fIndex !== floorIndex) {
@@ -785,3 +796,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
