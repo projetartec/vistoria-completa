@@ -303,13 +303,11 @@ export default function FireCheckPage() {
               break;
             case 'removeSubItem':
               if (cat.subItems && update.subItemId) {
-                 if (window.confirm('Tem certeza que deseja remover este subitem?')) {
-                    updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
-                    categoryStructurallyChanged = true;
-                    setTimeout(() => {
-                      toast({ title: "Subitem Removido", variant: "destructive" });
-                    }, 0);
-                 }
+                updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
+                categoryStructurallyChanged = true;
+                setTimeout(() => {
+                  toast({ title: "Subitem Removido", variant: "destructive" });
+                }, 0);
               }
               break;
             default: break;
@@ -414,10 +412,8 @@ export default function FireCheckPage() {
       toast({ title: "Ação Inválida", description: "Deve haver pelo menos um andar.", variant: "destructive" });
       return;
     }
-    if (typeof window !== 'undefined' && window.confirm(`Tem certeza que deseja remover este formulário de andar? As informações não salvas serão perdidas.`)) {
-      setActiveFloorsData(prev => prev.filter((_, index) => index !== floorIndex));
-      toast({ title: "Andar Removido", description: "O formulário do andar foi removido.", variant: "default" });
-    }
+    setActiveFloorsData(prev => prev.filter((_, index) => index !== floorIndex));
+    toast({ title: "Andar Removido", description: "O formulário do andar foi removido.", variant: "default" });
   }, [activeFloorsData.length, toast]);
 
 
@@ -653,20 +649,18 @@ export default function FireCheckPage() {
   }, []);
 
   const handleRemoveCategoryFromFloor = useCallback((floorIndex: number, categoryId: string) => {
-    if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja remover esta categoria deste andar? Esta ação não pode ser desfeita para este andar.')) {
-      setActiveFloorsData(prevFloors =>
-        prevFloors.map((floor, fIndex) => {
-          if (fIndex !== floorIndex) {
-            return floor;
-          }
-          return {
-            ...floor,
-            categories: floor.categories.filter(cat => cat.id !== categoryId),
-          };
-        })
-      );
-      toast({ title: "Categoria Removida", description: "A categoria foi removida deste andar.", variant: "default" });
-    }
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map((floor, fIndex) => {
+        if (fIndex !== floorIndex) {
+          return floor;
+        }
+        return {
+          ...floor,
+          categories: floor.categories.filter(cat => cat.id !== categoryId),
+        };
+      })
+    );
+    toast({ title: "Categoria Removida", description: "A categoria foi removida deste andar.", variant: "default" });
   }, [toast]);
 
 
