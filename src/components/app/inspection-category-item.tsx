@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,9 @@ interface InspectionCategoryItemProps {
   onCategoryItemUpdate: (floorIndex: number, categoryId: string, update: CategoryUpdatePayload) => void;
   overallStatus: CategoryOverallStatus;
   floorIndex: number;
+  onMoveCategoryItem: (floorIndex: number, categoryId: string, direction: 'up' | 'down') => void;
+  categoryIndex: number;
+  totalCategoriesInFloor: number;
 }
 
 const ExtinguisherRegistrySubItem: React.FC<{
@@ -230,7 +233,15 @@ const HoseRegistrySubItem: React.FC<{
 const MemoizedHoseRegistrySubItem = React.memo(HoseRegistrySubItem);
 
 
-const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overallStatus, floorIndex }: InspectionCategoryItemProps) => {
+const InspectionCategoryItemComponent = ({ 
+  category, 
+  onCategoryItemUpdate, 
+  overallStatus, 
+  floorIndex,
+  onMoveCategoryItem,
+  categoryIndex,
+  totalCategoriesInFloor 
+}: InspectionCategoryItemProps) => {
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
@@ -285,11 +296,11 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
       collapsible
       value={category.isExpanded ? category.id : ""}
       onValueChange={handleAccordionValueChange}
-      className="mb-4 bg-card shadow-md rounded-lg"
+      className="mb-4 bg-card shadow-md rounded-lg group/item"
     >
       <AccordionItem value={category.id} className="border-b-0">
         <AccordionTrigger className="px-4 py-3 hover:no-underline">
-          <div className="flex items-center flex-1">
+          <div className="flex items-center flex-1 mr-2"> {/* Status Icon & Title */}
             {overallStatus === 'all-items-selected' ? (
               <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
             ) : (
@@ -297,6 +308,31 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
             )}
             <h3 className="text-lg font-semibold font-headline text-left flex-1">{category.title}</h3>
           </div>
+
+          {/* Reorder buttons container */}
+          <div className="flex flex-col items-center justify-center opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 mx-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'up'); }}
+              disabled={categoryIndex === 0}
+              className="h-6 w-6 p-0"
+              title="Mover Categoria Para Cima"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'down'); }}
+              disabled={categoryIndex >= totalCategoriesInFloor - 1}
+              className="h-6 w-6 p-0"
+              title="Mover Categoria Para Baixo"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+          {/* Default accordion chevron is rendered by AccordionTrigger itself */}
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && hasNonRegistrySubItems && (
@@ -510,3 +546,4 @@ const InspectionCategoryItemComponent = ({ category, onCategoryItemUpdate, overa
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
+

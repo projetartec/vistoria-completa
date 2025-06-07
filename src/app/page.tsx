@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose } from '@/lib/types';
-import { INITIAL_INSPECTION_DATA } from '@/constants/inspection.config';
+import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff } from 'lucide-react';
@@ -26,9 +26,9 @@ const createNewFloorEntry = (): InspectionData => {
 
   return {
     id: newId,
-    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)),
+    ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Deep copy
     floor: '',
-    categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)),
+    categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)), // Deep copy
   };
 };
 
@@ -163,12 +163,14 @@ export default function FireCheckPage() {
             return cat;
           }
           let updatedCatData = { ...cat };
-          let categoryStructurallyChanged = false; // Tracks changes other than isExpanded
+          let categoryStructurallyChanged = false; 
 
           switch (update.field) {
             case 'isExpanded':
-              updatedCatData.isExpanded = update.value;
-              // This change is handled separately for overall state, doesn't trigger auto-collapse
+              if (updatedCatData.isExpanded !== update.value) { // Only mark as changed if value actually changes
+                updatedCatData.isExpanded = update.value;
+                inspectionChangedOverall = true; // Explicit open/close should be considered a change
+              }
               break;
             case 'status':
               if (updatedCatData.status !== update.value) {
@@ -285,7 +287,6 @@ export default function FireCheckPage() {
             default: break;
           }
           
-          // Auto-collapse logic: only if the update was NOT for 'isExpanded' AND there was a structural change
           if (update.field !== 'isExpanded' && categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
             const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
             if (relevantSubItems.length > 0) {
@@ -296,14 +297,14 @@ export default function FireCheckPage() {
             }
           }
 
-          // Determine if overall inspection data has changed for this floor
-          if (categoryStructurallyChanged || (update.field === 'isExpanded' && cat.isExpanded !== updatedCatData.isExpanded)) {
+          if (categoryStructurallyChanged) { // isExpanded changes are handled by its own logic above.
             inspectionChangedOverall = true;
           }
           
           return updatedCatData;
         });
 
+        // If inspectionChangedOverall is true, it means some structural data changed or isExpanded state explicitly changed.
         if (inspectionChangedOverall) {
           return { ...currentFloorData, categories: newCategories };
         }
@@ -329,10 +330,66 @@ export default function FireCheckPage() {
   }, [toast]);
 
   const handleNewFloorInspection = useCallback(() => {
-    setActiveFloorsData(prev => [...prev, createNewFloorEntry()]);
+    setActiveFloorsData(prevFloors => {
+      const newFloorId = `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Create a deep-copied map of initial category states for resetting
+      const initialCategoriesMap = new Map(
+        INITIAL_INSPECTION_DATA.categories.map(cat => [cat.id, JSON.parse(JSON.stringify(cat))])
+      );
+  
+      let orderedCategoriesForNewFloor: InspectionCategoryState[];
+  
+      if (prevFloors.length > 0) {
+        const lastFloor = prevFloors[prevFloors.length - 1];
+        orderedCategoriesForNewFloor = lastFloor.categories.map(lastFloorCategory => {
+          const initialCategoryState = initialCategoriesMap.get(lastFloorCategory.id);
+          if (initialCategoryState) {
+            // Use the reset state but ensure ID and Title match the ordered category from the last floor
+            return { ...initialCategoryState, id: lastFloorCategory.id, title: lastFloorCategory.title };
+          }
+          // Fallback: Should ideally not be reached if all categories are in INITIAL_INSPECTION_DATA
+          // This attempts to find a default based on INSPECTION_CONFIG if not in map
+          const config = INSPECTION_CONFIG.find(c => c.id === lastFloorCategory.id);
+          if (config) {
+            return {
+              id: config.id,
+              title: config.title,
+              type: config.type,
+              isExpanded: false,
+              ...(config.type === 'standard' && {
+                subItems: config.subItems!.map(subItem => ({
+                  id: subItem.id,
+                  name: subItem.name,
+                  status: undefined, observation: '', showObservation: false, isRegistry: subItem.isRegistry || false,
+                  ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
+                  ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
+                })),
+              }),
+              ...(config.type === 'special' && { status: undefined, observation: '', showObservation: false }),
+              ...(config.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '' as InspectionCategoryState['pressureUnit'], observation: '', showObservation: false }),
+            };
+          }
+          // Absolute fallback if a category ID is entirely unknown
+          return JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories.find(c => c.id === 'extintor')!));
+        });
+      } else {
+        // No previous floor, use default initial categories (deep copy)
+        orderedCategoriesForNewFloor = JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories));
+      }
+  
+      const newFloorEntry: InspectionData = {
+        id: newFloorId,
+        floor: '',
+        categories: orderedCategoriesForNewFloor,
+      };
+  
+      return [...prevFloors, newFloorEntry];
+    });
+  
     toast({
       title: "Novo Andar Adicionado",
-      description: "Um novo formulário de andar foi adicionado abaixo. Preencha os detalhes.",
+      description: "Um novo formulário de andar foi adicionado. A ordem dos itens foi copiada do andar anterior, se existente.",
     });
   }, [toast]);
 
@@ -551,6 +608,33 @@ export default function FireCheckPage() {
     toast({ title: "Checklist Expandido", description: "Todos os itens do checklist foram expandidos." });
   }, [toast]);
 
+  const handleMoveCategoryItem = useCallback((floorIndex: number, categoryId: string, direction: 'up' | 'down') => {
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map((floor, fIndex) => {
+        if (fIndex !== floorIndex) {
+          return floor;
+        }
+        const categories = [...floor.categories]; // Create a mutable copy
+        const itemIndex = categories.findIndex(cat => cat.id === categoryId);
+  
+        if (itemIndex === -1) return floor; // Category not found, should not happen
+  
+        if (direction === 'up' && itemIndex > 0) {
+          // Swap with previous item
+          const temp = categories[itemIndex];
+          categories[itemIndex] = categories[itemIndex - 1];
+          categories[itemIndex - 1] = temp;
+        } else if (direction === 'down' && itemIndex < categories.length - 1) {
+          // Swap with next item
+          const temp = categories[itemIndex];
+          categories[itemIndex] = categories[itemIndex + 1];
+          categories[itemIndex + 1] = temp;
+        }
+        return { ...floor, categories };
+      })
+    );
+  }, []);
+
 
   if (!isClientInitialized) {
     return (
@@ -624,7 +708,7 @@ export default function FireCheckPage() {
                       )}
                     </div>
                     
-                    {floorData.categories.map(category => {
+                    {floorData.categories.map((category, categoryIndex) => {
                       const overallStatus = getCategoryOverallStatus(category);
                       return (
                         <InspectionCategoryItem
@@ -633,6 +717,9 @@ export default function FireCheckPage() {
                           overallStatus={overallStatus}
                           onCategoryItemUpdate={handleCategoryItemUpdateForFloor}
                           floorIndex={floorIndex}
+                          onMoveCategoryItem={handleMoveCategoryItem}
+                          categoryIndex={categoryIndex}
+                          totalCategoriesInFloor={floorData.categories.length}
                         />
                       );
                     })}
@@ -669,5 +756,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
