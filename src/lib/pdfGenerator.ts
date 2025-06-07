@@ -2,6 +2,7 @@
 import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState } from './types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { INSPECTION_CONFIG } from '@/constants/inspection.config';
 
 // SVG Icons remain the same
 const checkCircleSvg = `
@@ -49,29 +50,40 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
   // Pre-process data to add flags
+  // And collect unique verified items for the first page
+  const verifiedCategoriesOverall = new Set<string>();
+  const verifiedSubItemsOverall = new Set<string>(); // Stores subItem.id prefixed with category.id
+
   const processedFloorsData = relevantFloorsData.map(floor => ({
     ...floor,
     categories: floor.categories.map(category => {
-      let hasVerifiedItems = false;
-      let hasNonConformingItems = false; // Changed from hasNonConformingOrNAItems
+      let hasVerifiedItemsFloor = false;
+      let hasNonConformingOrNAItemsFloor = false;
 
       if (category.type === 'standard' && category.subItems) {
         const processedSubItems = category.subItems.map(subItem => {
           const isVerified = subItem.status !== undefined && !subItem.isRegistry;
-          if (isVerified) hasVerifiedItems = true;
-          if (isVerified && subItem.status === 'N/C') { // Only N/C
-            hasNonConformingItems = true;
+          if (isVerified) {
+            hasVerifiedItemsFloor = true;
+            verifiedCategoriesOverall.add(category.id);
+            verifiedSubItemsOverall.add(`${category.id}_${subItem.id}`);
+          }
+          if (isVerified && (subItem.status === 'N/C' || subItem.status === 'N/A')) {
+            hasNonConformingOrNAItemsFloor = true;
           }
           return { ...subItem, isVerified };
         });
-        return { ...category, subItems: processedSubItems, hasVerifiedItems, hasNonConformingItems };
+        return { ...category, subItems: processedSubItems, hasVerifiedItemsFloor, hasNonConformingOrNAItemsFloor };
       } else if (category.type === 'special' || category.type === 'pressure') {
-        if (category.status !== undefined) hasVerifiedItems = true;
-        if (category.status === 'N/C') { // Only N/C
-          hasNonConformingItems = true;
+        if (category.status !== undefined) {
+          hasVerifiedItemsFloor = true;
+          verifiedCategoriesOverall.add(category.id);
+        }
+        if (category.status === 'N/C' || category.status === 'N/A') {
+          hasNonConformingOrNAItemsFloor = true;
         }
       }
-      return { ...category, hasVerifiedItems, hasNonConformingItems };
+      return { ...category, hasVerifiedItemsFloor, hasNonConformingOrNAItemsFloor };
     })
   }));
 
@@ -102,12 +114,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           .pdf-section-title { font-size: 16pt; font-weight: 700; color: #1F2937; margin-top: 25px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #2563EB; }
           
-          .pdf-verified-summary-floor { margin-bottom: 20px; page-break-inside: avoid; }
-          .pdf-verified-summary-floor h4 { font-size: 13pt; font-weight: 600; color: #374151; margin-top: 0; margin-bottom: 10px; }
-          .pdf-verified-summary-category { margin-bottom: 8px; margin-left: 15px; }
-          .pdf-verified-summary-category-title { font-size: 11pt; font-weight: 600; color: #111827; margin-bottom: 4px; }
-          .pdf-verified-summary-category ul { list-style: disc; margin-left: 20px; padding-left: 0; margin-top: 0; margin-bottom: 5px; }
-          .pdf-verified-summary-category li { font-size: 10pt; color: #4B5563; margin-bottom: 2px; }
+          .pdf-verified-summary-overall { margin-bottom: 20px; page-break-inside: avoid; }
+          .pdf-verified-summary-overall h4 { font-size: 13pt; font-weight: 600; color: #374151; margin-top: 0; margin-bottom: 10px; }
+          .pdf-verified-summary-category-overall { margin-bottom: 8px; }
+          .pdf-verified-summary-category-title-overall { font-size: 11pt; font-weight: 600; color: #111827; margin-bottom: 4px; }
+          .pdf-verified-summary-overall ul { list-style: disc; margin-left: 20px; padding-left: 0; margin-top: 0; margin-bottom: 5px; }
+          .pdf-verified-summary-overall li { font-size: 10pt; color: #4B5563; margin-bottom: 2px; }
+
 
           .page-break-before { page-break-before: always; }
 
@@ -135,7 +148,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           @media print {
             html, body { height: auto; background-color: #FFFFFF !important; margin: 0 !important; padding: 10mm 8mm !important; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; font-size: 10pt; }
             .pdf-container { width: 100%; box-shadow: none !important; padding: 0 !important; border: none !important; margin: 0 !important; }
-            .pdf-header-main, .pdf-client-info, .pdf-verified-summary-floor { page-break-after: avoid; }
+            .pdf-header-main, .pdf-client-info, .pdf-verified-summary-overall { page-break-after: avoid; }
             .pdf-section-title { page-break-after: avoid; }
             .pdf-footer { page-break-before: auto; page-break-inside: avoid; }
             .pdf-floor-section { page-break-inside: avoid; page-break-before: auto; }
@@ -147,9 +160,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             .pdf-client-info .pdf-subtitle { color: #6B7280 !important; }
             .pdf-client-info-grid strong { color: #111827 !important; }
             .pdf-section-title, .pdf-floor-title { color: #1F2937 !important; border-bottom-color: #2563EB !important; }
-            .pdf-verified-summary-floor h4 { color: #374151 !important; }
-            .pdf-verified-summary-category-title { color: #111827 !important; }
-            .pdf-verified-summary-category li { color: #4B5563 !important; }
+            .pdf-verified-summary-overall h4 { color: #374151 !important; }
+            .pdf-verified-summary-category-title-overall { color: #111827 !important; }
+            .pdf-verified-summary-overall li { color: #4B5563 !important; }
             .pdf-category-title-text { color: #111827 !important; }
             .pdf-subitem-name { color: #1F2937 !important; }
             .pdf-observation { color: #4B5563 !important; border-left: 3px solid #9CA3AF !important; background-color: #F9FAFB !important; }
@@ -194,49 +207,46 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             </div>
           </section>
 
-          <!-- Seção 1: Resumo de Itens Verificados -->
-          <section class="pdf-verified-summary">
-            <h3 class="pdf-section-title">Resumo de Itens Verificados</h3>`;
-  
-  processedFloorsData.forEach(floor => {
-    if (floor.categories.some(cat => cat.hasVerifiedItems)) {
-      pdfHtml += `<div class="pdf-verified-summary-floor">
-                    <h4>Andar: ${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h4>`;
-      floor.categories.forEach(category => {
-        if (category.hasVerifiedItems) {
-          pdfHtml += `<div class="pdf-verified-summary-category">
-                        <p class="pdf-verified-summary-category-title">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
-          if (category.type === 'standard' && category.subItems && category.subItems.some(si => si.isVerified)) {
-            pdfHtml += `<ul>`;
-            category.subItems.forEach(subItem => {
-              if (subItem.isVerified && !subItem.isRegistry) { 
-                pdfHtml += `<li>${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
-              }
-            });
-            pdfHtml += `</ul>`;
-          } else if ((category.type === 'special' || category.type === 'pressure') && category.status !== undefined) {
-            // For special/pressure, the category title itself indicates verification if it has a status.
-          }
-          pdfHtml += `</div>`;
+          <!-- Seção 1: Resumo de Itens Verificados (Geral) -->
+          <section class="pdf-verified-summary-overall">
+            <h3 class="pdf-section-title">Itens e Subitens Verificados na Vistoria (Geral)</h3>`;
+            
+  // Use INSPECTION_CONFIG to maintain the original order of categories
+  INSPECTION_CONFIG.forEach(configCategory => {
+    if (verifiedCategoriesOverall.has(configCategory.id)) {
+      pdfHtml += `<div class="pdf-verified-summary-category-overall">
+                    <p class="pdf-verified-summary-category-title-overall">${configCategory.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+      if (configCategory.type === 'standard' && configCategory.subItems) {
+        const verifiedSubItemsForThisCategory = configCategory.subItems.filter(subItemConfig => 
+          !subItemConfig.isRegistry && verifiedSubItemsOverall.has(`${configCategory.id}_${subItemConfig.id}`)
+        );
+        if (verifiedSubItemsForThisCategory.length > 0) {
+          pdfHtml += `<ul>`;
+          verifiedSubItemsForThisCategory.forEach(subItemConfig => {
+            pdfHtml += `<li>${subItemConfig.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
+          });
+          pdfHtml += `</ul>`;
         }
-      });
+      }
+      // For 'special' or 'pressure' types, just listing the category title is enough if it was verified.
       pdfHtml += `</div>`;
     }
   });
+
   pdfHtml += `</section>
 
             <div class="page-break-before"></div>
 
-            <!-- Seção 2: Detalhes de Itens Não Conformes (N/C) -->
+            <!-- Seção 2: Detalhes de Itens Não Conformes (N/C) e Não Aplicáveis (N/A) -->
             <section class="pdf-non-compliant-details">
-              <h3 class="pdf-section-title">Detalhes de Itens Não Conformes (N/C)</h3>`;
+              <h3 class="pdf-section-title">Detalhes de Itens Não Conformes (N/C) e Não Aplicáveis (N/A)</h3>`;
 
   processedFloorsData.forEach((floor) => {
-    if (floor.categories.some(cat => cat.hasNonConformingItems)) { // Use the updated flag
+    if (floor.categories.some(cat => cat.hasNonConformingOrNAItemsFloor)) {
       pdfHtml += `<div class="pdf-floor-section">
                     <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
       floor.categories.forEach(category => {
-        if (category.hasNonConformingItems) { // Use the updated flag
+        if (category.hasNonConformingOrNAItemsFloor) {
           pdfHtml += `<article class="pdf-category-card">
                         <header class="pdf-category-header">
                           <span class="pdf-category-title-text">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -245,7 +255,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           
           if (category.type === 'standard' && category.subItems) {
             category.subItems.forEach(subItem => {
-              if (!subItem.isRegistry && subItem.status === 'N/C') { // Only N/C
+              if (!subItem.isRegistry && (subItem.status === 'N/C' || subItem.status === 'N/A')) {
                 pdfHtml += `<div class="pdf-subitem-wrapper">
                               <div class="pdf-subitem">
                                 <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -257,11 +267,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 pdfHtml += `</div>`;
               }
             });
-          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') { // Only N/C
+          } else if ((category.type === 'special' || category.type === 'pressure') && (category.status === 'N/C' || category.status === 'N/A')) {
             const detailsClass = category.type === 'special' ? 'pdf-special-details' : 'pdf-pressure-details';
             pdfHtml += `<div class="${detailsClass}">
                           <p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-            if (category.type === 'pressure' && category.status !== 'N/A') { // Check N/A for pressure details
+            if (category.type === 'pressure' && category.status !== 'N/A') { 
                  pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
             }
             if (category.showObservation && category.observation) {
@@ -305,5 +315,3 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
-
-    
