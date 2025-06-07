@@ -167,9 +167,9 @@ export default function FireCheckPage() {
 
           switch (update.field) {
             case 'isExpanded':
-              if (updatedCatData.isExpanded !== update.value) { // Only mark as changed if value actually changes
+              if (updatedCatData.isExpanded !== update.value) {
                 updatedCatData.isExpanded = update.value;
-                inspectionChangedOverall = true; // Explicit open/close should be considered a change
+                inspectionChangedOverall = true; 
               }
               break;
             case 'status':
@@ -287,6 +287,7 @@ export default function FireCheckPage() {
             default: break;
           }
           
+          // Only auto-collapse if the change was not an explicit 'isExpanded' toggle
           if (update.field !== 'isExpanded' && categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
             const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
             if (relevantSubItems.length > 0) {
@@ -297,14 +298,13 @@ export default function FireCheckPage() {
             }
           }
 
-          if (categoryStructurallyChanged) { // isExpanded changes are handled by its own logic above.
+          if (categoryStructurallyChanged) { 
             inspectionChangedOverall = true;
           }
           
           return updatedCatData;
         });
 
-        // If inspectionChangedOverall is true, it means some structural data changed or isExpanded state explicitly changed.
         if (inspectionChangedOverall) {
           return { ...currentFloorData, categories: newCategories };
         }
@@ -333,7 +333,6 @@ export default function FireCheckPage() {
     setActiveFloorsData(prevFloors => {
       const newFloorId = `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
       
-      // Create a deep-copied map of initial category states for resetting
       const initialCategoriesMap = new Map(
         INITIAL_INSPECTION_DATA.categories.map(cat => [cat.id, JSON.parse(JSON.stringify(cat))])
       );
@@ -342,23 +341,18 @@ export default function FireCheckPage() {
   
       if (prevFloors.length > 0) {
         const lastFloor = prevFloors[prevFloors.length - 1];
+        // Use the current categories from the last floor as the template for order and presence
         orderedCategoriesForNewFloor = lastFloor.categories.map(lastFloorCategory => {
-          const initialCategoryState = initialCategoriesMap.get(lastFloorCategory.id);
-          if (initialCategoryState) {
-            // Use the reset state but ensure ID and Title match the ordered category from the last floor
-            return { ...initialCategoryState, id: lastFloorCategory.id, title: lastFloorCategory.title };
-          }
-          // Fallback: Should ideally not be reached if all categories are in INITIAL_INSPECTION_DATA
-          // This attempts to find a default based on INSPECTION_CONFIG if not in map
-          const config = INSPECTION_CONFIG.find(c => c.id === lastFloorCategory.id);
-          if (config) {
-            return {
-              id: config.id,
-              title: config.title,
-              type: config.type,
-              isExpanded: false,
-              ...(config.type === 'standard' && {
-                subItems: config.subItems!.map(subItem => ({
+          // Find the initial full state for this category ID to reset its content
+          const initialCategoryConfig = INSPECTION_CONFIG.find(c => c.id === lastFloorCategory.id);
+          if (initialCategoryConfig) {
+            return { // Create a fresh, reset category state based on INSPECTION_CONFIG
+              id: initialCategoryConfig.id,
+              title: initialCategoryConfig.title, // Use title from config for consistency
+              type: initialCategoryConfig.type,
+              isExpanded: false, // Always start collapsed
+              ...(initialCategoryConfig.type === 'standard' && {
+                subItems: initialCategoryConfig.subItems!.map(subItem => ({
                   id: subItem.id,
                   name: subItem.name,
                   status: undefined, observation: '', showObservation: false, isRegistry: subItem.isRegistry || false,
@@ -366,13 +360,16 @@ export default function FireCheckPage() {
                   ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
                 })),
               }),
-              ...(config.type === 'special' && { status: undefined, observation: '', showObservation: false }),
-              ...(config.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '' as InspectionCategoryState['pressureUnit'], observation: '', showObservation: false }),
+              ...(initialCategoryConfig.type === 'special' && { status: undefined, observation: '', showObservation: false }),
+              ...(initialCategoryConfig.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '' as InspectionCategoryState['pressureUnit'], observation: '', showObservation: false }),
             };
           }
-          // Absolute fallback if a category ID is entirely unknown
-          return JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories.find(c => c.id === 'extintor')!));
-        });
+          // Fallback: Should ideally not happen if lastFloorCategory.id always matches an INSPECTION_CONFIG id
+          // This could return a generic or error state, or filter it out.
+          // For now, we'll try to find it in the initial map as a less ideal fallback.
+          const initialCategoryState = initialCategoriesMap.get(lastFloorCategory.id);
+          return initialCategoryState ? { ...initialCategoryState, id: lastFloorCategory.id, title: lastFloorCategory.title } : null;
+        }).filter(cat => cat !== null) as InspectionCategoryState[]; // Filter out any nulls if fallback failed
       } else {
         // No previous floor, use default initial categories (deep copy)
         orderedCategoriesForNewFloor = JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories));
@@ -389,7 +386,7 @@ export default function FireCheckPage() {
   
     toast({
       title: "Novo Andar Adicionado",
-      description: "Um novo formulário de andar foi adicionado. A ordem dos itens foi copiada do andar anterior, se existente.",
+      description: "Um novo formulário de andar foi adicionado. As categorias (e sua ordem) foram copiadas do andar anterior, se existente. Todos os itens foram reiniciados.",
     });
   }, [toast]);
 
@@ -614,18 +611,16 @@ export default function FireCheckPage() {
         if (fIndex !== floorIndex) {
           return floor;
         }
-        const categories = [...floor.categories]; // Create a mutable copy
+        const categories = [...floor.categories]; 
         const itemIndex = categories.findIndex(cat => cat.id === categoryId);
   
-        if (itemIndex === -1) return floor; // Category not found, should not happen
+        if (itemIndex === -1) return floor; 
   
         if (direction === 'up' && itemIndex > 0) {
-          // Swap with previous item
           const temp = categories[itemIndex];
           categories[itemIndex] = categories[itemIndex - 1];
           categories[itemIndex - 1] = temp;
         } else if (direction === 'down' && itemIndex < categories.length - 1) {
-          // Swap with next item
           const temp = categories[itemIndex];
           categories[itemIndex] = categories[itemIndex + 1];
           categories[itemIndex + 1] = temp;
@@ -634,6 +629,23 @@ export default function FireCheckPage() {
       })
     );
   }, []);
+
+  const handleRemoveCategoryFromFloor = useCallback((floorIndex: number, categoryId: string) => {
+    if (typeof window !== 'undefined' && window.confirm('Tem certeza que deseja remover esta categoria deste andar? Esta ação não pode ser desfeita para este andar.')) {
+      setActiveFloorsData(prevFloors =>
+        prevFloors.map((floor, fIndex) => {
+          if (fIndex !== floorIndex) {
+            return floor;
+          }
+          return {
+            ...floor,
+            categories: floor.categories.filter(cat => cat.id !== categoryId),
+          };
+        })
+      );
+      toast({ title: "Categoria Removida", description: "A categoria foi removida deste andar.", variant: "default" });
+    }
+  }, [toast]);
 
 
   if (!isClientInitialized) {
@@ -718,6 +730,7 @@ export default function FireCheckPage() {
                           onCategoryItemUpdate={handleCategoryItemUpdateForFloor}
                           floorIndex={floorIndex}
                           onMoveCategoryItem={handleMoveCategoryItem}
+                          onRemoveCategory={handleRemoveCategoryFromFloor}
                           categoryIndex={categoryIndex}
                           totalCategoriesInFloor={floorData.categories.length}
                         />

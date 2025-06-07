@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { useCallback, useState, useMemo } from 'react';
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { Accordion, AccordionContent } from '@/components/ui/accordion'; // Keep Accordion wrapper and AccordionContent
+import { Accordion, AccordionContent } from '@/components/ui/accordion'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,7 @@ interface InspectionCategoryItemProps {
   overallStatus: CategoryOverallStatus;
   floorIndex: number;
   onMoveCategoryItem: (floorIndex: number, categoryId: string, direction: 'up' | 'down') => void;
+  onRemoveCategory: (floorIndex: number, categoryId: string) => void;
   categoryIndex: number;
   totalCategoriesInFloor: number;
 }
@@ -29,7 +30,7 @@ interface InspectionCategoryItemProps {
 const ExtinguisherRegistrySubItem: React.FC<{
   subItem: SubItemState;
   onUpdate: (update: CategoryUpdatePayload) => void;
-}> = ({ subItem, onUpdate }) => {
+}> = React.memo(({ subItem, onUpdate }) => {
   const [quantity, setQuantity] = useState<number | ''>(1);
   const [type, setType] = useState<ExtinguisherTypeOption | ''>('');
   const [weight, setWeight] = useState<ExtinguisherWeightOption | ''>('');
@@ -120,13 +121,14 @@ const ExtinguisherRegistrySubItem: React.FC<{
       </CardContent>
     </Card>
   );
-};
-const MemoizedExtinguisherRegistrySubItem = React.memo(ExtinguisherRegistrySubItem);
+});
+ExtinguisherRegistrySubItem.displayName = 'ExtinguisherRegistrySubItem';
+
 
 const HoseRegistrySubItem: React.FC<{
   subItem: SubItemState;
   onUpdate: (update: CategoryUpdatePayload) => void;
-}> = ({ subItem, onUpdate }) => {
+}> = React.memo(({ subItem, onUpdate }) => {
   const [quantity, setQuantity] = useState<number | ''>(1);
   const [length, setLength] = useState<HoseLengthOption | ''>('');
   const [diameter, setDiameter] = useState<HoseDiameterOption | ''>('');
@@ -230,8 +232,8 @@ const HoseRegistrySubItem: React.FC<{
       </CardContent>
     </Card>
   );
-};
-const MemoizedHoseRegistrySubItem = React.memo(HoseRegistrySubItem);
+});
+HoseRegistrySubItem.displayName = 'HoseRegistrySubItem';
 
 
 const InspectionCategoryItemComponent = ({ 
@@ -240,6 +242,7 @@ const InspectionCategoryItemComponent = ({
   overallStatus, 
   floorIndex,
   onMoveCategoryItem,
+  onRemoveCategory,
   categoryIndex,
   totalCategoriesInFloor 
 }: InspectionCategoryItemProps) => {
@@ -304,10 +307,10 @@ const InspectionCategoryItemComponent = ({
           <AccordionPrimitive.Trigger
             className={cn(
               "flex flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none",
-              "[&[data-state=open]>svg]:rotate-180" // Handles chevron rotation
+              "[&[data-state=open]>svg.accordion-chevron]:rotate-180" 
             )}
           >
-            <div className="flex items-center flex-1 mr-2"> {/* Status Icon & Title */}
+            <div className="flex items-center flex-1 mr-2"> 
               {overallStatus === 'all-items-selected' ? (
                 <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
               ) : (
@@ -315,16 +318,16 @@ const InspectionCategoryItemComponent = ({
               )}
               <h3 className="text-lg font-semibold font-headline">{category.title}</h3>
             </div>
-            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />
           </AccordionPrimitive.Trigger>
 
-          <div className="flex flex-col items-center justify-center opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2">
+          <div className="flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'up'); }}
               disabled={categoryIndex === 0}
-              className="h-6 w-6 p-0"
+              className="h-7 w-7 p-0"
               title="Mover Categoria Para Cima"
             >
               <ChevronUp className="h-4 w-4" />
@@ -334,10 +337,19 @@ const InspectionCategoryItemComponent = ({
               size="icon"
               onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'down'); }}
               disabled={categoryIndex >= totalCategoriesInFloor - 1}
-              className="h-6 w-6 p-0"
+              className="h-7 w-7 p-0"
               title="Mover Categoria Para Baixo"
             >
               <ChevronDown className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); onRemoveCategory(floorIndex, category.id); }}
+              className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+              title="Remover esta categoria do andar"
+            >
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </AccordionPrimitive.Header>
@@ -360,7 +372,7 @@ const InspectionCategoryItemComponent = ({
             if (subItem.isRegistry) {
               if (subItem.id === 'extintor_cadastro') {
                 return (
-                  <MemoizedExtinguisherRegistrySubItem
+                  <ExtinguisherRegistrySubItem
                     key={subItem.id}
                     subItem={subItem}
                     onUpdate={handleSubItemRegistryUpdate}
@@ -368,7 +380,7 @@ const InspectionCategoryItemComponent = ({
                 );
               } else if (subItem.id === 'hidrantes_cadastro_mangueiras') {
                 return (
-                  <MemoizedHoseRegistrySubItem
+                  <HoseRegistrySubItem
                     key={subItem.id}
                     subItem={subItem}
                     onUpdate={handleSubItemRegistryUpdate}
@@ -554,4 +566,3 @@ const InspectionCategoryItemComponent = ({
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
-
