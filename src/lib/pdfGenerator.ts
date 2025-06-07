@@ -1,51 +1,38 @@
 
-import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState, CategoryOverallStatus } from './types';
+import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState } from './types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Replicate logic from page.tsx to determine category overall status for PDF icons
-const getCategoryOverallStatusForPdf = (category: InspectionCategoryState): CategoryOverallStatus => {
-  if (category.type === 'standard' && category.subItems) {
-    const relevantSubItems = category.subItems.filter(subItem => !subItem.isRegistry);
-    if (relevantSubItems.length === 0) {
-      return 'all-items-selected';
-    }
-    const allSelected = relevantSubItems.every(subItem => subItem.status !== undefined);
-    return allSelected ? 'all-items-selected' : 'some-items-pending';
-  } else if (category.type === 'special' || category.type === 'pressure') {
-    // For special/pressure, 'all-items-selected' now also means status is defined (and not N/A for PDF)
-    return category.status !== undefined && category.status !== 'N/A' ? 'all-items-selected' : 'some-items-pending';
-  }
-  return 'some-items-pending';
-};
+// SVG Icons (no longer used for category headers in N/A summary, but kept for potential future use or if detailed report is re-added)
+// const checkCircleSvg = `
+//   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-status-completed">
+//     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+//     <polyline points="22 4 12 14.01 9 11.01"/>
+//   </svg>
+// `;
+
+// const xCircleSvg = `
+//   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-status-incomplete">
+//     <circle cx="12" cy="12" r="10"/>
+//     <line x1="15" y1="9" x2="9" y2="15"/>
+//     <line x1="9" y1="9" x2="15" y2="15"/>
+//   </svg>
+// `;
+
 
 function getStatusLabel(status: StatusOption | undefined): string {
-  if (status === undefined) return 'Pendente';
+  if (status === undefined) return 'Pendente'; // Should not appear in N/A summary ideally
   return status;
 }
 
 function getStatusClass(status: StatusOption | undefined): string {
+  // Only N/A status is expected here for the summary
+  if (status === 'N/A') return 'status-na';
+  // Fallbacks, though not primary for this report type
   if (status === 'OK') return 'status-ok';
   if (status === 'N/C') return 'status-nc';
-  if (status === 'N/A') return 'status-na';
   return 'status-pending';
 }
-
-// SVG Icons
-const checkCircleSvg = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-status-completed">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-    <polyline points="22 4 12 14.01 9 11.01"/>
-  </svg>
-`;
-
-const xCircleSvg = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-status-incomplete">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="15" y1="9" x2="9" y2="15"/>
-    <line x1="9" y1="9" x2="15" y2="15"/>
-  </svg>
-`;
 
 
 export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
@@ -53,25 +40,47 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o PDF.");
     return;
   }
-  if (floorsData.length === 0 || floorsData.every(floor => !floor.floor || floor.floor.trim() === "")) {
+  
+  const relevantFloorsData = floorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
+  if (relevantFloorsData.length === 0) {
     alert("Nenhum andar com nome preenchido para incluir no PDF.");
     return;
   }
 
-  const defaultLogoUrl = '/brazil-extintores-logo.png'; // Fallback if no logo is uploaded
+  // Check if there are any N/A items to report
+  let hasNaItems = false;
+  relevantFloorsData.forEach(floor => {
+    floor.categories.forEach(category => {
+      if (category.type === 'standard' && category.subItems) {
+        if (category.subItems.some(subItem => !subItem.isRegistry && subItem.status === 'N/A')) {
+          hasNaItems = true;
+        }
+      } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/A') {
+        hasNaItems = true;
+      }
+    });
+  });
+
+  if (!hasNaItems) {
+    alert("Nenhum item marcado como 'N/A' para incluir no relatório resumido.");
+    return;
+  }
+
+
+  const defaultLogoUrl = '/brazil-extintores-logo.png';
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
   const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
   let pdfHtml = `
     <html>
       <head>
-        <title>Vistoria Técnica - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+        <title>Relatório Resumido N/A - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap');
           body {
             font-family: 'PT Sans', Arial, sans-serif;
             margin: 0;
-            padding: 20px; /* Default padding for screen view */
+            padding: 20px;
             line-height: 1.6;
             font-size: 10pt; 
             background-color: #FFFFFF;
@@ -179,7 +188,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             border-radius: 8px;
             margin-bottom: 20px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-            page-break-inside: avoid; /* This is important */
+            page-break-inside: avoid;
           }
           .pdf-category-header {
             display: flex;
@@ -190,9 +199,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
           }
-          .pdf-category-header svg { margin-right: 12px; flex-shrink: 0; }
-          .icon-status-completed { stroke: #059669; }
-          .icon-status-incomplete { stroke: #DC2626; }
+          /* Removed SVG icon from header for N/A summary */
           .pdf-category-title-text {
             font-size: 14pt; 
             font-weight: 600;
@@ -206,7 +213,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
              margin-bottom: 10px;
              padding-bottom: 10px;
              border-bottom: 1px dashed #E5E7EB;
-             page-break-inside: avoid; /* Important to keep subitem with its details */
+             page-break-inside: avoid;
           }
           .pdf-subitem-wrapper:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
@@ -233,25 +240,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             width: 100%;
             box-sizing: border-box;
           }
-
-          .pdf-registry-container {
-            margin-top: 8px;
+          
+          .pdf-no-na-items {
+            padding: 10px;
+            text-align: center;
+            color: #6B7280;
+            font-style: italic;
           }
-          .pdf-registry-title {
-            font-weight: bold;
-            margin-top: 12px;
-            margin-bottom: 6px;
-            color: #374151;
-            display: block;
-            font-size: 1.05em;
-          }
-          .pdf-registry-list { list-style: none; padding-left: 0; margin-top: 0; }
-          .pdf-registry-list li {
-            padding: 4px 0;
-            font-size: 0.95em;
-            border-bottom: 1px dotted #EEE;
-          }
-          .pdf-registry-list li:last-child { border-bottom: none; }
 
           .pdf-pressure-details p, .pdf-special-details p {
             margin: 4px 0 8px 0;
@@ -272,13 +267,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           @media print {
             html, body {
-                height: auto; /* Allow content to determine height */
-                background-color: #FFFFFF !important; /* Ensure white background for printing */
-                margin: 0 !important; /* Reset margins for printing */
-                padding: 10mm 8mm !important; /* Standard print margins */
+                height: auto;
+                background-color: #FFFFFF !important;
+                margin: 0 !important;
+                padding: 10mm 8mm !important;
                 print-color-adjust: exact !important;
                 -webkit-print-color-adjust: exact !important;
-                font-size: 10pt; /* Ensure consistent font size */
+                font-size: 10pt;
             }
             .pdf-container {
                 width: 100%;
@@ -288,43 +283,40 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 margin: 0 !important;
             }
             .pdf-header-main, .pdf-client-info {
-                page-break-after: avoid; /* Try to keep these with following content */
+                page-break-after: avoid;
             }
              .pdf-footer {
-                page-break-before: auto; /* Allow break before footer if needed, but prefer it on last page */
+                page-break-before: auto;
                 page-break-inside: avoid;
             }
             .pdf-floor-section {
-                page-break-inside: avoid; /* Try to keep content of a floor together */
-                page-break-before: auto; /* Allow a floor to start on a new page */
+                page-break-inside: avoid; 
+                page-break-before: auto; 
             }
             .pdf-floor-section:first-of-type {
-                page-break-before: avoid; /* Don't break before the very first floor section */
+                page-break-before: avoid; 
             }
             .pdf-category-card {
-                page-break-inside: avoid !important; /* Enforce no break inside category card */
+                page-break-inside: avoid !important; 
                 box-shadow: none !important;
                 border: 1px solid #E5E7EB !important;
             }
             .pdf-subitem-wrapper {
-                page-break-inside: avoid !important; /* Keep subitem with its observation */
+                page-break-inside: avoid !important; 
             }
-            /* Re-apply specific colors for print if they are themed by CSS vars that might not translate */
             .pdf-header-main .company-name { color: #2563EB !important; }
             .pdf-header-main .company-details p { color: #374151 !important; }
             .pdf-client-info .pdf-main-title { color: #2563EB !important; }
             .pdf-client-info .pdf-subtitle { color: #6B7280 !important; }
             .pdf-client-info-grid strong { color: #111827 !important; }
             .pdf-floor-title { color: #1F2937 !important; border-bottom: 3px solid #2563EB !important; }
-            .icon-status-completed { stroke: #059669 !important; }
-            .icon-status-incomplete { stroke: #DC2626 !important; }
             .pdf-category-title-text { color: #111827 !important; }
             .pdf-subitem-name { color: #1F2937 !important; }
             .pdf-observation { color: #4B5563 !important; border-left: 3px solid #9CA3AF !important; background-color: #F9FAFB !important; }
-            .pdf-registry-title { color: #374151 !important; }
+            .status-na { background-color: #FFFBEB !important; color: #B45309 !important; border: 1px solid #FDE68A !important; }
+            /* Ensure other statuses are styled correctly if they somehow appear, though not intended for N/A summary */
             .status-ok { background-color: #ECFDF5 !important; color: #047857 !important; border: 1px solid #A7F3D0 !important; }
             .status-nc { background-color: #FEF2F2 !important; color: #B91C1C !important; border: 1px solid #FECACA !important; }
-            .status-na { background-color: #FFFBEB !important; color: #B45309 !important; border: 1px solid #FDE68A !important; }
             .status-pending { background-color: #F3F4F6 !important; color: #4B5563 !important; border: 1px solid #D1D5DB !important; }
           }
         </style>
@@ -351,7 +343,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           </header>
 
           <section class="pdf-client-info">
-            <h2 class="pdf-main-title">VISTORIA TÉCNICA</h2>
+            <h2 class="pdf-main-title">RELATÓRIO RESUMIDO - ITENS NÃO APLICÁVEIS (N/A)</h2>
             <p class="pdf-subtitle">DADOS DO CLIENTE</p>
             <div class="pdf-client-info-grid">
               <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
@@ -364,93 +356,63 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           </section>
   `;
 
-  floorsData.filter(floor => floor.floor && floor.floor.trim() !== "").forEach((floor) => {
-    pdfHtml += `<section class="pdf-floor-section">`;
-    pdfHtml += `<h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
+  relevantFloorsData.forEach((floor) => {
+    let floorHasNaItems = false;
+    let floorHtmlContent = '';
 
     floor.categories.forEach(category => {
-      // Skip 'special' or 'pressure' categories if their status is 'N/A'
-      if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/A') {
-        return; // Skip this category
-      }
-
-      const overallStatus = getCategoryOverallStatusForPdf(category);
-      const statusIcon = overallStatus === 'all-items-selected' ? checkCircleSvg : xCircleSvg;
-
-      pdfHtml += `<article class="pdf-category-card">`;
-      pdfHtml += `  <header class="pdf-category-header">`;
-      pdfHtml += `    ${statusIcon}`;
-      pdfHtml += `    <span class="pdf-category-title-text">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`;
-      pdfHtml += `  </header>`;
-      pdfHtml += `  <div class="pdf-category-content">`;
+      let categoryHtmlContent = '';
+      let categoryHasNaItems = false;
 
       if (category.type === 'standard' && category.subItems) {
-        category.subItems.forEach(subItem => {
-          if (subItem.isRegistry) {
-            // Subitens de registro são sempre incluídos
-            pdfHtml += `<div class="pdf-subitem-wrapper">`; // wrapper for page-break control
-            pdfHtml += `<div class="pdf-registry-container">`;
-            if (subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers && subItem.registeredExtinguishers.length > 0) {
-              pdfHtml += `<span class="pdf-registry-title">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span>`;
-              pdfHtml += `<ul class="pdf-registry-list">`;
-              subItem.registeredExtinguishers.forEach(ext => {
-                pdfHtml += `<li>${ext.quantity}x - ${ext.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${ext.weight.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
-              });
-              pdfHtml += `</ul>`;
-            } else if (subItem.id === 'hidrantes_cadastro_mangueiras' && subItem.registeredHoses && subItem.registeredHoses.length > 0) {
-              pdfHtml += `<span class="pdf-registry-title">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span>`;
-              pdfHtml += `<ul class="pdf-registry-list">`;
-              subItem.registeredHoses.forEach(hose => {
-                pdfHtml += `<li>${hose.quantity}x - ${hose.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
-              });
-              pdfHtml += `</ul>`;
-            } else if (subItem.isRegistry) { 
-                 pdfHtml += `<div class="pdf-subitem">`; 
-                 pdfHtml += `  <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span> <span style="color: #6B7280; font-style: italic;">Nenhum item cadastrado.</span>`;
-                 pdfHtml += `</div>`;
-            }
-            pdfHtml += `</div>`;
-            pdfHtml += `</div>`; // closing pdf-subitem-wrapper
-          } else if (subItem.status !== 'N/A') {
-            // Subitens normais não-N/A são incluídos
-            pdfHtml += `<div class="pdf-subitem-wrapper">`;
-            pdfHtml += `<div class="pdf-subitem">`;
-            pdfHtml += `  <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`;
-            pdfHtml += `  <span class="pdf-status ${getStatusClass(subItem.status)}">${getStatusLabel(subItem.status)}</span>`;
-            pdfHtml += `</div>`;
+        const naSubItems = category.subItems.filter(subItem => !subItem.isRegistry && subItem.status === 'N/A');
+        if (naSubItems.length > 0) {
+          categoryHasNaItems = true;
+          naSubItems.forEach(subItem => {
+            categoryHtmlContent += `<div class="pdf-subitem-wrapper">`;
+            categoryHtmlContent += `<div class="pdf-subitem">`;
+            categoryHtmlContent += `  <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`;
+            categoryHtmlContent += `  <span class="pdf-status ${getStatusClass(subItem.status)}">${getStatusLabel(subItem.status)}</span>`;
+            categoryHtmlContent += `</div>`;
             if (subItem.showObservation && subItem.observation) {
-              pdfHtml += `<div class="pdf-observation">${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+              categoryHtmlContent += `<div class="pdf-observation">${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
             }
-            pdfHtml += `</div>`;
-          }
-          // Subitens normais com status 'N/A' são omitidos
-        });
-      } else if (category.type === 'special') {
-        // 'special' items are now skipped if status is N/A by the check at the start of the loop
-        pdfHtml += `<div class="pdf-special-details pdf-subitem-wrapper">`; 
-        pdfHtml += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-        if (category.showObservation && category.observation) {
-          pdfHtml += `<div class="pdf-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+            categoryHtmlContent += `</div>`;
+          });
         }
-        pdfHtml += `</div>`;
-      } else if (category.type === 'pressure') {
-        // 'pressure' items are now skipped if status is N/A by the check at the start of the loop
-        pdfHtml += `<div class="pdf-pressure-details pdf-subitem-wrapper">`;
-        pdfHtml += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-        // Only show pressure value and unit if status is not N/A (already handled by the main category skip)
-        // This inner check is somewhat redundant now but harmless
-        if (category.status !== 'N/A') {
-            pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
+      } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/A') {
+        categoryHasNaItems = true;
+        const detailsClass = category.type === 'special' ? 'pdf-special-details' : 'pdf-pressure-details';
+        categoryHtmlContent += `<div class="${detailsClass} pdf-subitem-wrapper">`; 
+        categoryHtmlContent += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
+        if (category.type === 'pressure' && category.pressureValue) {
+            categoryHtmlContent += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
         }
         if (category.showObservation && category.observation) {
-          pdfHtml += `<div class="pdf-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+          categoryHtmlContent += `<div class="pdf-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
         }
-        pdfHtml += `</div>`;
+        categoryHtmlContent += `</div>`;
       }
-      pdfHtml += `  </div>`;
-      pdfHtml += `</article>`;
+
+      if (categoryHasNaItems) {
+        floorHasNaItems = true;
+        floorHtmlContent += `<article class="pdf-category-card">`;
+        floorHtmlContent += `  <header class="pdf-category-header">`;
+        floorHtmlContent += `    <span class="pdf-category-title-text">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`;
+        floorHtmlContent += `  </header>`;
+        floorHtmlContent += `  <div class="pdf-category-content">`;
+        floorHtmlContent += categoryHtmlContent;
+        floorHtmlContent += `  </div>`;
+        floorHtmlContent += `</article>`;
+      }
     });
-    pdfHtml += `</section>`;
+    
+    if (floorHasNaItems) {
+        pdfHtml += `<section class="pdf-floor-section">`;
+        pdfHtml += `<h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
+        pdfHtml += floorHtmlContent;
+        pdfHtml += `</section>`;
+    }
   });
 
   pdfHtml += `
@@ -480,4 +442,3 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
-
