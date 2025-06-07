@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2 } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -246,11 +246,16 @@ const InspectionCategoryItemComponent = ({
   categoryIndex,
   totalCategoriesInFloor 
 }: InspectionCategoryItemProps) => {
+  const [newSubItemName, setNewSubItemName] = useState('');
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
     if (field === 'markAllSubItemsNA') {
       payload = { field };
+    } else if (field === 'addSubItem') {
+        payload = { field, categoryId: category.id, value: value as string };
+    } else if (field === 'removeSubItem' && subItemId) {
+        payload = { field, categoryId: category.id, subItemId };
     } else if (subItemId) {
       if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
       else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
@@ -289,6 +294,15 @@ const InspectionCategoryItemComponent = ({
       default: return "";
     }
   };
+
+  const handleAddCustomSubItem = useCallback(() => {
+    if (newSubItemName.trim() === '') {
+      alert('Por favor, insira um nome para o novo subitem.');
+      return;
+    }
+    handleUpdate('addSubItem', newSubItemName.trim());
+    setNewSubItemName(''); // Reset input after adding
+  }, [newSubItemName, handleUpdate]);
 
   const hasNonRegistrySubItems = useMemo(() => {
     return category.type === 'standard' && category.subItems && category.subItems.some(sub => !sub.isRegistry);
@@ -393,7 +407,7 @@ const InspectionCategoryItemComponent = ({
               <div key={subItem.id} className="py-2 border-t first:border-t-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
                   <Label className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
-                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
+                  <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0">
                     <RadioGroup
                       value={subItem.status || ''}
                       onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
@@ -416,9 +430,18 @@ const InspectionCategoryItemComponent = ({
                       size="icon"
                       onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)}
                       className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      title={subItem.showObservation ? 'Esconder Observação' : 'Mostrar Observação'}
                     >
                       {subItem.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      <span className="sr-only">{subItem.showObservation ? 'Esconder' : 'Mostrar'} Observação</span>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleUpdate('removeSubItem', undefined, subItem.id)}
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        title="Remover este subitem"
+                      >
+                        <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -435,6 +458,27 @@ const InspectionCategoryItemComponent = ({
               </div>
             );
           })}
+
+          {category.type === 'standard' && (
+            <div className="mt-4 pt-4 border-t">
+              <Label htmlFor={`add-subitem-${category.id}`} className="font-medium">Adicionar Novo Subitem:</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  id={`add-subitem-${category.id}`}
+                  type="text"
+                  value={newSubItemName}
+                  onChange={(e) => setNewSubItemName(e.target.value)}
+                  placeholder="Nome do novo subitem"
+                  className="flex-grow"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSubItem();}}}
+                />
+                <Button onClick={handleAddCustomSubItem} size="sm">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
+                </Button>
+              </div>
+            </div>
+          )}
+
 
           {category.type === 'special' && (
             <div className="py-2">

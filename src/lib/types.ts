@@ -93,7 +93,9 @@ export type CategoryUpdatePayload =
   | { field: 'removeRegisteredExtinguisher'; subItemId: string; extinguisherId: string }
   | { field: 'addRegisteredHose'; subItemId: string; value: Omit<RegisteredHose, 'id'> }
   | { field: 'removeRegisteredHose'; subItemId: string; hoseId: string }
-  | { field: 'markAllSubItemsNA' }; // Added new action type
+  | { field: 'markAllSubItemsNA' }
+  | { field: 'addSubItem'; categoryId: string; value: string } // value is new subitem name
+  | { field: 'removeSubItem'; categoryId: string; subItemId: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';
 

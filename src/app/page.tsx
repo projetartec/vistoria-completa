@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose } from '@/lib/types';
+import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
@@ -284,10 +284,33 @@ export default function FireCheckPage() {
                 if (atLeastOneSubItemChanged) categoryStructurallyChanged = true;
               }
               break;
+            case 'addSubItem':
+              if (cat.type === 'standard' && update.value.trim() !== '') {
+                const newSubItem: SubItemState = {
+                  id: `custom-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                  name: update.value.trim(),
+                  status: undefined,
+                  observation: '',
+                  showObservation: false,
+                  isRegistry: false,
+                };
+                updatedCatData.subItems = [...(updatedCatData.subItems || []), newSubItem];
+                categoryStructurallyChanged = true;
+                toast({ title: "Subitem Adicionado", description: `Subitem "${newSubItem.name}" adicionado.`});
+              }
+              break;
+            case 'removeSubItem':
+              if (cat.subItems && update.subItemId) {
+                 if (window.confirm('Tem certeza que deseja remover este subitem?')) {
+                    updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
+                    categoryStructurallyChanged = true;
+                    toast({ title: "Subitem Removido", variant: "destructive" });
+                 }
+              }
+              break;
             default: break;
           }
           
-          // Only auto-collapse if the change was not an explicit 'isExpanded' toggle
           if (update.field !== 'isExpanded' && categoryStructurallyChanged && updatedCatData.type === 'standard' && updatedCatData.subItems) {
             const relevantSubItems = updatedCatData.subItems.filter(sub => !sub.isRegistry);
             if (relevantSubItems.length > 0) {
@@ -311,7 +334,7 @@ export default function FireCheckPage() {
         return currentFloorData;
       });
     });
-  }, []);
+  }, [toast]);
 
 
   const resetInspectionForm = useCallback(() => {
@@ -332,53 +355,50 @@ export default function FireCheckPage() {
   const handleNewFloorInspection = useCallback(() => {
     setActiveFloorsData(prevFloors => {
       const newFloorId = `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
-      
-      const initialCategoriesMap = new Map(
-        INITIAL_INSPECTION_DATA.categories.map(cat => [cat.id, JSON.parse(JSON.stringify(cat))])
-      );
-  
-      let orderedCategoriesForNewFloor: InspectionCategoryState[];
+      let newFloorCategories: InspectionCategoryState[];
   
       if (prevFloors.length > 0) {
         const lastFloor = prevFloors[prevFloors.length - 1];
-        // Use the current categories from the last floor as the template for order and presence
-        orderedCategoriesForNewFloor = lastFloor.categories.map(lastFloorCategory => {
-          // Find the initial full state for this category ID to reset its content
-          const initialCategoryConfig = INSPECTION_CONFIG.find(c => c.id === lastFloorCategory.id);
-          if (initialCategoryConfig) {
-            return { // Create a fresh, reset category state based on INSPECTION_CONFIG
-              id: initialCategoryConfig.id,
-              title: initialCategoryConfig.title, // Use title from config for consistency
-              type: initialCategoryConfig.type,
-              isExpanded: false, // Always start collapsed
-              ...(initialCategoryConfig.type === 'standard' && {
-                subItems: initialCategoryConfig.subItems!.map(subItem => ({
-                  id: subItem.id,
-                  name: subItem.name,
-                  status: undefined, observation: '', showObservation: false, isRegistry: subItem.isRegistry || false,
-                  ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
-                  ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
-                })),
-              }),
-              ...(initialCategoryConfig.type === 'special' && { status: undefined, observation: '', showObservation: false }),
-              ...(initialCategoryConfig.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '' as InspectionCategoryState['pressureUnit'], observation: '', showObservation: false }),
-            };
+        newFloorCategories = lastFloor.categories.map(lastFloorCat => {
+          const newCatState: InspectionCategoryState = {
+            ...lastFloorCat, // Copy category structure (id, title, type, isExpanded)
+            isExpanded: false, // Always start new floor categories collapsed
+            status: undefined, // Reset status for special/pressure
+            observation: '',   // Reset observation
+            showObservation: false, // Reset showObservation
+            pressureValue: '', // Reset pressure specifics
+            pressureUnit: '',
+          };
+  
+          if (lastFloorCat.type === 'standard' && lastFloorCat.subItems) {
+            newCatState.subItems = lastFloorCat.subItems.map(lastFloorSubItem => {
+              const newSubItem: SubItemState = {
+                ...lastFloorSubItem, // Copy subitem structure (id, name, isRegistry)
+                status: undefined,
+                observation: '',
+                showObservation: false,
+              };
+              if (lastFloorSubItem.isRegistry) {
+                if (lastFloorSubItem.id === 'extintor_cadastro') {
+                  newSubItem.registeredExtinguishers = [];
+                } else if (lastFloorSubItem.id === 'hidrantes_cadastro_mangueiras') {
+                  newSubItem.registeredHoses = [];
+                }
+              }
+              return newSubItem;
+            });
           }
-          // Fallback: Should ideally not happen if lastFloorCategory.id always matches an INSPECTION_CONFIG id
-          // This could return a generic or error state, or filter it out.
-          // For now, we'll try to find it in the initial map as a less ideal fallback.
-          const initialCategoryState = initialCategoriesMap.get(lastFloorCategory.id);
-          return initialCategoryState ? { ...initialCategoryState, id: lastFloorCategory.id, title: lastFloorCategory.title } : null;
-        }).filter(cat => cat !== null) as InspectionCategoryState[]; // Filter out any nulls if fallback failed
+          return newCatState;
+        });
       } else {
-        // No previous floor, use default initial categories (deep copy)
-        orderedCategoriesForNewFloor = JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories));
+        // No previous floor, use deep copy of INITIAL_INSPECTION_DATA.categories
+        newFloorCategories = JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories));
       }
   
       const newFloorEntry: InspectionData = {
         id: newFloorId,
-        floor: '',
-        categories: orderedCategoriesForNewFloor,
+        floor: '', // New floor name is empty initially
+        categories: newFloorCategories,
       };
   
       return [...prevFloors, newFloorEntry];
@@ -386,7 +406,7 @@ export default function FireCheckPage() {
   
     toast({
       title: "Novo Andar Adicionado",
-      description: "Um novo formulário de andar foi adicionado. As categorias (e sua ordem) foram copiadas do andar anterior, se existente. Todos os itens foram reiniciados.",
+      description: "Um novo formulário de andar foi adicionado. A estrutura (categorias, subitens e sua ordem) foi copiada do andar anterior, se existente. Todos os itens foram reiniciados.",
     });
   }, [toast]);
 
@@ -507,6 +527,9 @@ export default function FireCheckPage() {
           ...cat,
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
+            id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
+                ? sub.id 
+                : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`, // Preserve custom IDs, generate for others if needed
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
