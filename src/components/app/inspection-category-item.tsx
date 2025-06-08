@@ -435,10 +435,10 @@ const InspectionCategoryItemComponent = ({
                     >
                       {STATUS_OPTIONS.map(opt => (
                         <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1">
-                          <RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} />
+                          <RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} className="h-5 w-5"/>
                           <Label
                             htmlFor={`${subItem.id}-${opt}-rg-item`}
-                            className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
+                            className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}
                           >
                             {opt}
                           </Label>
@@ -449,19 +449,19 @@ const InspectionCategoryItemComponent = ({
                       variant="ghost"
                       size="icon"
                       onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)}
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      className="h-9 w-9 text-muted-foreground hover:text-foreground"
                       title={subItem.showObservation ? 'Esconder Observação' : 'Mostrar Observação'}
                     >
-                      {subItem.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {subItem.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </Button>
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleUpdate('removeSubItem', undefined, subItem.id)}
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        className="h-9 w-9 text-destructive hover:bg-destructive/10"
                         title="Remover este subitem"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
@@ -512,10 +512,10 @@ const InspectionCategoryItemComponent = ({
                   >
                     {STATUS_OPTIONS.map(opt => (
                       <div key={`${category.id}-${opt}`} className="flex items-center space-x-1">
-                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-rg-item`} />
+                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-rg-item`} className="h-5 w-5" />
                         <Label
                           htmlFor={`${category.id}-${opt}-rg-item`}
-                          className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
+                          className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}
                         >
                           {opt}
                         </Label>
@@ -526,9 +526,9 @@ const InspectionCategoryItemComponent = ({
                     variant="ghost"
                     size="icon"
                     onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)}
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    className="h-9 w-9 text-muted-foreground hover:text-foreground"
                   >
-                    {category.showObservation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {category.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     <span className="sr-only">{category.showObservation ? 'Esconder' : 'Mostrar'} Observação</span>
                   </Button>
                 </div>
@@ -558,10 +558,10 @@ const InspectionCategoryItemComponent = ({
                   >
                     {STATUS_OPTIONS.map(opt => (
                       <div key={`${category.id}-${opt}-pressure`} className="flex items-center space-x-1">
-                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-pressure-rg-item`} />
+                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-pressure-rg-item`} className="h-5 w-5"/>
                         <Label
                           htmlFor={`${category.id}-${opt}-pressure-rg-item`}
-                          className={cn("cursor-pointer font-normal", getStatusLabelColor(opt))}
+                          className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}
                         >
                           {opt}
                         </Label>
@@ -610,7 +610,7 @@ const InspectionCategoryItemComponent = ({
                 onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)}
                 className="text-muted-foreground hover:text-foreground"
               >
-                {category.showObservation ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                {category.showObservation ? <EyeOff className="mr-2 h-5 w-5" /> : <Eye className="mr-2 h-5 w-5" />}
                 {category.showObservation ? 'Esconder' : 'Mostrar'} Observação
               </Button>
               {category.showObservation && (
