@@ -50,7 +50,7 @@ export function ActionButtonsPanel({
       </div>
 
       {isActionsContentVisible && (
-        <div id="actions-content-panel" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div id="actions-content-panel" className="grid grid-cols-4 gap-2 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
           <Button onClick={onSave} title="Salvar Vistoria" size="sm">
             <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar Vistoria</span>
           </Button>
@@ -105,7 +105,6 @@ export function ActionButtonsPanel({
           <Button
             onClick={onNewInspection}
             variant="destructive"
-            className="md:col-start-4 lg:col-start-auto"
             title="Nova Vistoria (Limpar Formulário Atual)"
             size="sm"
           >
