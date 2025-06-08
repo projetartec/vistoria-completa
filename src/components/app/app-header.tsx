@@ -14,9 +14,9 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
 
   return (
     <header className="bg-card p-4 shadow-md rounded-lg mb-6">
-      <div className="container mx-auto flex flex-col md:flex-row items-center justify-center md:justify-between gap-x-6 gap-y-4">
+      <div className="container mx-auto flex flex-row items-center justify-between gap-x-4 md:gap-x-6">
         {/* Logo Upload and Display Section */}
-        <div className="flex items-center gap-3 order-1 md:order-none">
+        <div className="flex items-center gap-3 order-1">
           {uploadedLogoDataUrl ? (
             <Image
               src={uploadedLogoDataUrl}
@@ -54,7 +54,7 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
         </div>
 
         {/* Company Details Section */}
-        <div className="text-center md:text-left order-2 md:order-none">
+        <div className="text-left order-2">
           <h1 className="text-xl sm:text-2xl font-bold text-primary font-headline mb-2">
             BRAZIL EXTINTORES - SP
           </h1>
