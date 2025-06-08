@@ -17,7 +17,7 @@ import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspecti
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const createNewFloorEntry = (): InspectionData => {
@@ -678,45 +678,39 @@ export default function FireCheckPage() {
     }
   }, [savedInspections, setSavedInspections, toast]);
 
-  const handleRenameInspection = useCallback((oldId: string, newId: string) => {
-    if (!newId.trim()) {
-      toast({ title: "Erro ao Renomear", description: "O novo número da vistoria não pode ser vazio.", variant: "destructive" });
-      return;
-    }
-    if (oldId !== newId && savedInspections.some(insp => insp.id === newId)) {
-      toast({ title: "Erro ao Renomear", description: `O número de vistoria "${newId}" já existe. Escolha um número único.`, variant: "destructive" });
+  const handleUpdateClientLocationForSavedInspection = useCallback((inspectionId: string, newClientLocation: string) => {
+    if (!newClientLocation.trim()) {
+      toast({ title: "Erro ao Atualizar", description: "O novo nome do cliente não pode ser vazio.", variant: "destructive" });
       return;
     }
 
     setSavedInspections(prevSaved => {
-      const inspectionToRename = prevSaved.find(insp => insp.id === oldId);
-      if (!inspectionToRename) {
-        toast({ title: "Erro ao Renomear", description: "Vistoria original não encontrada.", variant: "destructive" });
+      const inspectionToUpdate = prevSaved.find(insp => insp.id === inspectionId);
+      if (!inspectionToUpdate) {
+        toast({ title: "Erro ao Atualizar", description: "Vistoria original não encontrada.", variant: "destructive" });
         return prevSaved;
       }
 
-      const renamedInspection: FullInspectionData = {
-        ...JSON.parse(JSON.stringify(inspectionToRename)), // Deep copy
-        id: newId,
+      const updatedInspection: FullInspectionData = {
+        ...JSON.parse(JSON.stringify(inspectionToUpdate)), // Deep copy
         clientInfo: {
-          ...inspectionToRename.clientInfo,
-          inspectionNumber: newId,
+          ...inspectionToUpdate.clientInfo,
+          clientLocation: newClientLocation.trim(),
         },
         timestamp: Date.now(), // Update timestamp to reflect modification
       };
 
-      const updatedList = prevSaved.filter(insp => insp.id !== oldId);
-      updatedList.push(renamedInspection);
+      const updatedList = prevSaved.map(insp => insp.id === inspectionId ? updatedInspection : insp);
       const sortedList = updatedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       
-      toast({ title: "Vistoria Renomeada", description: `Vistoria "${oldId}" foi renomeada para "${newId}".` });
+      toast({ title: "Nome do Cliente Atualizado", description: `O nome do cliente para a vistoria "${inspectionId}" foi atualizado.` });
       return sortedList;
     });
 
-    // If the currently loaded inspection was renamed, update its clientInfo
-    if (clientInfo.inspectionNumber === oldId) {
-      setClientInfo(prev => ({ ...prev, inspectionNumber: newId }));
-      setBlockAutoSaveOnce(true); // Prevent immediate autosave with old ID if form is modified
+    // If the currently loaded inspection was the one updated, update its clientInfo
+    if (clientInfo.inspectionNumber === inspectionId) {
+      setClientInfo(prev => ({ ...prev, clientLocation: newClientLocation.trim() }));
+      // No need for blockAutoSaveOnce here as it's not an ID change that affects filename logic
     }
   }, [savedInspections, setSavedInspections, clientInfo.inspectionNumber, toast]);
 
@@ -1138,7 +1132,7 @@ export default function FireCheckPage() {
             onDeleteInspection={handleDeleteInspection}
             onDeleteMultipleInspections={handleDeleteMultipleInspections}
             onDuplicateInspection={handleDuplicateInspection}
-            onRenameInspection={handleRenameInspection}
+            onUpdateClientLocation={handleUpdateClientLocationForSavedInspection}
           />
         )}
 
@@ -1149,3 +1143,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+

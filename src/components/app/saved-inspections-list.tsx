@@ -19,7 +19,7 @@ interface SavedInspectionsListProps {
   onDeleteInspection: (fullInspectionId: string) => void;
   onDeleteMultipleInspections: (fullInspectionIds: string[]) => void;
   onDuplicateInspection: (fullInspectionId: string) => void;
-  onRenameInspection: (oldId: string, newId: string) => void;
+  onUpdateClientLocation: (inspectionId: string, newClientLocation: string) => void;
 }
 
 export function SavedInspectionsList({
@@ -28,12 +28,12 @@ export function SavedInspectionsList({
   onDeleteInspection,
   onDeleteMultipleInspections,
   onDuplicateInspection,
-  onRenameInspection,
+  onUpdateClientLocation,
 }: SavedInspectionsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedToDelete, setSelectedToDelete] = useState<string[]>([]);
-  const [renamingInspection, setRenamingInspection] = useState<FullInspectionData | null>(null);
-  const [newInspectionIdInput, setNewInspectionIdInput] = useState('');
+  const [editingClientLocationForInspection, setEditingClientLocationForInspection] = useState<FullInspectionData | null>(null);
+  const [newClientLocationInput, setNewClientLocationInput] = useState('');
 
   const filteredInspections = savedInspections
     .filter(inspection =>
@@ -62,22 +62,22 @@ export function SavedInspectionsList({
     }
   };
 
-  const openRenameDialog = useCallback((inspection: FullInspectionData) => {
-    setRenamingInspection(inspection);
-    setNewInspectionIdInput(inspection.id);
+  const openEditClientLocationDialog = useCallback((inspection: FullInspectionData) => {
+    setEditingClientLocationForInspection(inspection);
+    setNewClientLocationInput(inspection.clientInfo.clientLocation);
   }, []);
 
-  const closeRenameDialog = useCallback(() => {
-    setRenamingInspection(null);
-    setNewInspectionIdInput('');
+  const closeEditClientLocationDialog = useCallback(() => {
+    setEditingClientLocationForInspection(null);
+    setNewClientLocationInput('');
   }, []);
 
-  const handleRenameConfirm = useCallback(() => {
-    if (renamingInspection && newInspectionIdInput.trim()) {
-      onRenameInspection(renamingInspection.id, newInspectionIdInput.trim());
+  const handleEditClientLocationConfirm = useCallback(() => {
+    if (editingClientLocationForInspection && newClientLocationInput.trim()) {
+      onUpdateClientLocation(editingClientLocationForInspection.id, newClientLocationInput.trim());
     }
-    closeRenameDialog();
-  }, [renamingInspection, newInspectionIdInput, onRenameInspection, closeRenameDialog]);
+    closeEditClientLocationDialog();
+  }, [editingClientLocationForInspection, newClientLocationInput, onUpdateClientLocation, closeEditClientLocationDialog]);
 
 
   return (
@@ -149,8 +149,8 @@ export function SavedInspectionsList({
                       <Button onClick={() => onLoadInspection(inspection.id)} size="sm" variant="outline">
                         <Edit3 className="mr-2 h-4 w-4" /> Carregar
                       </Button>
-                       <Button onClick={() => openRenameDialog(inspection)} size="sm" variant="outline">
-                        <Edit2 className="mr-2 h-4 w-4" /> Renomear
+                       <Button onClick={() => openEditClientLocationDialog(inspection)} size="sm" variant="outline">
+                        <Edit2 className="mr-2 h-4 w-4" /> Editar Cliente
                       </Button>
                       <Button onClick={() => onDuplicateInspection(inspection.id)} size="sm" variant="secondary">
                         <Copy className="mr-2 h-4 w-4" /> Duplicar
@@ -171,28 +171,27 @@ export function SavedInspectionsList({
         </CardContent>
       </Card>
 
-      {renamingInspection && (
-        <AlertDialog open={!!renamingInspection} onOpenChange={(isOpen) => !isOpen && closeRenameDialog()}>
+      {editingClientLocationForInspection && (
+        <AlertDialog open={!!editingClientLocationForInspection} onOpenChange={(isOpen) => !isOpen && closeEditClientLocationDialog()}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Renomear Vistoria</AlertDialogTitle>
+              <AlertDialogTitle>Editar Nome do Cliente (Local)</AlertDialogTitle>
               <AlertDialogDescription>
-                Insira o novo Número da Vistoria (ID) para "{renamingInspection.id}".
-                Este ID deve ser único.
+                Insira o novo Nome do Cliente (Local) para a vistoria Nº "{editingClientLocationForInspection.id}".
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4">
-              <Label htmlFor="new-inspection-id" className="mb-2 block">Novo Número da Vistoria (ID)</Label>
+              <Label htmlFor="new-client-location" className="mb-2 block">Novo Nome do Cliente (Local)</Label>
               <Input
-                id="new-inspection-id"
-                value={newInspectionIdInput}
-                onChange={(e) => setNewInspectionIdInput(e.target.value)}
-                placeholder="Ex: VIST-001-XYZ"
+                id="new-client-location"
+                value={newClientLocationInput}
+                onChange={(e) => setNewClientLocationInput(e.target.value)}
+                placeholder="Ex: Condomínio XPTO"
               />
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={closeRenameDialog}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleRenameConfirm} disabled={!newInspectionIdInput.trim()}>Salvar Alterações</AlertDialogAction>
+              <AlertDialogCancel onClick={closeEditClientLocationDialog}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleEditClientLocationConfirm} disabled={!newClientLocationInput.trim()}>Salvar Alterações</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -200,3 +199,4 @@ export function SavedInspectionsList({
     </>
   );
 }
+
