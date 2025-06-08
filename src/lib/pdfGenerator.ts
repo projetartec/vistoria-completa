@@ -1,5 +1,5 @@
 
-import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState } from './types';
+import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState, RegisteredExtinguisher, RegisteredHose } from './types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { INSPECTION_CONFIG } from '@/constants/inspection.config';
@@ -49,16 +49,36 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
   const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
-  // Pre-process data to add flags
-  // And collect unique verified items for the first page
   const verifiedCategoriesOverall = new Set<string>();
-  const verifiedSubItemsOverall = new Set<string>(); // Stores subItem.id prefixed with category.id
+  const verifiedSubItemsOverall = new Set<string>(); 
 
-  const processedFloorsData = relevantFloorsData.map(floor => ({
-    ...floor,
-    categories: floor.categories.map(category => {
+  let totalExtinguishersRegistered = 0;
+  let totalHosesRegistered = 0;
+
+  const processedFloorsData = relevantFloorsData.map(floor => {
+    let floorHasPressureSPK = false;
+    let floorPressureSPKValue = '';
+    let floorPressureSPKUnit = '';
+    let floorHasPressureHidrante = false;
+    let floorPressureHidranteValue = '';
+    let floorPressureHidranteUnit = '';
+    let floorRegisteredExtinguishers: RegisteredExtinguisher[] = [];
+    let floorRegisteredHoses: RegisteredHose[] = [];
+
+    const categories = floor.categories.map(category => {
       let hasVerifiedItemsFloor = false;
-      let hasNonConformingItemsFloor = false; // Changed from hasNonConformingOrNAItemsFloor
+      let hasNonConformingItemsFloor = false;
+
+      if (category.id === 'pressao_spk' && category.status !== 'N/A' && category.pressureValue) {
+        floorHasPressureSPK = true;
+        floorPressureSPKValue = category.pressureValue;
+        floorPressureSPKUnit = category.pressureUnit || '';
+      }
+      if (category.id === 'pressao_hidrante' && category.status !== 'N/A' && category.pressureValue) {
+        floorHasPressureHidrante = true;
+        floorPressureHidranteValue = category.pressureValue;
+        floorPressureHidranteUnit = category.pressureUnit || '';
+      }
 
       if (category.type === 'standard' && category.subItems) {
         const processedSubItems = category.subItems.map(subItem => {
@@ -68,8 +88,16 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             verifiedCategoriesOverall.add(category.id);
             verifiedSubItemsOverall.add(`${category.id}_${subItem.id}`);
           }
-          if (isVerified && subItem.status === 'N/C') { // Only N/C now
+          if (isVerified && subItem.status === 'N/C') {
             hasNonConformingItemsFloor = true;
+          }
+          if (subItem.isRegistry && subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers) {
+            floorRegisteredExtinguishers.push(...subItem.registeredExtinguishers);
+            subItem.registeredExtinguishers.forEach(ext => totalExtinguishersRegistered += (ext.quantity || 0));
+          }
+          if (subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && subItem.registeredHoses) {
+            floorRegisteredHoses.push(...subItem.registeredHoses);
+            subItem.registeredHoses.forEach(hose => totalHosesRegistered += (hose.quantity || 0));
           }
           return { ...subItem, isVerified };
         });
@@ -79,13 +107,25 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           hasVerifiedItemsFloor = true;
           verifiedCategoriesOverall.add(category.id);
         }
-        if (category.status === 'N/C') { // Only N/C now
+        if (category.status === 'N/C') { 
           hasNonConformingItemsFloor = true;
         }
       }
       return { ...category, hasVerifiedItemsFloor, hasNonConformingItemsFloor };
-    })
-  }));
+    });
+    return { 
+        ...floor, 
+        categories,
+        floorHasPressureSPK,
+        floorPressureSPKValue,
+        floorPressureSPKUnit,
+        floorHasPressureHidrante,
+        floorPressureHidranteValue,
+        floorPressureHidranteUnit,
+        floorRegisteredExtinguishers,
+        floorRegisteredHoses
+    };
+  });
 
 
   let pdfHtml = `
@@ -143,12 +183,22 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           .pdf-observation { color: #4B5563; margin-top: 6px; padding: 8px 10px; background-color: #F9FAFB; border-left: 3px solid #9CA3AF; font-size: 0.95em; white-space: pre-wrap; width: 100%; box-sizing: border-box; }
           .pdf-pressure-details p, .pdf-special-details p { margin: 4px 0 8px 0; display: flex; justify-content: space-between; align-items: center; }
           .pdf-pressure-details .pdf-subitem-name, .pdf-special-details .pdf-subitem-name { flex-grow: 0; font-weight: 600; }
+          
+          .pdf-registered-items-section { margin-top: 20px; }
+          .pdf-registered-items-section h4 { font-size: 12pt; font-weight: 600; color: #374151; margin-top: 15px; margin-bottom: 8px; }
+          .pdf-registered-items-section ul { list-style: disc; margin-left: 25px; padding-left: 0; margin-top: 0; margin-bottom: 10px; }
+          .pdf-registered-items-section li { font-size: 10pt; color: #4B5563; margin-bottom: 3px; }
+          .pdf-no-items { font-style: italic; color: #6B7280; margin-left: 5px; }
+          .pdf-totals-summary { margin-top: 30px; padding-top: 15px; border-top: 1px solid #E5E7EB; }
+          .pdf-totals-summary h4 { font-size: 13pt; font-weight: 600; color: #111827; margin-bottom: 10px; }
+          .pdf-totals-summary p { font-size: 11pt; color: #1F2937; margin-bottom: 5px; }
+
           .pdf-footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; font-size: 9pt; color: #6B7280; }
 
           @media print {
             html, body { height: auto; background-color: #FFFFFF !important; margin: 0 !important; padding: 10mm 8mm !important; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; font-size: 10pt; }
             .pdf-container { width: 100%; box-shadow: none !important; padding: 0 !important; border: none !important; margin: 0 !important; }
-            .pdf-header-main, .pdf-client-info, .pdf-verified-summary-overall { page-break-after: avoid; }
+            .pdf-header-main, .pdf-client-info, .pdf-verified-summary-overall, .pdf-pressure-reading-section, .pdf-registered-items-outer-section { page-break-after: avoid; }
             .pdf-section-title { page-break-after: avoid; }
             .pdf-footer { page-break-before: auto; page-break-inside: avoid; }
             .pdf-floor-section { page-break-inside: avoid; page-break-before: auto; }
@@ -170,6 +220,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             .status-nc { background-color: #FEF2F2 !important; color: #B91C1C !important; border: 1px solid #FECACA !important; }
             .status-na { background-color: #FFFBEB !important; color: #B45309 !important; border: 1px solid #FDE68A !important; }
             .status-pending { background-color: #F3F4F6 !important; color: #4B5563 !important; border: 1px solid #D1D5DB !important; }
+            .pdf-registered-items-section h4 { color: #374151 !important; }
+            .pdf-registered-items-section li { color: #4B5563 !important; }
+            .pdf-no-items { color: #6B7280 !important; }
+            .pdf-totals-summary h4 { color: #111827 !important; }
+            .pdf-totals-summary p { color: #1F2937 !important; }
           }
         </style>
       </head>
@@ -207,7 +262,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             </div>
           </section>
 
-          <!-- Seção 1: Resumo de Itens Verificados (Geral) -->
           <section class="pdf-verified-summary-overall">
             <h3 class="pdf-section-title">Itens e Subitens Verificados na Vistoria (Geral)</h3>`;
             
@@ -235,16 +289,15 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
             <div class="page-break-before"></div>
 
-            <!-- Seção 2: Detalhes de Itens Não Conformes (N/C) -->
             <section class="pdf-non-compliant-details">
               <h3 class="pdf-section-title">Detalhes de Itens Não Conformes (N/C)</h3>`;
 
   processedFloorsData.forEach((floor) => {
-    if (floor.categories.some(cat => cat.hasNonConformingItemsFloor)) { // Use the updated flag
+    if (floor.categories.some(cat => cat.hasNonConformingItemsFloor)) {
       pdfHtml += `<div class="pdf-floor-section">
                     <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
       floor.categories.forEach(category => {
-        if (category.hasNonConformingItemsFloor) { // Use the updated flag
+        if (category.hasNonConformingItemsFloor) {
           pdfHtml += `<article class="pdf-category-card">
                         <header class="pdf-category-header">
                           <span class="pdf-category-title-text">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -253,7 +306,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           
           if (category.type === 'standard' && category.subItems) {
             category.subItems.forEach(subItem => {
-              if (!subItem.isRegistry && subItem.status === 'N/C') { // Only N/C
+              if (!subItem.isRegistry && subItem.status === 'N/C') {
                 pdfHtml += `<div class="pdf-subitem-wrapper">
                               <div class="pdf-subitem">
                                 <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -265,11 +318,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 pdfHtml += `</div>`;
               }
             });
-          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') { // Only N/C
+          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
             const detailsClass = category.type === 'special' ? 'pdf-special-details' : 'pdf-pressure-details';
             pdfHtml += `<div class="${detailsClass}">
                           <p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-            if (category.type === 'pressure' && category.status !== 'N/A') { // This condition is fine: if it's N/C, it's not N/A, so pressure details should show if available.
+            if (category.type === 'pressure' && category.status !== 'N/A') {
                  pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
             }
             if (category.showObservation && category.observation) {
@@ -285,6 +338,90 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     }
   });
   pdfHtml += `</section>`;
+
+  // <!-- NEW PAGE: Pressure Readings (by Floor) -->
+  pdfHtml += `<div class="page-break-before"></div>
+              <section class="pdf-pressure-reading-section">
+                <h3 class="pdf-section-title">Registros de Pressão (SPK e Hidrante)</h3>`;
+  let anyPressureData = false;
+  processedFloorsData.forEach((floor) => {
+    if (floor.floorHasPressureSPK || floor.floorHasPressureHidrante) {
+      anyPressureData = true;
+      pdfHtml += `<div class="pdf-floor-section">
+                    <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                    <div class="pdf-category-card">
+                      <div class="pdf-category-content">`;
+      if (floor.floorHasPressureSPK) {
+        pdfHtml += `<p><strong>Pressão SPK:</strong> ${floor.floorPressureSPKValue.replace(/</g, "&lt;").replace(/>/g, "&gt;")} ${floor.floorPressureSPKUnit.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+      } else {
+        pdfHtml += `<p><strong>Pressão SPK:</strong> <span class="pdf-no-items">Não registrada ou N/A</span></p>`;
+      }
+      if (floor.floorHasPressureHidrante) {
+        pdfHtml += `<p><strong>Pressão Hidrante:</strong> ${floor.floorPressureHidranteValue.replace(/</g, "&lt;").replace(/>/g, "&gt;")} ${floor.floorPressureHidranteUnit.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+      } else {
+        pdfHtml += `<p><strong>Pressão Hidrante:</strong> <span class="pdf-no-items">Não registrada ou N/A</span></p>`;
+      }
+      pdfHtml += `    </div>
+                    </div>
+                  </div>`;
+    }
+  });
+  if (!anyPressureData) {
+    pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 20px;">Nenhum registro de pressão (SPK ou Hidrante) encontrado para esta vistoria.</p>`;
+  }
+  pdfHtml += `</section>`;
+
+
+  // <!-- NEW PAGE: Registered Items (Extinguishers & Hoses by Floor) & Totals -->
+  pdfHtml += `<div class="page-break-before"></div>
+              <section class="pdf-registered-items-outer-section">
+                <h3 class="pdf-section-title">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
+  let anyRegisteredItems = false;
+  processedFloorsData.forEach((floor) => {
+    if (floor.floorRegisteredExtinguishers.length > 0 || floor.floorRegisteredHoses.length > 0) {
+      anyRegisteredItems = true;
+      pdfHtml += `<div class="pdf-floor-section">
+                    <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                    <div class="pdf-registered-items-section">`;
+      
+      // Extinguishers for the floor
+      if (floor.floorRegisteredExtinguishers.length > 0) {
+        pdfHtml += `<h4>Extintores Cadastrados neste Andar:</h4><ul>`;
+        floor.floorRegisteredExtinguishers.forEach(ext => {
+          pdfHtml += `<li>${ext.quantity}x - ${ext.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${ext.weight.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
+        });
+        pdfHtml += `</ul>`;
+      } else {
+        pdfHtml += `<h4>Extintores Cadastrados neste Andar:</h4><p class="pdf-no-items">Nenhum extintor cadastrado.</p>`;
+      }
+
+      // Hoses for the floor
+      if (floor.floorRegisteredHoses.length > 0) {
+        pdfHtml += `<h4>Mangueiras Cadastradas neste Andar:</h4><ul>`;
+        floor.floorRegisteredHoses.forEach(hose => {
+          pdfHtml += `<li>${hose.quantity}x - ${hose.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
+        });
+        pdfHtml += `</ul>`;
+      } else {
+        pdfHtml += `<h4>Mangueiras Cadastradas neste Andar:</h4><p class="pdf-no-items">Nenhuma mangueira cadastrada.</p>`;
+      }
+      pdfHtml += `  </div>
+                  </div>`;
+    }
+  });
+
+   if (!anyRegisteredItems) {
+    pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 20px;">Nenhum extintor ou mangueira cadastrado nesta vistoria.</p>`;
+  }
+
+  // Totals Summary
+  pdfHtml += `<div class="pdf-totals-summary">
+                <h4>Totais Gerais de Itens Cadastrados</h4>
+                <p><strong>Total de Extintores Registrados na Vistoria:</strong> ${totalExtinguishersRegistered}</p>
+                <p><strong>Total de Mangueiras Registradas na Vistoria:</strong> ${totalHosesRegistered}</p>
+              </div>
+            </section>`;
+
 
   pdfHtml += `
           <footer class="pdf-footer">
@@ -313,4 +450,3 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
-
