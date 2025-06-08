@@ -1,8 +1,8 @@
 
-import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState, RegisteredExtinguisher, RegisteredHose } from './types';
+import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState, RegisteredExtinguisher, RegisteredHose, ExtinguisherTypeOption } from './types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { INSPECTION_CONFIG } from '@/constants/inspection.config';
+import { INSPECTION_CONFIG, EXTINGUISHER_TYPES } from '@/constants/inspection.config';
 
 // SVG Icons remain the same
 const checkCircleSvg = `
@@ -50,10 +50,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
   const verifiedCategoriesOverall = new Set<string>();
-  const verifiedSubItemsOverall = new Set<string>(); 
-
-  let totalExtinguishersRegistered = 0;
-  let totalHosesRegistered = 0;
+  const verifiedSubItemsOverall = new Set<string>();
 
   const processedFloorsData = relevantFloorsData.map(floor => {
     let floorHasPressureSPK = false;
@@ -64,10 +61,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     let floorPressureHidranteUnit = '';
     let floorRegisteredExtinguishers: RegisteredExtinguisher[] = [];
     let floorRegisteredHoses: RegisteredHose[] = [];
+    let floorHasNonConformingItems = false;
 
     const categories = floor.categories.map(category => {
       let hasVerifiedItemsFloor = false;
-      let hasNonConformingItemsFloor = false;
+      let categoryHasNCItems = false;
 
       if (category.id === 'pressao_spk' && category.status !== 'N/A' && category.pressureValue) {
         floorHasPressureSPK = true;
@@ -89,29 +87,29 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             verifiedSubItemsOverall.add(`${category.id}_${subItem.id}`);
           }
           if (isVerified && subItem.status === 'N/C') {
-            hasNonConformingItemsFloor = true;
+            categoryHasNCItems = true;
+            floorHasNonConformingItems = true;
           }
           if (subItem.isRegistry && subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers) {
             floorRegisteredExtinguishers.push(...subItem.registeredExtinguishers);
-            subItem.registeredExtinguishers.forEach(ext => totalExtinguishersRegistered += (ext.quantity || 0));
           }
           if (subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && subItem.registeredHoses) {
             floorRegisteredHoses.push(...subItem.registeredHoses);
-            subItem.registeredHoses.forEach(hose => totalHosesRegistered += (hose.quantity || 0));
           }
           return { ...subItem, isVerified };
         });
-        return { ...category, subItems: processedSubItems, hasVerifiedItemsFloor, hasNonConformingItemsFloor };
+        return { ...category, subItems: processedSubItems, hasVerifiedItemsFloor, categoryHasNCItems };
       } else if (category.type === 'special' || category.type === 'pressure') {
         if (category.status !== undefined) {
           hasVerifiedItemsFloor = true;
           verifiedCategoriesOverall.add(category.id);
         }
         if (category.status === 'N/C') { 
-          hasNonConformingItemsFloor = true;
+          categoryHasNCItems = true;
+          floorHasNonConformingItems = true;
         }
       }
-      return { ...category, hasVerifiedItemsFloor, hasNonConformingItemsFloor };
+      return { ...category, hasVerifiedItemsFloor, categoryHasNCItems };
     });
     return { 
         ...floor, 
@@ -123,8 +121,26 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         floorPressureHidranteValue,
         floorPressureHidranteUnit,
         floorRegisteredExtinguishers,
-        floorRegisteredHoses
+        floorRegisteredHoses,
+        floorHasNonConformingItems
     };
+  });
+
+  // Calculate totals for extinguishers by type and hoses
+  const extinguisherTypeTotals: { [key: string]: number } = {};
+  let grandTotalExtinguishersCount = 0;
+  let grandTotalHosesCount = 0;
+
+  processedFloorsData.forEach(floor => {
+    floor.floorRegisteredExtinguishers.forEach(ext => {
+      if (ext.type && ext.quantity > 0) {
+        extinguisherTypeTotals[ext.type] = (extinguisherTypeTotals[ext.type] || 0) + ext.quantity;
+      }
+      grandTotalExtinguishersCount += (ext.quantity || 0);
+    });
+    floor.floorRegisteredHoses.forEach(hose => {
+      grandTotalHosesCount += (hose.quantity || 0);
+    });
   });
 
 
@@ -189,9 +205,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           .pdf-registered-items-section ul { list-style: disc; margin-left: 25px; padding-left: 0; margin-top: 0; margin-bottom: 10px; }
           .pdf-registered-items-section li { font-size: 10pt; color: #4B5563; margin-bottom: 3px; }
           .pdf-no-items { font-style: italic; color: #6B7280; margin-left: 5px; }
+          
           .pdf-totals-summary { margin-top: 30px; padding-top: 15px; border-top: 1px solid #E5E7EB; }
           .pdf-totals-summary h4 { font-size: 13pt; font-weight: 600; color: #111827; margin-bottom: 10px; }
           .pdf-totals-summary p { font-size: 11pt; color: #1F2937; margin-bottom: 5px; }
+          .pdf-totals-summary .pdf-type-breakdown { list-style: none; padding-left: 15px; margin-top: 2px; margin-bottom: 8px; }
+          .pdf-totals-summary .pdf-type-breakdown li { font-size: 10pt; color: #374151; margin-bottom: 1px; }
+
 
           .pdf-footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; font-size: 9pt; color: #6B7280; }
 
@@ -225,6 +245,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             .pdf-no-items { color: #6B7280 !important; }
             .pdf-totals-summary h4 { color: #111827 !important; }
             .pdf-totals-summary p { color: #1F2937 !important; }
+            .pdf-totals-summary .pdf-type-breakdown li { color: #374151 !important; }
           }
         </style>
       </head>
@@ -265,17 +286,35 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           <section class="pdf-verified-summary-overall">
             <h3 class="pdf-section-title">Itens e Subitens Verificados na Vistoria (Geral)</h3>`;
             
+  const overallUniqueVerifiedCategories = new Set<string>();
+  const overallUniqueVerifiedSubItems = new Set<string>(); // Stores "categoryId_subItemId"
+
+  processedFloorsData.forEach(floor => {
+    floor.categories.forEach(category => {
+      if (category.hasVerifiedItemsFloor) {
+        overallUniqueVerifiedCategories.add(category.id);
+        if (category.type === 'standard' && category.subItems) {
+          category.subItems.forEach(subItem => {
+            if (subItem.isVerified && !subItem.isRegistry) { // Only non-registry items for this list
+              overallUniqueVerifiedSubItems.add(`${category.id}_${subItem.id}`);
+            }
+          });
+        }
+      }
+    });
+  });
+  
   INSPECTION_CONFIG.forEach(configCategory => {
-    if (verifiedCategoriesOverall.has(configCategory.id)) {
+    if (overallUniqueVerifiedCategories.has(configCategory.id)) {
       pdfHtml += `<div class="pdf-verified-summary-category-overall">
                     <p class="pdf-verified-summary-category-title-overall">${configCategory.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       if (configCategory.type === 'standard' && configCategory.subItems) {
-        const verifiedSubItemsForThisCategory = configCategory.subItems.filter(subItemConfig => 
-          !subItemConfig.isRegistry && verifiedSubItemsOverall.has(`${configCategory.id}_${subItemConfig.id}`)
+        const verifiedSubItemsForThisConfigCategory = configCategory.subItems.filter(subItemConfig => 
+          !subItemConfig.isRegistry && overallUniqueVerifiedSubItems.has(`${configCategory.id}_${subItemConfig.id}`)
         );
-        if (verifiedSubItemsForThisCategory.length > 0) {
+        if (verifiedSubItemsForThisConfigCategory.length > 0) {
           pdfHtml += `<ul>`;
-          verifiedSubItemsForThisCategory.forEach(subItemConfig => {
+          verifiedSubItemsForThisConfigCategory.forEach(subItemConfig => {
             pdfHtml += `<li>${subItemConfig.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
           });
           pdfHtml += `</ul>`;
@@ -292,12 +331,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             <section class="pdf-non-compliant-details">
               <h3 class="pdf-section-title">Detalhes de Itens Não Conformes (N/C)</h3>`;
 
+  let anyNonConformingItemsFound = false;
   processedFloorsData.forEach((floor) => {
-    if (floor.categories.some(cat => cat.hasNonConformingItemsFloor)) {
+    if (floor.floorHasNonConformingItems) {
+      anyNonConformingItemsFound = true;
       pdfHtml += `<div class="pdf-floor-section">
                     <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
       floor.categories.forEach(category => {
-        if (category.hasNonConformingItemsFloor) {
+        if (category.categoryHasNCItems) {
           pdfHtml += `<article class="pdf-category-card">
                         <header class="pdf-category-header">
                           <span class="pdf-category-title-text">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -322,7 +363,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             const detailsClass = category.type === 'special' ? 'pdf-special-details' : 'pdf-pressure-details';
             pdfHtml += `<div class="${detailsClass}">
                           <p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-            if (category.type === 'pressure' && category.status !== 'N/A') {
+            if (category.type === 'pressure' && category.status !== 'N/A') { // Only show pressure if not N/A, relevant for N/C
                  pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
             }
             if (category.showObservation && category.observation) {
@@ -337,6 +378,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
       pdfHtml += `  </div>`;
     }
   });
+   if (!anyNonConformingItemsFound) {
+    pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 20px;">Nenhum item "Não Conforme" (N/C) encontrado nesta vistoria.</p>`;
+  }
   pdfHtml += `</section>`;
 
   // <!-- NEW PAGE: Pressure Readings (by Floor) -->
@@ -376,15 +420,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   pdfHtml += `<div class="page-break-before"></div>
               <section class="pdf-registered-items-outer-section">
                 <h3 class="pdf-section-title">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
-  let anyRegisteredItems = false;
+  let anyRegisteredItemsOnFloors = false;
   processedFloorsData.forEach((floor) => {
     if (floor.floorRegisteredExtinguishers.length > 0 || floor.floorRegisteredHoses.length > 0) {
-      anyRegisteredItems = true;
+      anyRegisteredItemsOnFloors = true;
       pdfHtml += `<div class="pdf-floor-section">
                     <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
                     <div class="pdf-registered-items-section">`;
       
-      // Extinguishers for the floor
       if (floor.floorRegisteredExtinguishers.length > 0) {
         pdfHtml += `<h4>Extintores Cadastrados neste Andar:</h4><ul>`;
         floor.floorRegisteredExtinguishers.forEach(ext => {
@@ -395,7 +438,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         pdfHtml += `<h4>Extintores Cadastrados neste Andar:</h4><p class="pdf-no-items">Nenhum extintor cadastrado.</p>`;
       }
 
-      // Hoses for the floor
       if (floor.floorRegisteredHoses.length > 0) {
         pdfHtml += `<h4>Mangueiras Cadastradas neste Andar:</h4><ul>`;
         floor.floorRegisteredHoses.forEach(hose => {
@@ -410,17 +452,33 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     }
   });
 
-   if (!anyRegisteredItems) {
+   if (!anyRegisteredItemsOnFloors && grandTotalExtinguishersCount === 0 && grandTotalHosesCount === 0) { // Check grand totals too
     pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 20px;">Nenhum extintor ou mangueira cadastrado nesta vistoria.</p>`;
   }
 
-  // Totals Summary
   pdfHtml += `<div class="pdf-totals-summary">
                 <h4>Totais Gerais de Itens Cadastrados</h4>
-                <p><strong>Total de Extintores Registrados na Vistoria:</strong> ${totalExtinguishersRegistered}</p>
-                <p><strong>Total de Mangueiras Registradas na Vistoria:</strong> ${totalHosesRegistered}</p>
-              </div>
-            </section>`;
+                <p><strong>Total de Extintores Registrados na Vistoria:</strong></p>
+                <ul class="pdf-type-breakdown">`;
+
+  let hasAnyExtinguisherTypeTotal = false;
+  EXTINGUISHER_TYPES.forEach(type => { // Iterate over predefined types to maintain order
+    if (extinguisherTypeTotals[type] && extinguisherTypeTotals[type] > 0) {
+      pdfHtml += `<li>${type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}: ${extinguisherTypeTotals[type]}</li>`;
+      hasAnyExtinguisherTypeTotal = true;
+    }
+  });
+   if (!hasAnyExtinguisherTypeTotal && grandTotalExtinguishersCount > 0) { // If there are ext but not categorized by type somehow (fallback)
+    pdfHtml += `<li>Total (não especificado por tipo): ${grandTotalExtinguishersCount}</li>`;
+  } else if (!hasAnyExtinguisherTypeTotal && grandTotalExtinguishersCount === 0) {
+    pdfHtml += `<li>Nenhum extintor cadastrado.</li>`;
+  }
+
+  pdfHtml += `</ul>
+              <p style="margin-top: 5px;"><strong>Total Geral de Extintores:</strong> ${grandTotalExtinguishersCount}</p>
+              <p style="margin-top: 10px;"><strong>Total de Mangueiras Registradas na Vistoria:</strong> ${grandTotalHosesCount}</p>
+            </div>
+          </section>`;
 
 
   pdfHtml += `
@@ -450,3 +508,4 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
