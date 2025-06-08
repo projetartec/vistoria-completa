@@ -12,38 +12,48 @@ interface AppHeaderProps {
 export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <header className="bg-card p-4 shadow-md rounded-lg mb-6">
       <div className="container mx-auto flex flex-row items-center justify-between gap-x-4 md:gap-x-6">
         {/* Logo Upload and Display Section */}
-        <div className="flex items-center gap-3 order-1">
+        <div className="order-1">
           {uploadedLogoDataUrl ? (
-            <Image
-              src={uploadedLogoDataUrl}
-              alt="Logo Carregado"
-              width={224} 
-              height={112} 
-              className="max-h-28 w-auto object-contain border rounded-md p-1" 
-              data-ai-hint="company logo"
-            />
+            <div
+              onClick={triggerFileInput}
+              className="cursor-pointer border rounded-md p-1 hover:border-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') triggerFileInput(); }}
+              aria-label="Alterar logo"
+              title="Clique para alterar o logo"
+            >
+              <Image
+                src={uploadedLogoDataUrl}
+                alt="Logo Carregado"
+                width={224}
+                height={112}
+                className="max-h-28 w-auto object-contain"
+                data-ai-hint="company logo"
+              />
+            </div>
           ) : (
             <div
-              className="h-28 w-56 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-sm" 
+              onClick={triggerFileInput}
+              className="h-28 w-56 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-sm cursor-pointer hover:border-primary hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               data-ai-hint="logo placeholder"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') triggerFileInput(); }}
+              aria-label="Carregar logo"
+              title="Clique para carregar o logo"
             >
-              Nenhum logo
+              Carregar Logo
             </div>
           )}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-8 w-8" 
-            title="Carregar Logo"
-          >
-            <UploadCloud className="h-4 w-4" />
-            <span className="sr-only">Carregar Logo</span>
-          </Button>
           <input
             type="file"
             ref={fileInputRef}
