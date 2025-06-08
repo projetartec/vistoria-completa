@@ -17,7 +17,7 @@ import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientI
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3 } from 'lucide-react';
 
 const createNewFloorEntry = (): InspectionData => {
   const newId = (typeof window !== 'undefined')
@@ -419,7 +419,7 @@ export default function FireCheckPage() {
               copiedSubItem.observation = '';
               copiedSubItem.showObservation = false;
               
-              if (subItem.isRegistry) { // Keep registered items
+              if (subItem.isRegistry) { 
                 if (subItem.id === 'extintor_cadastro') {
                    copiedSubItem.registeredExtinguishers = subItem.registeredExtinguishers ? JSON.parse(JSON.stringify(subItem.registeredExtinguishers)) : [];
                 } else if (subItem.id === 'hidrantes_cadastro_mangueiras') {
@@ -700,7 +700,7 @@ export default function FireCheckPage() {
     setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
   };
 
-  const handleCollapseAllGlobal = useCallback(() => {
+  const handleCollapseAllGlobalCategories = useCallback(() => {
     setActiveFloorsData(prevFloors =>
       prevFloors.map(floor => ({
         ...floor,
@@ -712,7 +712,7 @@ export default function FireCheckPage() {
     }, 0);
   }, [toast]);
 
-  const handleExpandAllGlobal = useCallback(() => {
+  const handleExpandAllGlobalCategories = useCallback(() => {
     setActiveFloorsData(prevFloors =>
       prevFloors.map(floor => ({
         ...floor,
@@ -724,7 +724,32 @@ export default function FireCheckPage() {
     }, 0);
   }, [toast]);
 
-  const handleExpandAllForFloor = useCallback((floorIndex: number) => {
+  const handleShowAllFloorContent = useCallback(() => {
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map(floor => ({
+        ...floor,
+        isFloorContentVisible: true,
+      }))
+    );
+    setTimeout(() => {
+      toast({ title: "Conteúdo de Todos os Andares Exibido" });
+    }, 0);
+  }, [toast]);
+
+  const handleHideAllFloorContent = useCallback(() => {
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map(floor => ({
+        ...floor,
+        isFloorContentVisible: false,
+      }))
+    );
+    setTimeout(() => {
+      toast({ title: "Conteúdo de Todos os Andares Ocultado" });
+    }, 0);
+  }, [toast]);
+
+
+  const handleExpandAllCategoriesForFloor = useCallback((floorIndex: number) => {
     setActiveFloorsData(prevFloors =>
       prevFloors.map((floor, fIndex) => {
         if (fIndex === floorIndex) {
@@ -741,7 +766,7 @@ export default function FireCheckPage() {
     }, 0);
   }, [activeFloorsData, toast]);
   
-  const handleCollapseAllForFloor = useCallback((floorIndex: number) => {
+  const handleCollapseAllCategoriesForFloor = useCallback((floorIndex: number) => {
     setActiveFloorsData(prevFloors =>
       prevFloors.map((floor, fIndex) => {
         if (fIndex === floorIndex) {
@@ -863,12 +888,18 @@ export default function FireCheckPage() {
 
           {isChecklistVisible && (
             <>
-              <div className="flex space-x-2 mb-4">
-                <Button onClick={handleExpandAllGlobal} variant="outline" size="sm">
-                  <Eye className="mr-2 h-4 w-4" /> Mostrar Todos (Global)
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button onClick={handleExpandAllGlobalCategories} variant="outline" size="sm">
+                  <Eye className="mr-2 h-4 w-4" /> Expandir Categorias (Global)
                 </Button>
-                <Button onClick={handleCollapseAllGlobal} variant="outline" size="sm">
-                  <EyeOff className="mr-2 h-4 w-4" /> Esconder Todos (Global)
+                <Button onClick={handleCollapseAllGlobalCategories} variant="outline" size="sm">
+                  <EyeOff className="mr-2 h-4 w-4" /> Recolher Categorias (Global)
+                </Button>
+                 <Button onClick={handleShowAllFloorContent} variant="outline" size="sm">
+                  <Rows3 className="mr-2 h-4 w-4" /> Mostrar Conteúdo (Global)
+                </Button>
+                <Button onClick={handleHideAllFloorContent} variant="outline" size="sm">
+                  <Columns3 className="mr-2 h-4 w-4" /> Ocultar Conteúdo (Global)
                 </Button>
               </div>
 
@@ -915,10 +946,10 @@ export default function FireCheckPage() {
                     {(floorData.isFloorContentVisible !== false) && (
                       <>
                         <div className="flex space-x-2 mb-4">
-                            <Button onClick={() => handleExpandAllForFloor(floorIndex)} variant="outline" size="sm" title="Expandir todos os itens deste andar">
+                            <Button onClick={() => handleExpandAllCategoriesForFloor(floorIndex)} variant="outline" size="sm" title="Expandir todos os itens deste andar">
                                 <Eye className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Expandir Itens do Andar</span>
                             </Button>
-                            <Button onClick={() => handleCollapseAllForFloor(floorIndex)} variant="outline" size="sm" title="Recolher todos os itens deste andar">
+                            <Button onClick={() => handleCollapseAllCategoriesForFloor(floorIndex)} variant="outline" size="sm" title="Recolher todos os itens deste andar">
                                 <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Recolher Itens do Andar</span>
                             </Button>
                         </div>
