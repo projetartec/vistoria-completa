@@ -89,15 +89,6 @@ export default function FireCheckPage() {
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
   const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
 
-  // State for drag and drop
-  const [draggingState, setDraggingState] = useState<{
-    floorIndex: number | null;
-    itemId: string | null;    // ID of item being dragged
-    itemIndex: number | null; // Original index of item being dragged
-    targetItemId: string | null; // ID of item being hovered over
-    dropPlacement: 'before' | 'after' | null; // Where to drop relative to targetItemId
-  }>({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
-
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -816,85 +807,6 @@ export default function FireCheckPage() {
     );
   }, []);
 
-  // Drag and Drop Handlers
-  const handleCategoryDragStart = useCallback((floorIndex: number, categoryId: string, categoryIndex: number, event: React.TouchEvent) => {
-    if (isMobile && event.touches && event.touches.length === 1) {
-       event.preventDefault(); 
-      setDraggingState({
-        floorIndex,
-        itemId: categoryId,
-        itemIndex: categoryIndex,
-        targetItemId: null,
-        dropPlacement: null,
-      });
-    }
-  }, [isMobile]);
-
-  const handleCategoryDragOver = useCallback((targetFloorIndex: number, targetCategoryId: string, event: React.TouchEvent) => {
-    if (!isMobile || !draggingState.itemId || draggingState.floorIndex !== targetFloorIndex || draggingState.itemId === targetCategoryId) {
-      return;
-    }
-    event.preventDefault(); // Important for D&D behavior
-
-    const targetElement = event.currentTarget as HTMLElement;
-    if (!targetElement) return;
-
-    const rect = targetElement.getBoundingClientRect();
-    const clientY = event.touches[0].clientY;
-    const midPointY = rect.top + rect.height / 2;
-    const placement = clientY < midPointY ? 'before' : 'after';
-
-    if (draggingState.targetItemId !== targetCategoryId || draggingState.dropPlacement !== placement) {
-      setDraggingState(prev => ({ ...prev, targetItemId, dropPlacement: placement }));
-    }
-  }, [isMobile, draggingState]);
-
-  const handleCategoryDrop = useCallback(() => {
-    if (!isMobile || !draggingState.itemId || !draggingState.targetItemId || draggingState.floorIndex === null || draggingState.itemIndex === null || !draggingState.dropPlacement) {
-      setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
-      return;
-    }
-
-    const { floorIndex, itemId: draggedItemId, itemIndex: originalIndex, targetItemId, dropPlacement } = draggingState;
-
-    setActiveFloorsData(prevFloors =>
-      prevFloors.map((floor, fIdx) => {
-        if (fIdx !== floorIndex) return floor;
-
-        const categories = [...floor.categories];
-        const draggedItem = categories[originalIndex];
-
-        if (!draggedItem || draggedItem.id !== draggedItemId) {
-          // console.error("Drag consistency error: Dragged item mismatch.");
-          setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
-          return floor; 
-        }
-        
-        categories.splice(originalIndex, 1);
-
-        let newTargetIndexInModifiedArray = categories.findIndex(cat => cat.id === targetItemId);
-        
-        if (newTargetIndexInModifiedArray === -1) {
-          // console.error("Drag consistency error: Target item not found in modified array.");
-           // Re-insert at original position as a fallback to prevent item loss
-          const originalCategoriesCopy = [...floor.categories]; // Get a fresh copy
-          setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
-          return {...floor, categories: originalCategoriesCopy };
-        }
-        
-        if (dropPlacement === 'after') {
-          newTargetIndexInModifiedArray++;
-        }
-
-        categories.splice(newTargetIndexInModifiedArray, 0, draggedItem);
-        return { ...floor, categories };
-      })
-    );
-
-    setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
-  }, [isMobile, draggingState, setActiveFloorsData]);
-
-
 
   if (!isClientInitialized) {
     return (
@@ -950,7 +862,7 @@ export default function FireCheckPage() {
                 return (
                   <Card key={floorData.id} className="mb-6 shadow-md">
                     <CardContent className="p-4 space-y-3">
-                       <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-3 mb-3">
+                      <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-3 mb-3">
                           {/* Floor Name and Label Group - Row 1 on Mobile */}
                           <div className="flex flex-row items-center gap-x-2 flex-grow md:flex-grow-0">
                             <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
@@ -967,7 +879,7 @@ export default function FireCheckPage() {
                           
                           {/* Floor Action Buttons Group - Row 2 on Mobile */}
                           <div className="flex flex-row items-center gap-x-2 md:ml-auto">
-                            <Button 
+                             <Button 
                               onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
                               variant="outline" 
                               size="sm" 
@@ -1024,12 +936,6 @@ export default function FireCheckPage() {
                                 categoryIndex={categoryIndex}
                                 totalCategoriesInFloor={floorData.categories.length}
                                 isMobile={isMobile}
-                                draggingItemId={draggingState.floorIndex === floorIndex ? draggingState.itemId : null}
-                                dragOverItemId={draggingState.floorIndex === floorIndex ? draggingState.targetItemId : null}
-                                dropPlacement={draggingState.floorIndex === floorIndex ? draggingState.dropPlacement : null}
-                                onCategoryDragStart={handleCategoryDragStart}
-                                onCategoryDragOver={handleCategoryDragOver}
-                                onCategoryDrop={handleCategoryDrop}
                               />
                             );
                           })}
@@ -1070,4 +976,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
