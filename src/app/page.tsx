@@ -29,6 +29,7 @@ const createNewFloorEntry = (): InspectionData => {
     ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Deep copy
     floor: '',
     categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)), // Deep copy
+    isFloorContentVisible: true, // Default to visible
   };
 };
 
@@ -449,7 +450,7 @@ export default function FireCheckPage() {
             showObservation: false,
           }),
           ...(configCat.type === 'pressure' && {
-            status: undefined,
+            status: undefined, // Added status for pressure type
             pressureValue: '',
             pressureUnit: '' as InspectionCategoryState['pressureUnit'],
             observation: '',
@@ -462,6 +463,7 @@ export default function FireCheckPage() {
         id: newFloorId,
         floor: '', 
         categories: newFloorCategories,
+        isFloorContentVisible: true, // Default to visible
       };
   
       return [...prevFloors, newFloorEntry];
@@ -517,7 +519,8 @@ export default function FireCheckPage() {
       floors: namedFloors.map(floor => ({
         id: floor.id,
         floor: floor.floor,
-        categories: JSON.parse(JSON.stringify(floor.categories))
+        categories: JSON.parse(JSON.stringify(floor.categories)),
+        isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true,
       })),
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl
@@ -584,6 +587,7 @@ export default function FireCheckPage() {
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
             ? floor.id
             : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
+        isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true, // Handle loading old data
         categories: floor.categories.map(cat => ({
           ...cat,
           subItems: cat.subItems ? cat.subItems.map(sub => ({
@@ -717,6 +721,24 @@ export default function FireCheckPage() {
     toast({ title: `Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Recolhidos` });
   }, [activeFloorsData, toast]);
 
+  const handleToggleFloorContent = useCallback((floorIndex: number) => {
+    setActiveFloorsData(prevFloors => {
+      const newFloors = prevFloors.map((floor, index) =>
+        index === floorIndex
+          ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) }
+          : floor
+      );
+      const updatedFloor = newFloors[floorIndex];
+      if (updatedFloor) {
+        toast({ 
+          title: `Conteúdo do Andar ${updatedFloor.floor || floorIndex + 1}`,
+          description: updatedFloor.isFloorContentVisible ? "Exibido" : "Ocultado"
+        });
+      }
+      return newFloors;
+    });
+  }, [toast]);
+
 
   const handleMoveCategoryItem = useCallback((floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
     setActiveFloorsData(prevFloors =>
@@ -825,11 +847,14 @@ export default function FireCheckPage() {
                         />
                       </div>
                       <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
-                         <Button onClick={() => handleExpandAllForFloor(floorIndex)} variant="outline" size="sm" title="Expandir itens deste andar">
-                            <Eye className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Expandir Andar</span>
-                          </Button>
-                          <Button onClick={() => handleCollapseAllForFloor(floorIndex)} variant="outline" size="sm" title="Recolher itens deste andar">
-                            <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Recolher Andar</span>
+                         <Button 
+                            onClick={() => handleToggleFloorContent(floorIndex)} 
+                            variant="outline" 
+                            size="sm" 
+                            title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
+                          >
+                            {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
+                            <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar Conteúdo" : "Mostrar Conteúdo"}</span>
                           </Button>
                         {activeFloorsData.length > 1 && (
                           <Button
@@ -845,22 +870,34 @@ export default function FireCheckPage() {
                       </div>
                     </div>
                     
-                    {floorData.categories.map((category, categoryIndex) => {
-                      const overallStatus = getCategoryOverallStatus(category);
-                      return (
-                        <InspectionCategoryItem
-                          key={`${floorData.id}-${category.id}`}
-                          category={category}
-                          overallStatus={overallStatus}
-                          onCategoryItemUpdate={handleCategoryItemUpdateForFloor}
-                          floorIndex={floorIndex}
-                          onMoveCategoryItem={handleMoveCategoryItem}
-                          onRemoveCategory={handleRemoveCategoryFromFloor}
-                          categoryIndex={categoryIndex}
-                          totalCategoriesInFloor={floorData.categories.length}
-                        />
-                      );
-                    })}
+                    {(floorData.isFloorContentVisible !== false) && (
+                      <>
+                        <div className="flex space-x-2 mb-4">
+                            <Button onClick={() => handleExpandAllForFloor(floorIndex)} variant="outline" size="sm" title="Expandir todos os itens deste andar">
+                                <Eye className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Expandir Itens do Andar</span>
+                            </Button>
+                            <Button onClick={() => handleCollapseAllForFloor(floorIndex)} variant="outline" size="sm" title="Recolher todos os itens deste andar">
+                                <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Recolher Itens do Andar</span>
+                            </Button>
+                        </div>
+                        {floorData.categories.map((category, categoryIndex) => {
+                          const overallStatus = getCategoryOverallStatus(category);
+                          return (
+                            <InspectionCategoryItem
+                              key={`${floorData.id}-${category.id}`}
+                              category={category}
+                              overallStatus={overallStatus}
+                              onCategoryItemUpdate={handleCategoryItemUpdateForFloor}
+                              floorIndex={floorIndex}
+                              onMoveCategoryItem={handleMoveCategoryItem}
+                              onRemoveCategory={handleRemoveCategoryFromFloor}
+                              categoryIndex={categoryIndex}
+                              totalCategoriesInFloor={floorData.categories.length}
+                            />
+                          );
+                        })}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               ))}

@@ -52,6 +52,7 @@ export interface InspectionData {
   id: string; // Unique ID for this floor entry
   floor: string;
   categories: InspectionCategoryState[];
+  isFloorContentVisible?: boolean; // Added to control visibility of the entire floor's content
 }
 
 export interface ClientInfo {
