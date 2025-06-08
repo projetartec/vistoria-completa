@@ -533,18 +533,11 @@ export default function FireCheckPage() {
         newSavedList.push(fullInspectionToSave);
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      // Toast de salvamento local será customizado abaixo se !isAutoSave
+      if (!isAutoSave) { // Only toast for manual save
+        toast({ title: "Vistoria Salva", description: "Sua vistoria foi salva localmente." });
+      }
       return sortedList;
     });
-
-    if (!isAutoSave) {
-      const fileName = initiateFileDownload(fullInspectionToSave, clientInfo);
-      toast({ 
-        title: "Vistoria Salva e Exportada", 
-        description: `Salva localmente. Escolha onde salvar o arquivo ${fileName}.`, 
-        duration: 6000 
-      });
-    }
     // Autosave não mostrará toast aqui.
   }, [clientInfo, activeFloorsData, setSavedInspections, uploadedLogoDataUrl, toast]);
 
@@ -1108,5 +1101,7 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
 
     
