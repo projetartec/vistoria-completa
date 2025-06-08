@@ -889,17 +889,17 @@ export default function FireCheckPage() {
           {isChecklistVisible && (
             <>
               <div className="flex flex-wrap gap-2 mb-4">
-                <Button onClick={handleExpandAllGlobalCategories} variant="outline" size="sm">
-                  <Eye className="mr-2 h-4 w-4" /> Expandir Categorias (Global)
+                <Button onClick={handleExpandAllGlobalCategories} variant="outline" size="sm" title="Expandir Todas as Categorias (Global)">
+                  <Eye className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Expandir Tudo</span>
                 </Button>
-                <Button onClick={handleCollapseAllGlobalCategories} variant="outline" size="sm">
-                  <EyeOff className="mr-2 h-4 w-4" /> Recolher Categorias (Global)
+                <Button onClick={handleCollapseAllGlobalCategories} variant="outline" size="sm" title="Recolher Todas as Categorias (Global)">
+                  <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Recolher Tudo</span>
                 </Button>
-                 <Button onClick={handleShowAllFloorContent} variant="outline" size="sm">
-                  <Rows3 className="mr-2 h-4 w-4" /> Mostrar Conteúdo (Global)
+                <Button onClick={handleShowAllFloorContent} variant="outline" size="sm" title="Mostrar Conteúdo de Todos os Andares (Global)">
+                  <Rows3 className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Mostrar Tudo</span>
                 </Button>
-                <Button onClick={handleHideAllFloorContent} variant="outline" size="sm">
-                  <Columns3 className="mr-2 h-4 w-4" /> Ocultar Conteúdo (Global)
+                <Button onClick={handleHideAllFloorContent} variant="outline" size="sm" title="Ocultar Conteúdo de Todos os Andares (Global)">
+                  <Columns3 className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Ocultar Tudo</span>
                 </Button>
               </div>
 
