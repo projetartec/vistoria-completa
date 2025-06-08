@@ -17,7 +17,7 @@ import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientI
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy } from 'lucide-react';
 
 const createNewFloorEntry = (): InspectionData => {
   const newId = (typeof window !== 'undefined')
@@ -672,6 +672,62 @@ export default function FireCheckPage() {
     }
   }, [setSavedInspections, toast, clientInfo.inspectionNumber, resetInspectionForm]);
 
+  const handleDuplicateInspection = useCallback((originalInspectionId: string) => {
+    const originalInspection = savedInspections.find(insp => insp.id === originalInspectionId);
+    if (originalInspection) {
+      const duplicatedInspection = JSON.parse(JSON.stringify(originalInspection)) as FullInspectionData;
+      
+      const newInspectionNumber = `${originalInspection.clientInfo.inspectionNumber}_CÓPIA_${Date.now().toString().slice(-5)}`;
+      duplicatedInspection.id = newInspectionNumber;
+      duplicatedInspection.clientInfo.inspectionNumber = newInspectionNumber;
+      duplicatedInspection.clientInfo.inspectionDate = new Date().toISOString().split('T')[0];
+      duplicatedInspection.clientInfo.inspectedBy = ''; // Clear inspected by for the new copy
+      duplicatedInspection.timestamp = Date.now();
+
+      // Regenerate IDs for floors, subitems, extinguishers, and hoses to ensure uniqueness if modified
+      duplicatedInspection.floors = duplicatedInspection.floors.map(floor => ({
+        ...floor,
+        id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-floorcopy`,
+        categories: floor.categories.map(cat => ({
+          ...cat,
+          subItems: cat.subItems ? cat.subItems.map(sub => ({
+            ...sub,
+            // Keep original IDs for standard subitems, regenerate for custom and registry item instances
+            id: sub.id.startsWith('custom-') || sub.isRegistry 
+                ? `${sub.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substring(2,9)}-copy` 
+                : sub.id,
+            registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
+              ...ext,
+              id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-extcopy`
+            })) : [],
+            registeredHoses: sub.registeredHoses ? sub.registeredHoses.map(hose => ({
+              ...hose,
+              id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-hosecopy`
+            })) : []
+          })) : []
+        }))
+      }));
+
+      setSavedInspections(prevSaved => {
+        return [duplicatedInspection, ...prevSaved].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      });
+
+      setTimeout(() => {
+        toast({
+          title: "Vistoria Duplicada",
+          description: `Vistoria "${originalInspectionId}" duplicada como "${newInspectionNumber}".`,
+        });
+      }, 0);
+    } else {
+      setTimeout(() => {
+        toast({
+          title: "Erro ao Duplicar",
+          description: "A vistoria original não foi encontrada.",
+          variant: "destructive",
+        });
+      }, 0);
+    }
+  }, [savedInspections, setSavedInspections, toast]);
 
   const handleGeneratePdf = useCallback(() => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
@@ -994,6 +1050,7 @@ export default function FireCheckPage() {
             onLoadInspection={handleLoadInspection}
             onDeleteInspection={handleDeleteInspection}
             onDeleteMultipleInspections={handleDeleteMultipleInspections}
+            onDuplicateInspection={handleDuplicateInspection}
           />
         )}
 

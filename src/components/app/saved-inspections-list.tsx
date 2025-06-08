@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit3, Trash2, Search, Hash } from 'lucide-react';
+import { Edit3, Trash2, Search, Hash, Copy } from 'lucide-react';
 import type { FullInspectionData } from '@/lib/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -16,6 +16,7 @@ interface SavedInspectionsListProps {
   onLoadInspection: (fullInspectionId: string) => void;
   onDeleteInspection: (fullInspectionId: string) => void;
   onDeleteMultipleInspections: (fullInspectionIds: string[]) => void;
+  onDuplicateInspection: (fullInspectionId: string) => void;
 }
 
 export function SavedInspectionsList({
@@ -23,6 +24,7 @@ export function SavedInspectionsList({
   onLoadInspection,
   onDeleteInspection,
   onDeleteMultipleInspections,
+  onDuplicateInspection,
 }: SavedInspectionsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedToDelete, setSelectedToDelete] = useState<string[]>([]);
@@ -119,9 +121,12 @@ export function SavedInspectionsList({
                     Código Cliente: {inspection.clientInfo.clientCode || 'N/A'} <br />
                     Total de Andares: {inspection.floors.length}
                   </CardDescription>
-                  <div className="flex space-x-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     <Button onClick={() => onLoadInspection(inspection.id)} size="sm" variant="outline">
                       <Edit3 className="mr-2 h-4 w-4" /> Carregar Vistoria
+                    </Button>
+                    <Button onClick={() => onDuplicateInspection(inspection.id)} size="sm" variant="secondary">
+                      <Copy className="mr-2 h-4 w-4" /> Duplicar Vistoria
                     </Button>
                     <Button variant="destructive" onClick={() => onDeleteInspection(inspection.id)} size="sm">
                       <Trash2 className="mr-2 h-4 w-4" /> Excluir Vistoria
