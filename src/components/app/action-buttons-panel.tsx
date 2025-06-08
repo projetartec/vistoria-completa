@@ -51,13 +51,14 @@ export function ActionButtonsPanel({
 
       {isActionsContentVisible && (
         <div id="actions-content-panel" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Button onClick={onSave} title="Salvar Vistoria">
+          <Button onClick={onSave} title="Salvar Vistoria" size="sm">
             <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar Vistoria</span>
           </Button>
           <Button
             onClick={onNewFloor}
             className="bg-green-500 hover:bg-green-600 text-white"
             title="Novo Andar"
+            size="sm"
           >
             <CopyPlus className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Novo Andar</span>
           </Button>
@@ -65,6 +66,7 @@ export function ActionButtonsPanel({
             onClick={onGeneratePdf}
             className="bg-orange-500 hover:bg-orange-600 text-white"
             title="Gerar Relatório PDF"
+            size="sm"
           >
             <FileText className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Relatório PDF</span>
           </Button>
@@ -72,6 +74,7 @@ export function ActionButtonsPanel({
             onClick={onPrint}
             variant="secondary"
             title="Imprimir Vistoria"
+            size="sm"
           >
             <Printer className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Imprimir Vistoria</span>
           </Button>
@@ -79,6 +82,7 @@ export function ActionButtonsPanel({
             onClick={onToggleSavedInspections}
             className="bg-yellow-500 hover:bg-yellow-600 text-black"
             title={isSavedInspectionsVisible ? 'Ocultar Vistorias Salvas' : 'Ver Vistorias Salvas'}
+            size="sm"
           >
             <ListChecks className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">{isSavedInspectionsVisible ? 'Ocultar Salvas' : 'Ver Salvas'}</span>
           </Button>
@@ -86,6 +90,7 @@ export function ActionButtonsPanel({
             onClick={onExportJson}
             className="bg-teal-500 hover:bg-teal-600 text-white"
             title="Exportar Vistoria para JSON"
+            size="sm"
           >
             <Download className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Exportar JSON</span>
           </Button>
@@ -93,6 +98,7 @@ export function ActionButtonsPanel({
             onClick={onTriggerImportJson}
             className="bg-teal-500 hover:bg-teal-600 text-white"
             title="Importar Vistoria de JSON"
+            size="sm"
           >
             <Upload className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Importar JSON</span>
           </Button>
@@ -101,6 +107,7 @@ export function ActionButtonsPanel({
             variant="destructive"
             className="md:col-start-4 lg:col-start-auto"
             title="Nova Vistoria (Limpar Formulário Atual)"
+            size="sm"
           >
             <PlusSquare className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Nova Vistoria (Limpar Tudo)</span>
           </Button>
