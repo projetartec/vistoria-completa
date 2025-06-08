@@ -819,7 +819,7 @@ export default function FireCheckPage() {
   // Drag and Drop Handlers
   const handleCategoryDragStart = useCallback((floorIndex: number, categoryId: string, categoryIndex: number, event: React.TouchEvent) => {
     if (isMobile && event.touches && event.touches.length === 1) {
-       // Optional: event.preventDefault() if scroll is an issue during drag start
+       event.preventDefault(); 
       setDraggingState({
         floorIndex,
         itemId: categoryId,
@@ -865,7 +865,7 @@ export default function FireCheckPage() {
         const draggedItem = categories[originalIndex];
 
         if (!draggedItem || draggedItem.id !== draggedItemId) {
-          console.error("Drag consistency error: Dragged item mismatch.");
+          // console.error("Drag consistency error: Dragged item mismatch.");
           setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
           return floor; 
         }
@@ -875,7 +875,7 @@ export default function FireCheckPage() {
         let newTargetIndexInModifiedArray = categories.findIndex(cat => cat.id === targetItemId);
         
         if (newTargetIndexInModifiedArray === -1) {
-          console.error("Drag consistency error: Target item not found in modified array.");
+          // console.error("Drag consistency error: Target item not found in modified array.");
            // Re-insert at original position as a fallback to prevent item loss
           const originalCategoriesCopy = [...floor.categories]; // Get a fresh copy
           setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
