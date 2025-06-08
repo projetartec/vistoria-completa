@@ -861,9 +861,9 @@ export default function FireCheckPage() {
                 return (
                   <Card key={floorData.id} className="mb-6 shadow-md">
                     <CardContent className="p-4 space-y-3">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
-                        <div className="flex items-center gap-x-2 flex-grow w-full sm:w-auto">
-                          <Label htmlFor={`floorName-${floorData.id}`} className="text-base sm:text-lg font-medium whitespace-nowrap">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center mb-3 gap-3">
+                        <div className="flex items-center gap-x-2 flex-grow w-full sm:w-auto flex-wrap">
+                          <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
                             ANDAR:
                           </Label>
                           <Input
@@ -900,14 +900,12 @@ export default function FireCheckPage() {
                               {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
                               <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar" : "Mostrar"}</span>
                            </Button>
-                        </div>
-                        <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
-                          {activeFloorsData.length > 1 && (
+                           {activeFloorsData.length > 1 && (
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleRemoveFloor(floorIndex)}
-                              className="text-destructive hover:bg-destructive/10"
+                              className="text-destructive hover:bg-destructive/10 h-9 w-9"
                               title="Remover este andar"
                             >
                               <Trash2 className="h-5 w-5" />
@@ -973,3 +971,4 @@ export default function FireCheckPage() {
 }
 
     
+
