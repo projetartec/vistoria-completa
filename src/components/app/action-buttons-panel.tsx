@@ -50,9 +50,9 @@ export function ActionButtonsPanel({
       </div>
 
       {isActionsContentVisible && (
-        <div id="actions-content-panel" className="grid grid-cols-4 gap-2 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div id="actions-content-panel" className="grid grid-cols-4 gap-2 sm:gap-4">
           <Button onClick={onSave} title="Salvar Vistoria" size="sm">
-            <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar Vistoria</span>
+            <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar</span>
           </Button>
           <Button
             onClick={onNewFloor}
@@ -68,7 +68,7 @@ export function ActionButtonsPanel({
             title="Gerar Relatório PDF"
             size="sm"
           >
-            <FileText className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Relatório PDF</span>
+            <FileText className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Gerar PDF</span>
           </Button>
           <Button
             onClick={onPrint}
@@ -76,7 +76,7 @@ export function ActionButtonsPanel({
             title="Imprimir Vistoria"
             size="sm"
           >
-            <Printer className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Imprimir Vistoria</span>
+            <Printer className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Imprimir</span>
           </Button>
           <Button
             onClick={onToggleSavedInspections}
@@ -108,7 +108,7 @@ export function ActionButtonsPanel({
             title="Nova Vistoria (Limpar Formulário Atual)"
             size="sm"
           >
-            <PlusSquare className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Nova Vistoria (Limpar Tudo)</span>
+            <PlusSquare className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Nova Vistoria</span>
           </Button>
         </div>
       )}
