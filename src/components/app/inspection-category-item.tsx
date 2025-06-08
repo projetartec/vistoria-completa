@@ -425,7 +425,7 @@ const InspectionCategoryItemComponent = ({
             }
             return (
               <div key={subItem.id} className="py-2 border-t first:border-t-0">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:gap-x-3 gap-y-1 mb-1">
                   <Label className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
                   <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0 flex-wrap">
                     <RadioGroup
