@@ -352,12 +352,17 @@ export default function FireCheckPage() {
           const collapsedCategoryIndex = intermediateCategories.findIndex(c => c.id === autoCollapsedCategoryId);
           if (collapsedCategoryIndex !== -1 && collapsedCategoryIndex + 1 < intermediateCategories.length) {
             finalCategories = intermediateCategories.map((cat, idx) => {
-              if (idx === collapsedCategoryIndex + 1) {
+              if (idx === collapsedCategoryIndex + 1 && !cat.isExpanded) { // Only expand if not already expanded
                 return { ...cat, isExpanded: true };
               }
               return cat;
             });
-            inspectionChangedOverall = true; 
+            // No need to set inspectionChangedOverall = true here if only expansion state changed due to auto-logic,
+            // as the structural change that triggered this already set it.
+            // However, if the expansion itself is considered a change to save, then:
+            if (finalCategories.some((cat, idx) => cat.isExpanded !== intermediateCategories[idx].isExpanded)) {
+                 inspectionChangedOverall = true;
+            }
           }
         }
         
@@ -425,7 +430,38 @@ export default function FireCheckPage() {
           return newCatState;
         });
       } else {
-        newFloorCategories = JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories));
+        // For the very first floor, or if there are no previous floors, use the default config.
+        // However, we need to ensure that INSPECTION_CONFIG is correctly transformed.
+        newFloorCategories = INSPECTION_CONFIG.map(configCat => ({
+          id: configCat.id,
+          title: configCat.title,
+          type: configCat.type,
+          isExpanded: false,
+          ...(configCat.type === 'standard' && {
+            subItems: configCat.subItems!.map(subItem => ({
+              id: subItem.id,
+              name: subItem.name,
+              status: undefined,
+              observation: '',
+              showObservation: false,
+              isRegistry: subItem.isRegistry || false,
+              ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
+              ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
+            })),
+          }),
+          ...(configCat.type === 'special' && {
+            status: undefined,
+            observation: '',
+            showObservation: false,
+          }),
+          ...(configCat.type === 'pressure' && {
+            status: undefined,
+            pressureValue: '',
+            pressureUnit: '' as InspectionCategoryState['pressureUnit'],
+            observation: '',
+            showObservation: false,
+          }),
+        }));
       }
   
       const newFloorEntry: InspectionData = {
@@ -657,7 +693,7 @@ export default function FireCheckPage() {
     toast({ title: "Checklist Expandido", description: "Todos os itens do checklist foram expandidos." });
   }, [toast]);
 
-  const handleMoveCategoryItem = useCallback((floorIndex: number, categoryId: string, direction: 'up' | 'down') => {
+  const handleMoveCategoryItem = useCallback((floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
     setActiveFloorsData(prevFloors =>
       prevFloors.map((floor, fIndex) => {
         if (fIndex !== floorIndex) {
@@ -676,6 +712,12 @@ export default function FireCheckPage() {
           const temp = categories[itemIndex];
           categories[itemIndex] = categories[itemIndex + 1];
           categories[itemIndex + 1] = temp;
+        } else if (direction === 'top' && itemIndex > 0) {
+          const [itemToMove] = categories.splice(itemIndex, 1);
+          categories.unshift(itemToMove);
+        } else if (direction === 'bottom' && itemIndex < categories.length - 1) {
+          const [itemToMove] = categories.splice(itemIndex, 1);
+          categories.push(itemToMove);
         }
         return { ...floor, categories };
       })
@@ -820,3 +862,4 @@ export default function FireCheckPage() {
   );
 }
 
+    

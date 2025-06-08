@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2 } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ interface InspectionCategoryItemProps {
   onCategoryItemUpdate: (floorIndex: number, categoryId: string, update: CategoryUpdatePayload) => void;
   overallStatus: CategoryOverallStatus;
   floorIndex: number;
-  onMoveCategoryItem: (floorIndex: number, categoryId: string, direction: 'up' | 'down') => void;
+  onMoveCategoryItem: (floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
   onRemoveCategory: (floorIndex: number, categoryId: string) => void;
   categoryIndex: number;
   totalCategoriesInFloor: number;
@@ -339,6 +339,16 @@ const InspectionCategoryItemComponent = ({
             <Button
               variant="ghost"
               size="icon"
+              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'top'); }}
+              disabled={categoryIndex === 0}
+              className="h-7 w-7 p-0"
+              title="Mover Categoria Para o Topo"
+            >
+              <ChevronsUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'up'); }}
               disabled={categoryIndex === 0}
               className="h-7 w-7 p-0"
@@ -355,6 +365,16 @@ const InspectionCategoryItemComponent = ({
               title="Mover Categoria Para Baixo"
             >
               <ChevronDown className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'bottom'); }}
+              disabled={categoryIndex >= totalCategoriesInFloor - 1}
+              className="h-7 w-7 p-0"
+              title="Mover Categoria Para o Fim"
+            >
+              <ChevronsDown className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
@@ -610,3 +630,5 @@ const InspectionCategoryItemComponent = ({
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
+
+    
