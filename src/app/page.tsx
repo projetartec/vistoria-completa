@@ -357,9 +357,6 @@ export default function FireCheckPage() {
               }
               return cat;
             });
-            // No need to set inspectionChangedOverall = true here if only expansion state changed due to auto-logic,
-            // as the structural change that triggered this already set it.
-            // However, if the expansion itself is considered a change to save, then:
             if (finalCategories.some((cat, idx) => cat.isExpanded !== intermediateCategories[idx].isExpanded)) {
                  inspectionChangedOverall = true;
             }
@@ -416,7 +413,6 @@ export default function FireCheckPage() {
               copiedSubItem.observation = '';
               copiedSubItem.showObservation = false;
               
-              // For registry items, keep the registered items if they exist
               if (subItem.isRegistry) {
                 if (subItem.id === 'extintor_cadastro') {
                    copiedSubItem.registeredExtinguishers = subItem.registeredExtinguishers ? JSON.parse(JSON.stringify(subItem.registeredExtinguishers)) : [];
@@ -430,8 +426,6 @@ export default function FireCheckPage() {
           return newCatState;
         });
       } else {
-        // For the very first floor, or if there are no previous floors, use the default config.
-        // However, we need to ensure that INSPECTION_CONFIG is correctly transformed.
         newFloorCategories = INSPECTION_CONFIG.map(configCat => ({
           id: configCat.id,
           title: configCat.title,
@@ -596,7 +590,7 @@ export default function FireCheckPage() {
             ...sub,
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
                 ? sub.id 
-                : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`, // Preserve custom IDs, generate for others if needed
+                : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
@@ -863,3 +857,4 @@ export default function FireCheckPage() {
 }
 
     
+
