@@ -143,10 +143,15 @@ export default function FireCheckPage() {
       const newClientInfoState = { ...prevClientInfo, [field]: value };
       
       if (field === 'clientCode' || field === 'clientLocation') {
-        newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
-          newClientInfoState.clientCode,
-          newClientInfoState.clientLocation
-        );
+        // Only recalculate inspectionNumber if it's currently empty or if clientCode/clientLocation triggered the change
+        // This prevents overwriting a manually set or loaded inspectionNumber unless client data changes significantly
+        if (!prevClientInfo.inspectionNumber || prevClientInfo.clientCode !== newClientInfoState.clientCode || prevClientInfo.clientLocation !== newClientInfoState.clientLocation) {
+            newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
+              newClientInfoState.clientCode,
+              newClientInfoState.clientLocation
+            );
+        }
+
         if (value && field === 'clientLocation') {
             setSavedLocations(prevLocs => {
                 const lowerCaseValue = value.trim().toLowerCase();
@@ -533,12 +538,11 @@ export default function FireCheckPage() {
         newSavedList.push(fullInspectionToSave);
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      if (!isAutoSave) { // Only toast for manual save
-        toast({ title: "Vistoria Salva", description: "Sua vistoria foi salva localmente." });
+      if (!isAutoSave) { 
+        toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSave.id} salva no navegador.` });
       }
       return sortedList;
     });
-    // Autosave não mostrará toast aqui.
   }, [clientInfo, activeFloorsData, setSavedInspections, uploadedLogoDataUrl, toast]);
 
 
@@ -553,7 +557,7 @@ export default function FireCheckPage() {
         clearTimeout(debounceTimeoutRef.current);
       }
       debounceTimeoutRef.current = setTimeout(() => {
-        handleSaveInspection(true); // Pass true para indicar autosave
+        handleSaveInspection(true); 
       }, 2500); 
     }
 
@@ -673,6 +677,49 @@ export default function FireCheckPage() {
       toast({ title: "Vistoria Duplicada", description: `Vistoria Nº ${newInspectionNumber} criada a partir da Nº ${originalInspectionId}.`});
     }
   }, [savedInspections, setSavedInspections, toast]);
+
+  const handleRenameInspection = useCallback((oldId: string, newId: string) => {
+    if (!newId.trim()) {
+      toast({ title: "Erro ao Renomear", description: "O novo número da vistoria não pode ser vazio.", variant: "destructive" });
+      return;
+    }
+    if (oldId !== newId && savedInspections.some(insp => insp.id === newId)) {
+      toast({ title: "Erro ao Renomear", description: `O número de vistoria "${newId}" já existe. Escolha um número único.`, variant: "destructive" });
+      return;
+    }
+
+    setSavedInspections(prevSaved => {
+      const inspectionToRename = prevSaved.find(insp => insp.id === oldId);
+      if (!inspectionToRename) {
+        toast({ title: "Erro ao Renomear", description: "Vistoria original não encontrada.", variant: "destructive" });
+        return prevSaved;
+      }
+
+      const renamedInspection: FullInspectionData = {
+        ...JSON.parse(JSON.stringify(inspectionToRename)), // Deep copy
+        id: newId,
+        clientInfo: {
+          ...inspectionToRename.clientInfo,
+          inspectionNumber: newId,
+        },
+        timestamp: Date.now(), // Update timestamp to reflect modification
+      };
+
+      const updatedList = prevSaved.filter(insp => insp.id !== oldId);
+      updatedList.push(renamedInspection);
+      const sortedList = updatedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      
+      toast({ title: "Vistoria Renomeada", description: `Vistoria "${oldId}" foi renomeada para "${newId}".` });
+      return sortedList;
+    });
+
+    // If the currently loaded inspection was renamed, update its clientInfo
+    if (clientInfo.inspectionNumber === oldId) {
+      setClientInfo(prev => ({ ...prev, inspectionNumber: newId }));
+      setBlockAutoSaveOnce(true); // Prevent immediate autosave with old ID if form is modified
+    }
+  }, [savedInspections, setSavedInspections, clientInfo.inspectionNumber, toast]);
+
 
   const handleGeneratePdf = useCallback(() => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
@@ -1064,14 +1111,14 @@ export default function FireCheckPage() {
         </div>
         
         <ActionButtonsPanel
-          onSave={() => handleSaveInspection(false)} // false indica que não é autosave
+          onSave={() => handleSaveInspection(false)}
           onNewInspection={resetInspectionForm}
           onNewFloor={handleNewFloorInspection}
           onToggleSavedInspections={toggleSavedInspections}
           isSavedInspectionsVisible={isSavedInspectionsVisible}
           onGeneratePdf={handleGeneratePdf}
           onPrint={handlePrintPage}
-          onExportJson={handleExportCurrentInspectionToJson} // Renomeado para clareza
+          onExportJson={handleExportCurrentInspectionToJson}
           onTriggerImportJson={triggerJsonImport}
         />
         <input 
@@ -1091,6 +1138,7 @@ export default function FireCheckPage() {
             onDeleteInspection={handleDeleteInspection}
             onDeleteMultipleInspections={handleDeleteMultipleInspections}
             onDuplicateInspection={handleDuplicateInspection}
+            onRenameInspection={handleRenameInspection}
           />
         )}
 
@@ -1101,7 +1149,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
-
-    
