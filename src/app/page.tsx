@@ -871,7 +871,7 @@ export default function FireCheckPage() {
                             value={floorData.floor}
                             onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
                             placeholder="Ex: Térreo, 1A, Subsolo"
-                            className="w-full max-w-xs"
+                            className="flex-grow max-w-xs min-w-[100px]"
                           />
                           <Button 
                             onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
@@ -971,4 +971,5 @@ export default function FireCheckPage() {
 }
 
     
+
 
