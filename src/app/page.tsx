@@ -110,7 +110,6 @@ export default function FireCheckPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setUploadedLogoDataUrl(reader.result as string);
-        // console.log("Logo Carregado");
       };
       reader.readAsDataURL(file);
     }
@@ -300,7 +299,6 @@ export default function FireCheckPage() {
                 };
                 updatedCatData.subItems = [...(updatedCatData.subItems || []), newSubItem];
                 categoryStructurallyChanged = true;
-                // console.log(`Subitem "${newSubItem.name}" adicionado.`);
               }
               break;
             case 'removeSubItem':
@@ -309,7 +307,7 @@ export default function FireCheckPage() {
                 updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
                 categoryStructurallyChanged = true;
                 if (subItemToRemove) {
-                    // No confirmation needed as per user request
+                    // No confirmation needed
                 }
               }
               break;
@@ -332,7 +330,7 @@ export default function FireCheckPage() {
                 }
             }
 
-            if (shouldAutoCollapse && cat.isExpanded) { // Only auto-collapse if it was expanded
+            if (shouldAutoCollapse && cat.isExpanded) { 
                 updatedCatData.isExpanded = false;
                 autoCollapsedCategoryId = cat.id; 
             }
@@ -350,7 +348,7 @@ export default function FireCheckPage() {
           const collapsedCategoryIndex = intermediateCategories.findIndex(c => c.id === autoCollapsedCategoryId);
           if (collapsedCategoryIndex !== -1 && collapsedCategoryIndex + 1 < intermediateCategories.length) {
             finalCategories = intermediateCategories.map((cat, idx) => {
-              if (idx === collapsedCategoryIndex + 1 && !cat.isExpanded) { // Only expand if not already expanded
+              if (idx === collapsedCategoryIndex + 1 && !cat.isExpanded) { 
                 return { ...cat, isExpanded: true };
               }
               return cat;
@@ -382,7 +380,6 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
     setBlockAutoSaveOnce(true); 
-    // console.log("Formulário de vistoria reiniciado.");
   }, []);
 
   const handleNewFloorInspection = useCallback(() => {
@@ -466,33 +463,26 @@ export default function FireCheckPage() {
       return [...prevFloors, newFloorEntry];
     });
   
-    // console.log("Novo andar adicionado.");
   }, []);
 
   const handleRemoveFloor = useCallback((floorIndex: number) => {
     if (activeFloorsData.length <= 1) {
-      // console.log("Ação Inválida: Deve haver pelo menos um andar.");
       return;
     }
     setActiveFloorsData(prev => prev.filter((_, index) => index !== floorIndex));
-    // console.log("Andar removido.");
   }, [activeFloorsData.length]);
 
 
   const handleSaveInspection = useCallback((isAutoSave = false) => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
       if (!isAutoSave) {
-        // console.log("Erro ao Salvar: CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.");
-      } else {
-        // console.log("Auto-save: Client info/Inspection Number incomplete, not saving.");
+        // console.log("Erro: CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.");
       }
       return;
     }
      if (!clientInfo.inspectionDate) {
       if (!isAutoSave) {
-        // console.log("Erro ao Salvar: DATA DA VISTORIA é obrigatória.");
-      } else {
-        // console.log("Auto-save: Inspection date missing, not saving.");
+        // console.log("Erro: DATA DA VISTORIA é obrigatória.");
       }
       return;
     }
@@ -501,8 +491,6 @@ export default function FireCheckPage() {
     if (namedFloors.length === 0) {
       if (!isAutoSave) {
         // console.log("Nenhum Andar Nomeado: Adicione e nomeie pelo menos um andar para salvar a vistoria.");
-      } else {
-        // console.log("Auto-save: No named floors, not saving.");
       }
       return;
     }
@@ -530,12 +518,6 @@ export default function FireCheckPage() {
       }
       return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     });
-
-    if (isAutoSave) {
-      // console.log(`Auto-save: Vistoria ${fullInspectionToSave.id} atualizada.`);
-    } else {
-      // console.log(`Vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.`);
-    }
   }, [clientInfo, activeFloorsData, setSavedInspections, uploadedLogoDataUrl]);
 
 
@@ -550,7 +532,6 @@ export default function FireCheckPage() {
         clearTimeout(debounceTimeoutRef.current);
       }
       debounceTimeoutRef.current = setTimeout(() => {
-        // console.log('Attempting auto-save...');
         handleSaveInspection(true); 
       }, 2500); 
     }
@@ -578,7 +559,7 @@ export default function FireCheckPage() {
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
             ? floor.id
             : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
-        isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true, // Handle loading old data
+        isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true, 
         categories: floor.categories.map(cat => ({
           ...cat,
           subItems: cat.subItems ? cat.subItems.map(sub => ({
@@ -605,13 +586,11 @@ export default function FireCheckPage() {
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
       setIsChecklistVisible(true);
-      // console.log(`Vistoria ${inspectionToLoad.id} carregada.`);
     }
   };
 
   const handleDeleteInspection = useCallback((fullInspectionId: string) => {
     setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
-    // console.log("A vistoria salva foi excluída com sucesso.");
 
     if (clientInfo.inspectionNumber === fullInspectionId) {
       resetInspectionForm();
@@ -619,17 +598,13 @@ export default function FireCheckPage() {
   }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm]);
 
   const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
-    // console.log('Attempting to delete inspection IDs:', inspectionIds);
     setSavedInspections(prev => {
       const filteredList = prev.filter(insp => !inspectionIds.includes(insp.id));
       const newList = [...filteredList]; 
-      // console.log('New list after filtering (and spreading):', newList.length, 'items. Previous list:', prev.length, 'items.');
       return newList;
     });
-    // console.log(`${inspectionIds.length} vistoria(s) foram excluídas com sucesso.`);
 
     if (clientInfo.inspectionNumber && inspectionIds.includes(clientInfo.inspectionNumber)) {
-      // console.log('Current inspection was deleted, resetting form.');
       resetInspectionForm();
     }
   }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm]);
@@ -643,10 +618,9 @@ export default function FireCheckPage() {
       duplicatedInspection.id = newInspectionNumber;
       duplicatedInspection.clientInfo.inspectionNumber = newInspectionNumber;
       duplicatedInspection.clientInfo.inspectionDate = new Date().toISOString().split('T')[0];
-      duplicatedInspection.clientInfo.inspectedBy = ''; // Clear inspected by for the new copy
+      duplicatedInspection.clientInfo.inspectedBy = ''; 
       duplicatedInspection.timestamp = Date.now();
 
-      // Regenerate IDs for floors, subitems, extinguishers, and hoses to ensure uniqueness if modified
       duplicatedInspection.floors = duplicatedInspection.floors.map(floor => ({
         ...floor,
         id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-floorcopy`,
@@ -654,7 +628,6 @@ export default function FireCheckPage() {
           ...cat,
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
-            // Keep original IDs for standard subitems, regenerate for custom and registry item instances
             id: sub.id.startsWith('custom-') || sub.isRegistry 
                 ? `${sub.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substring(2,9)}-copy` 
                 : sub.id,
@@ -673,21 +646,17 @@ export default function FireCheckPage() {
       setSavedInspections(prevSaved => {
         return [duplicatedInspection, ...prevSaved].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
-
-      // console.log(`Vistoria "${originalInspectionId}" duplicada como "${newInspectionNumber}".`);
     } else {
-      // console.log("Erro ao Duplicar: A vistoria original não foi encontrada.");
+      // console.log("Erro: A vistoria original não foi encontrada.");
     }
   }, [savedInspections, setSavedInspections]);
 
   const handleGeneratePdf = useCallback(() => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
-      // console.log("Dados Incompletos: CÓDIGO DO CLIENTE, LOCAL, DATA e NÚMERO DA VISTORIA são obrigatórios para gerar o PDF.");
       return;
     }
     const floorsToPrint = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (floorsToPrint.length === 0) {
-      // console.log("Nenhum Andar Nomeado: Adicione e nomeie pelo menos um andar para gerar o PDF.");
       return;
     }
     generateInspectionPdf(clientInfo, floorsToPrint, uploadedLogoDataUrl);
@@ -710,7 +679,6 @@ export default function FireCheckPage() {
         categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })),
       }))
     );
-    // console.log("Todos os itens do checklist foram recolhidos.");
   }, []);
 
   const handleExpandAllGlobalCategories = useCallback(() => {
@@ -720,7 +688,6 @@ export default function FireCheckPage() {
         categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })),
       }))
     );
-    // console.log("Todos os itens do checklist foram expandidos.");
   }, []);
 
   const handleShowAllFloorContent = useCallback(() => {
@@ -730,7 +697,6 @@ export default function FireCheckPage() {
         isFloorContentVisible: true,
       }))
     );
-    // console.log("Conteúdo de Todos os Andares Exibido");
   }, []);
 
   const handleHideAllFloorContent = useCallback(() => {
@@ -740,7 +706,6 @@ export default function FireCheckPage() {
         isFloorContentVisible: false,
       }))
     );
-    // console.log("Conteúdo de Todos os Andares Ocultado");
   }, []);
 
 
@@ -756,8 +721,7 @@ export default function FireCheckPage() {
         return floor;
       })
     );
-    // console.log(`Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Expandidos`);
-  }, [activeFloorsData]);
+  }, []);
   
   const handleCollapseAllCategoriesForFloor = useCallback((floorIndex: number) => {
     setActiveFloorsData(prevFloors =>
@@ -771,8 +735,19 @@ export default function FireCheckPage() {
         return floor;
       })
     );
-    // console.log(`Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Recolhidos`);
-  }, [activeFloorsData]);
+  }, []);
+
+  const handleToggleAllCategoriesForFloor = useCallback((floorIndex: number) => {
+    const floor = activeFloorsData[floorIndex];
+    if (floor) {
+      const areAnyExpanded = floor.categories.some(cat => cat.isExpanded);
+      if (areAnyExpanded) {
+        handleCollapseAllCategoriesForFloor(floorIndex);
+      } else {
+        handleExpandAllCategoriesForFloor(floorIndex);
+      }
+    }
+  }, [activeFloorsData, handleCollapseAllCategoriesForFloor, handleExpandAllCategoriesForFloor]);
 
   const handleToggleFloorContent = useCallback((floorIndex: number) => {
     setActiveFloorsData(prevFloors => {
@@ -781,10 +756,6 @@ export default function FireCheckPage() {
           ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) }
           : floor
       );
-      const updatedFloor = newFloors[floorIndex];
-      if (updatedFloor) {
-        // console.log(`Conteúdo do Andar ${updatedFloor.floor || floorIndex + 1} ${updatedFloor.isFloorContentVisible ? "Exibido" : "Ocultado"}`);
-      }
       return newFloors;
     });
   }, []);
@@ -822,7 +793,6 @@ export default function FireCheckPage() {
   }, []);
 
   const handleRemoveCategoryFromFloor = useCallback((floorIndex: number, categoryId: string) => {
-    // No confirmation needed as per user request
     setActiveFloorsData(prevFloors =>
       prevFloors.map((floor, fIndex) => {
         if (fIndex !== floorIndex) {
@@ -834,7 +804,6 @@ export default function FireCheckPage() {
         };
       })
     );
-    // console.log("A categoria foi removida deste andar.");
   }, []);
 
 
@@ -887,77 +856,90 @@ export default function FireCheckPage() {
                 </Button>
               </div>
 
-              {activeFloorsData.map((floorData, floorIndex) => (
-                <Card key={floorData.id} className="mb-6 shadow-md">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
-                      <div className="flex items-center gap-x-3 flex-grow mr-2 w-full sm:w-auto">
-                        <Label htmlFor={`floorName-${floorData.id}`} className="text-base sm:text-lg font-medium whitespace-nowrap">
-                          ANDAR:
-                        </Label>
-                        <Input
-                          id={`floorName-${floorData.id}`}
-                          value={floorData.floor}
-                          onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
-                          placeholder="Ex: Térreo, 1A, Subsolo"
-                          className="w-full max-w-xs"
-                        />
-                      </div>
-                      <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
-                         <Button 
-                            onClick={() => handleToggleFloorContent(floorIndex)} 
+              {activeFloorsData.map((floorData, floorIndex) => {
+                const areAnyCategoriesExpanded = floorData.categories.some(cat => cat.isExpanded);
+                return (
+                  <Card key={floorData.id} className="mb-6 shadow-md">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+                        <div className="flex items-center gap-x-2 flex-grow w-full sm:w-auto">
+                          <Label htmlFor={`floorName-${floorData.id}`} className="text-base sm:text-lg font-medium whitespace-nowrap">
+                            ANDAR:
+                          </Label>
+                          <Input
+                            id={`floorName-${floorData.id}`}
+                            value={floorData.floor}
+                            onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
+                            placeholder="Ex: Térreo, 1A, Subsolo"
+                            className="w-full max-w-xs"
+                          />
+                          <Button 
+                            onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
                             variant="outline" 
                             size="sm" 
-                            title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
+                            title={areAnyCategoriesExpanded ? "Recolher todos os itens deste andar" : "Expandir todos os itens deste andar"}
                           >
-                            {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
-                            <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar Conteúdo" : "Mostrar Conteúdo"}</span>
+                            {areAnyCategoriesExpanded ? (
+                              <>
+                                <EyeOff className="mr-1 h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Recolher Itens</span>
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="mr-1 h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Expandir Itens</span>
+                              </>
+                            )}
                           </Button>
-                        {activeFloorsData.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveFloor(floorIndex)}
-                            className="text-destructive hover:bg-destructive/10"
-                            title="Remover este andar"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {(floorData.isFloorContentVisible !== false) && (
-                      <>
-                        <div className="flex space-x-2 mb-4">
-                            <Button onClick={() => handleExpandAllCategoriesForFloor(floorIndex)} variant="outline" size="sm" title="Expandir todos os itens deste andar">
-                                <Eye className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Expandir Itens do Andar</span>
-                            </Button>
-                            <Button onClick={() => handleCollapseAllCategoriesForFloor(floorIndex)} variant="outline" size="sm" title="Recolher todos os itens deste andar">
-                                <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Recolher Itens do Andar</span>
-                            </Button>
                         </div>
-                        {floorData.categories.map((category, categoryIndex) => {
-                          const overallStatus = getCategoryOverallStatus(category);
-                          return (
-                            <InspectionCategoryItem
-                              key={`${floorData.id}-${category.id}`}
-                              category={category}
-                              overallStatus={overallStatus}
-                              onCategoryItemUpdate={handleCategoryItemUpdateForFloor}
-                              floorIndex={floorIndex}
-                              onMoveCategoryItem={handleMoveCategoryItem}
-                              onRemoveCategory={handleRemoveCategoryFromFloor}
-                              categoryIndex={categoryIndex}
-                              totalCategoriesInFloor={floorData.categories.length}
-                            />
-                          );
-                        })}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                        <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
+                           <Button 
+                              onClick={() => handleToggleFloorContent(floorIndex)} 
+                              variant="outline" 
+                              size="sm" 
+                              title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
+                            >
+                              {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
+                              <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar Conteúdo" : "Mostrar Conteúdo"}</span>
+                            </Button>
+                          {activeFloorsData.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveFloor(floorIndex)}
+                              className="text-destructive hover:bg-destructive/10"
+                              title="Remover este andar"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {(floorData.isFloorContentVisible !== false) && (
+                        <>
+                          {floorData.categories.map((category, categoryIndex) => {
+                            const overallStatus = getCategoryOverallStatus(category);
+                            return (
+                              <InspectionCategoryItem
+                                key={`${floorData.id}-${category.id}`}
+                                category={category}
+                                overallStatus={overallStatus}
+                                onCategoryItemUpdate={handleCategoryItemUpdateForFloor}
+                                floorIndex={floorIndex}
+                                onMoveCategoryItem={handleMoveCategoryItem}
+                                onRemoveCategory={handleRemoveCategoryFromFloor}
+                                categoryIndex={categoryIndex}
+                                totalCategoriesInFloor={floorData.categories.length}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </>
           )}
         </div>
