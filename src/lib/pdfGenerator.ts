@@ -181,7 +181,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
           .pdf-section-title { font-size: 16pt; font-weight: 700; color: #1F2937; margin-top: 25px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #2563EB; }
           
-          .pdf-verified-summary-overall { margin-bottom: 20px; page-break-inside: avoid; }
+          .pdf-verified-summary-overall { margin-bottom: 20px; page-break-inside: auto; } /* Allow breaking if needed */
           .pdf-verified-summary-overall h4 { font-size: 13pt; font-weight: 600; color: #374151; margin-top: 0; margin-bottom: 10px; }
           .pdf-verified-summary-category-overall { margin-bottom: 8px; }
           .pdf-verified-summary-category-title-overall { font-size: 11pt; font-weight: 600; color: #111827; margin-bottom: 4px; }
@@ -227,15 +227,38 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           .pdf-footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; font-size: 9pt; color: #6B7280; }
 
           @media print {
-            html, body { height: auto; background-color: #FFFFFF !important; margin: 0 !important; padding: 10mm 8mm !important; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; font-size: 10pt; }
-            .pdf-container { width: 100%; box-shadow: none !important; padding: 0 !important; border: none !important; margin: 0 !important; }
-            .pdf-header-main, .pdf-client-info, .pdf-verified-summary-overall, .pdf-pressure-reading-section, .pdf-registered-items-outer-section { page-break-after: avoid; }
-            .pdf-section-title { page-break-after: avoid; }
+            html, body { 
+              height: auto; 
+              background-color: #FFFFFF !important; 
+              margin: 0 !important; 
+              padding: 10mm 8mm !important; 
+              print-color-adjust: exact !important; 
+              -webkit-print-color-adjust: exact !important; 
+              font-size: 10pt;
+              overflow: visible !important; /* Ensure content can flow */
+            }
+            .pdf-container { 
+              width: 100%; 
+              box-shadow: none !important; 
+              padding: 0 !important; 
+              border: none !important; 
+              margin: 0 !important;
+              overflow: visible !important; /* Ensure content can flow */
+            }
+            /* Removed page-break-after: avoid rules for major sections */
+            /* .pdf-header-main, .pdf-client-info, .pdf-pressure-reading-section, .pdf-registered-items-outer-section { page-break-after: avoid; } */
+            /* .pdf-section-title { page-break-after: avoid; } */
+            
+            .pdf-verified-summary-overall { page-break-inside: auto !important; } /* Allow this section to break */
+
             .pdf-footer { page-break-before: auto; page-break-inside: avoid; }
-            .pdf-floor-section { page-break-inside: avoid; page-break-before: auto; }
+            
+            .pdf-floor-section { page-break-before: auto; } /* Removed page-break-inside: avoid from floor section */
             .pdf-floor-section:first-of-type { page-break-before: avoid; }
+            
             .pdf-category-card { page-break-inside: avoid !important; box-shadow: none !important; border: 1px solid #E5E7EB !important; }
             .pdf-subitem-wrapper { page-break-inside: avoid !important; }
+            
             .pdf-header-main .company-name, .pdf-client-info .pdf-main-title { color: #2563EB !important; }
             .pdf-header-main .company-details p { color: #374151 !important; }
             .pdf-client-info .pdf-subtitle { color: #6B7280 !important; }
@@ -329,8 +352,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             pdfHtml += `<li>${subItemConfig.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
           });
           pdfHtml += `</ul>`;
+        } else {
+           // If the category itself was "verified" (e.g. a special/pressure type, or a standard type where only registry items were touched)
+           // but no listable subitems were verified, we might not need to print anything here for standard types,
+           // or just print the category title if it's a special/pressure type.
+           // For now, if no listable subitems, the ul will be empty.
         }
       }
+      // For special/pressure types, just the category title being listed if 'verified' is enough.
       pdfHtml += `</div>`;
     }
   });
@@ -344,12 +373,15 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 
   let anyNonConformingItemsFound = false;
   processedFloorsData.forEach((floor) => {
-    if (floor.floorHasNonConformingItems) {
+    // Check if this floor has any NC items before printing its title
+    const floorHasNCItemsForReport = floor.categories.some(category => category.categoryHasNCItems);
+
+    if (floorHasNCItemsForReport) {
       anyNonConformingItemsFound = true;
       pdfHtml += `<div class="pdf-floor-section">
                     <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>`;
       floor.categories.forEach(category => {
-        if (category.categoryHasNCItems) {
+        if (category.categoryHasNCItems) { // Only categories with NC items
           pdfHtml += `<article class="pdf-category-card">
                         <header class="pdf-category-header">
                           <span class="pdf-category-title-text">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -358,7 +390,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           
           if (category.type === 'standard' && category.subItems) {
             category.subItems.forEach(subItem => {
-              if (!subItem.isRegistry && subItem.status === 'N/C') { // Only N/C
+              if (!subItem.isRegistry && subItem.status === 'N/C') { // Only N/C subitems
                 pdfHtml += `<div class="pdf-subitem-wrapper">
                               <div class="pdf-subitem">
                                 <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -370,11 +402,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 pdfHtml += `</div>`;
               }
             });
-          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') { // Only N/C
+          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') { // Only N/C special/pressure
             const detailsClass = category.type === 'special' ? 'pdf-special-details' : 'pdf-pressure-details';
             pdfHtml += `<div class="${detailsClass}">
                           <p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-            if (category.type === 'pressure' && category.status !== 'N/A') { 
+            if (category.type === 'pressure' && category.status === 'N/C') { // Only show pressure if NC
                  pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
             }
             if (category.showObservation && category.observation) {
@@ -386,7 +418,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                       </article>`;
         }
       });
-      pdfHtml += `  </div>`;
+      pdfHtml += `  </div>`; // End pdf-floor-section
     }
   });
    if (!anyNonConformingItemsFound) {
@@ -534,3 +566,4 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
