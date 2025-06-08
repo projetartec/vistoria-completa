@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { Save, FolderOpen, PlusSquare, ListChecks, CopyPlus, FileText, Printer } from 'lucide-react';
+import { Save, FolderOpen, PlusSquare, ListChecks, CopyPlus, FileText, Printer, Download, Upload } from 'lucide-react';
 
 interface ActionButtonsPanelProps {
   onSave: () => void;
@@ -10,6 +10,8 @@ interface ActionButtonsPanelProps {
   isSavedInspectionsVisible: boolean;
   onGeneratePdf: () => void;
   onPrint: () => void;
+  onExportJson: () => void;
+  onTriggerImportJson: () => void;
 }
 
 export function ActionButtonsPanel({
@@ -20,11 +22,13 @@ export function ActionButtonsPanel({
   isSavedInspectionsVisible,
   onGeneratePdf,
   onPrint,
+  onExportJson,
+  onTriggerImportJson,
 }: ActionButtonsPanelProps) {
   return (
     <div className="my-8 p-4 bg-card shadow-lg rounded-lg">
       <h2 className="text-xl font-semibold mb-4 font-headline">Ações</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <Button onClick={onSave} >
           <Save className="mr-2 h-4 w-4" /> Salvar Vistoria
         </Button>
@@ -38,7 +42,7 @@ export function ActionButtonsPanel({
           onClick={onGeneratePdf}
           className="bg-orange-500 hover:bg-orange-600 text-white"
         >
-          <FileText className="mr-2 h-4 w-4" /> Relatório
+          <FileText className="mr-2 h-4 w-4" /> Relatório PDF
         </Button>
         <Button
           onClick={onPrint}
@@ -52,9 +56,22 @@ export function ActionButtonsPanel({
         >
           <ListChecks className="mr-2 h-4 w-4" /> {isSavedInspectionsVisible ? 'Ocultar Salvas' : 'Ver Salvas'}
         </Button>
+         <Button
+          onClick={onExportJson}
+          variant="outline"
+        >
+          <Download className="mr-2 h-4 w-4" /> Exportar JSON
+        </Button>
+        <Button
+          onClick={onTriggerImportJson}
+          variant="outline"
+        >
+          <Upload className="mr-2 h-4 w-4" /> Importar JSON
+        </Button>
         <Button
           onClick={onNewInspection}
           variant="destructive"
+          className="md:col-start-4 lg:col-start-auto"
         >
           <PlusSquare className="mr-2 h-4 w-4" /> Nova Vistoria (Limpar Tudo)
         </Button>

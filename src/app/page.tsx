@@ -18,6 +18,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const createNewFloorEntry = (): InspectionData => {
   const newId = (typeof window !== 'undefined')
@@ -67,6 +68,8 @@ export default function FireCheckPage() {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [blockAutoSaveOnce, setBlockAutoSaveOnce] = useState(false);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const jsonImportFileInputRef = useRef<HTMLInputElement>(null);
 
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
@@ -479,13 +482,13 @@ export default function FireCheckPage() {
   const handleSaveInspection = useCallback((isAutoSave = false) => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
       if (!isAutoSave) {
-        // console.log("Erro: CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.");
+        toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios para salvar.", variant: "destructive" });
       }
       return;
     }
      if (!clientInfo.inspectionDate) {
       if (!isAutoSave) {
-        // console.log("Erro: DATA DA VISTORIA é obrigatória.");
+        toast({ title: "Dados Incompletos", description: "DATA DA VISTORIA é obrigatória para salvar.", variant: "destructive" });
       }
       return;
     }
@@ -493,7 +496,7 @@ export default function FireCheckPage() {
     const namedFloors = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (namedFloors.length === 0) {
       if (!isAutoSave) {
-        // console.log("Nenhum Andar Nomeado: Adicione e nomeie pelo menos um andar para salvar a vistoria.");
+        toast({ title: "Sem Andares Nomeados", description: "Adicione e nomeie pelo menos um andar para salvar a vistoria.", variant: "destructive" });
       }
       return;
     }
@@ -519,9 +522,13 @@ export default function FireCheckPage() {
       } else {
         newSavedList.push(fullInspectionToSave);
       }
-      return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      if (!isAutoSave) {
+          toast({ title: "Vistoria Salva!", description: `A vistoria Nº ${fullInspectionToSave.id} foi salva com sucesso.` });
+      }
+      return sortedList;
     });
-  }, [clientInfo, activeFloorsData, setSavedInspections, uploadedLogoDataUrl]);
+  }, [clientInfo, activeFloorsData, setSavedInspections, uploadedLogoDataUrl, toast]);
 
 
   useEffect(() => {
@@ -589,16 +596,18 @@ export default function FireCheckPage() {
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
       setIsChecklistVisible(true);
+      toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada.`});
     }
   };
 
   const handleDeleteInspection = useCallback((fullInspectionId: string) => {
     setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
+     toast({ title: "Vistoria Excluída", description: `Vistoria Nº ${fullInspectionId} foi excluída.`, variant: "destructive" });
 
     if (clientInfo.inspectionNumber === fullInspectionId) {
       resetInspectionForm();
     }
-  }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm]);
+  }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm, toast]);
 
   const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
     setSavedInspections(prev => {
@@ -606,11 +615,12 @@ export default function FireCheckPage() {
       const newList = [...filteredList]; 
       return newList;
     });
+     toast({ title: "Vistorias Excluídas", description: `${inspectionIds.length} vistoria(s) foram excluídas.`, variant: "destructive" });
 
     if (clientInfo.inspectionNumber && inspectionIds.includes(clientInfo.inspectionNumber)) {
       resetInspectionForm();
     }
-  }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm]);
+  }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm, toast]);
 
   const handleDuplicateInspection = useCallback((originalInspectionId: string) => {
     const originalInspection = savedInspections.find(insp => insp.id === originalInspectionId);
@@ -649,19 +659,22 @@ export default function FireCheckPage() {
       setSavedInspections(prevSaved => {
         return [duplicatedInspection, ...prevSaved].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
+      toast({ title: "Vistoria Duplicada", description: `Vistoria Nº ${newInspectionNumber} criada a partir da Nº ${originalInspectionId}.`});
     }
-  }, [savedInspections, setSavedInspections]);
+  }, [savedInspections, setSavedInspections, toast]);
 
   const handleGeneratePdf = useCallback(() => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+       toast({ title: "Dados Incompletos para PDF", description: "Preencha os dados do cliente para gerar o PDF.", variant: "destructive" });
       return;
     }
     const floorsToPrint = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (floorsToPrint.length === 0) {
+       toast({ title: "Sem Andares Nomeados para PDF", description: "Nomeie pelo menos um andar para incluir no PDF.", variant: "destructive" });
       return;
     }
     generateInspectionPdf(clientInfo, floorsToPrint, uploadedLogoDataUrl);
-  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl]);
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
 
   const handlePrintPage = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -807,6 +820,113 @@ export default function FireCheckPage() {
     );
   }, []);
 
+  const handleExportInspectionToJson = useCallback(() => {
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
+      toast({ title: "Dados Incompletos", description: "Preencha os dados do cliente para exportar.", variant: "destructive" });
+      return;
+    }
+    const namedFloors = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
+    if (namedFloors.length === 0) {
+      toast({ title: "Sem Andares Nomeados", description: "Adicione e nomeie pelo menos um andar para exportar.", variant: "destructive" });
+      return;
+    }
+
+    const inspectionToExport: FullInspectionData = {
+      id: clientInfo.inspectionNumber,
+      clientInfo: { ...clientInfo },
+      floors: namedFloors,
+      timestamp: Date.now(),
+      uploadedLogoDataUrl: uploadedLogoDataUrl,
+    };
+
+    const jsonString = JSON.stringify(inspectionToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const fileName = `vistoria_${clientInfo.inspectionNumber}_${clientInfo.clientLocation.replace(/\s+/g, '_')}.json`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo.` });
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+
+  const handleImportInspectionFromJson = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      toast({ title: "Nenhum arquivo selecionado", description: "Por favor, selecione um arquivo JSON para importar.", variant: "destructive"});
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonString = e.target?.result as string;
+        const importedData = JSON.parse(jsonString) as FullInspectionData;
+
+        // Basic validation
+        if (!importedData.id || !importedData.clientInfo || !importedData.floors || !importedData.timestamp) {
+          throw new Error("Formato de arquivo JSON inválido.");
+        }
+        
+        setBlockAutoSaveOnce(true);
+        setClientInfo(importedData.clientInfo);
+        setUploadedLogoDataUrl(importedData.uploadedLogoDataUrl || null);
+        
+        // Sanitize imported floor and subitem IDs like in handleLoadInspection
+        const sanitizedFloors = importedData.floors.map(floor => ({
+          ...floor,
+          id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
+              ? floor.id
+              : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
+          isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true, 
+          categories: floor.categories.map(cat => ({
+            ...cat,
+            subItems: cat.subItems ? cat.subItems.map(sub => ({
+              ...sub,
+              id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
+                  ? sub.id 
+                  : sub.id.startsWith('custom-') ? sub.id : `imported-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
+              registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
+                ...ext,
+                id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
+                    ? ext.id
+                    : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-ext-imported`
+              })) : [],
+              registeredHoses: sub.registeredHoses ? sub.registeredHoses.map(hose => ({
+                ...hose,
+                id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-'))
+                    ? hose.id
+                    : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-hose-imported`
+              })) : []
+            })) : []
+          }))
+        }));
+        setActiveFloorsData(sanitizedFloors);
+
+        toast({ title: "Vistoria Importada", description: `Vistoria Nº ${importedData.id} carregada do arquivo.` });
+        
+        // Optionally, save the imported data to local storage immediately
+        // handleSaveInspection(false); // This might show another toast, consider if needed
+      } catch (error) {
+        console.error("Erro ao importar JSON:", error);
+        toast({ title: "Erro na Importação", description: "Não foi possível importar a vistoria do arquivo. Verifique o formato do arquivo e tente novamente.", variant: "destructive"});
+      } finally {
+        // Reset file input to allow importing the same file again if needed
+        if (event.target) {
+          event.target.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  }, [toast, setSavedInspections /* handleSaveInspection might be added here */]);
+
+  const triggerJsonImport = useCallback(() => {
+    jsonImportFileInputRef.current?.click();
+  }, []);
+
 
   if (!isClientInitialized) {
     return (
@@ -862,7 +982,7 @@ export default function FireCheckPage() {
                 return (
                   <Card key={floorData.id} className="mb-6 shadow-md">
                     <CardContent className="p-4 space-y-3">
-                      <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-3 mb-3">
+                       <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-3 mb-3">
                           {/* Floor Name and Label Group - Row 1 on Mobile */}
                           <div className="flex flex-row items-center gap-x-2 flex-grow md:flex-grow-0">
                             <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
@@ -877,7 +997,7 @@ export default function FireCheckPage() {
                             />
                           </div>
                           
-                          {/* Floor Action Buttons Group - Row 2 on Mobile */}
+                          {/* Floor Action Buttons Group - Row 2 on Mobile, or appended to Row 1 on MD+ */}
                           <div className="flex flex-row items-center gap-x-2 md:ml-auto">
                              <Button 
                               onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
@@ -957,7 +1077,18 @@ export default function FireCheckPage() {
           isSavedInspectionsVisible={isSavedInspectionsVisible}
           onGeneratePdf={handleGeneratePdf}
           onPrint={handlePrintPage}
+          onExportJson={handleExportInspectionToJson}
+          onTriggerImportJson={triggerJsonImport}
         />
+        <input 
+          type="file"
+          ref={jsonImportFileInputRef}
+          accept=".json,application/json"
+          onChange={handleImportInspectionFromJson}
+          className="hidden"
+          id="json-import-input"
+        />
+
 
         {isSavedInspectionsVisible && (
           <SavedInspectionsList
