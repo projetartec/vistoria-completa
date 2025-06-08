@@ -667,7 +667,7 @@ export default function FireCheckPage() {
     setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
   };
 
-  const handleCollapseAll = useCallback(() => {
+  const handleCollapseAllGlobal = useCallback(() => {
     setActiveFloorsData(prevFloors =>
       prevFloors.map(floor => ({
         ...floor,
@@ -677,7 +677,7 @@ export default function FireCheckPage() {
     toast({ title: "Checklist Recolhido", description: "Todos os itens do checklist foram recolhidos." });
   }, [toast]);
 
-  const handleExpandAll = useCallback(() => {
+  const handleExpandAllGlobal = useCallback(() => {
     setActiveFloorsData(prevFloors =>
       prevFloors.map(floor => ({
         ...floor,
@@ -686,6 +686,37 @@ export default function FireCheckPage() {
     );
     toast({ title: "Checklist Expandido", description: "Todos os itens do checklist foram expandidos." });
   }, [toast]);
+
+  const handleExpandAllForFloor = useCallback((floorIndex: number) => {
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map((floor, fIndex) => {
+        if (fIndex === floorIndex) {
+          return {
+            ...floor,
+            categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })),
+          };
+        }
+        return floor;
+      })
+    );
+    toast({ title: `Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Expandidos` });
+  }, [activeFloorsData, toast]);
+  
+  const handleCollapseAllForFloor = useCallback((floorIndex: number) => {
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map((floor, fIndex) => {
+        if (fIndex === floorIndex) {
+          return {
+            ...floor,
+            categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })),
+          };
+        }
+        return floor;
+      })
+    );
+    toast({ title: `Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Recolhidos` });
+  }, [activeFloorsData, toast]);
+
 
   const handleMoveCategoryItem = useCallback((floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
     setActiveFloorsData(prevFloors =>
@@ -769,19 +800,19 @@ export default function FireCheckPage() {
           {isChecklistVisible && (
             <>
               <div className="flex space-x-2 mb-4">
-                <Button onClick={handleExpandAll} variant="outline" size="sm">
-                  <Eye className="mr-2 h-4 w-4" /> Mostrar Todos os Itens
+                <Button onClick={handleExpandAllGlobal} variant="outline" size="sm">
+                  <Eye className="mr-2 h-4 w-4" /> Mostrar Todos (Global)
                 </Button>
-                <Button onClick={handleCollapseAll} variant="outline" size="sm">
-                  <EyeOff className="mr-2 h-4 w-4" /> Esconder Todos os Itens
+                <Button onClick={handleCollapseAllGlobal} variant="outline" size="sm">
+                  <EyeOff className="mr-2 h-4 w-4" /> Esconder Todos (Global)
                 </Button>
               </div>
 
               {activeFloorsData.map((floorData, floorIndex) => (
                 <Card key={floorData.id} className="mb-6 shadow-md overflow-hidden">
                   <CardContent className="p-4 space-y-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-x-3 flex-grow mr-2">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+                      <div className="flex items-center gap-x-3 flex-grow mr-2 w-full sm:w-auto">
                         <Label htmlFor={`floorName-${floorData.id}`} className="text-lg font-medium whitespace-nowrap">
                           ANDAR:
                         </Label>
@@ -793,17 +824,25 @@ export default function FireCheckPage() {
                           className="flex-grow"
                         />
                       </div>
-                      {activeFloorsData.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveFloor(floorIndex)}
-                          className="text-destructive hover:bg-destructive/10 flex-shrink-0"
-                          title="Remover este andar"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      )}
+                      <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
+                         <Button onClick={() => handleExpandAllForFloor(floorIndex)} variant="outline" size="sm" title="Expandir itens deste andar">
+                            <Eye className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Expandir Andar</span>
+                          </Button>
+                          <Button onClick={() => handleCollapseAllForFloor(floorIndex)} variant="outline" size="sm" title="Recolher itens deste andar">
+                            <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Recolher Andar</span>
+                          </Button>
+                        {activeFloorsData.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveFloor(floorIndex)}
+                            className="text-destructive hover:bg-destructive/10"
+                            title="Remover este andar"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     
                     {floorData.categories.map((category, categoryIndex) => {
@@ -857,4 +896,3 @@ export default function FireCheckPage() {
 }
 
     
-
