@@ -17,7 +17,7 @@ import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspecti
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const createNewFloorEntry = (): InspectionData => {
@@ -61,6 +61,22 @@ const calculateNextInspectionNumber = (
 
   const randomNumber = Math.floor(100000 + Math.random() * 900000);
   return randomNumber.toString();
+};
+
+// Helper function to initiate file download
+const initiateFileDownload = (inspectionData: FullInspectionData, clientInfoForFilename: ClientInfo) => {
+  const jsonString = JSON.stringify(inspectionData, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  const fileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}.json`;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  return fileName; // Return filename for toast messages
 };
 
 
@@ -480,23 +496,17 @@ export default function FireCheckPage() {
 
 
   const handleSaveInspection = useCallback((isAutoSave = false) => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber || !clientInfo.inspectionDate) {
       if (!isAutoSave) {
-        toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios para salvar.", variant: "destructive" });
+        toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL, NÚMERO e DATA DA VISTORIA são obrigatórios.", variant: "destructive" });
       }
       return;
     }
-     if (!clientInfo.inspectionDate) {
-      if (!isAutoSave) {
-        toast({ title: "Dados Incompletos", description: "DATA DA VISTORIA é obrigatória para salvar.", variant: "destructive" });
-      }
-      return;
-    }
-
+     
     const namedFloors = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (namedFloors.length === 0) {
       if (!isAutoSave) {
-        toast({ title: "Sem Andares Nomeados", description: "Adicione e nomeie pelo menos um andar para salvar a vistoria.", variant: "destructive" });
+        toast({ title: "Sem Andares Nomeados", description: "Adicione e nomeie pelo menos um andar.", variant: "destructive" });
       }
       return;
     }
@@ -523,11 +533,19 @@ export default function FireCheckPage() {
         newSavedList.push(fullInspectionToSave);
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      if (!isAutoSave) {
-          toast({ title: "Vistoria Salva!", description: `A vistoria Nº ${fullInspectionToSave.id} foi salva com sucesso.` });
-      }
+      // Toast de salvamento local será customizado abaixo se !isAutoSave
       return sortedList;
     });
+
+    if (!isAutoSave) {
+      const fileName = initiateFileDownload(fullInspectionToSave, clientInfo);
+      toast({ 
+        title: "Vistoria Salva e Exportada", 
+        description: `Salva localmente. Escolha onde salvar o arquivo ${fileName}.`, 
+        duration: 6000 
+      });
+    }
+    // Autosave não mostrará toast aqui.
   }, [clientInfo, activeFloorsData, setSavedInspections, uploadedLogoDataUrl, toast]);
 
 
@@ -542,7 +560,7 @@ export default function FireCheckPage() {
         clearTimeout(debounceTimeoutRef.current);
       }
       debounceTimeoutRef.current = setTimeout(() => {
-        handleSaveInspection(true); 
+        handleSaveInspection(true); // Pass true para indicar autosave
       }, 2500); 
     }
 
@@ -820,8 +838,8 @@ export default function FireCheckPage() {
     );
   }, []);
 
-  const handleExportInspectionToJson = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
+  const handleExportCurrentInspectionToJson = useCallback(() => {
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber || !clientInfo.inspectionDate) {
       toast({ title: "Dados Incompletos", description: "Preencha os dados do cliente para exportar.", variant: "destructive" });
       return;
     }
@@ -839,17 +857,7 @@ export default function FireCheckPage() {
       uploadedLogoDataUrl: uploadedLogoDataUrl,
     };
 
-    const jsonString = JSON.stringify(inspectionToExport, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const fileName = `vistoria_${clientInfo.inspectionNumber}_${clientInfo.clientLocation.replace(/\s+/g, '_')}.json`;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const fileName = initiateFileDownload(inspectionToExport, clientInfo);
     toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo.` });
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
 
@@ -866,7 +874,6 @@ export default function FireCheckPage() {
         const jsonString = e.target?.result as string;
         const importedData = JSON.parse(jsonString) as FullInspectionData;
 
-        // Basic validation
         if (!importedData.id || !importedData.clientInfo || !importedData.floors || !importedData.timestamp) {
           throw new Error("Formato de arquivo JSON inválido.");
         }
@@ -875,7 +882,6 @@ export default function FireCheckPage() {
         setClientInfo(importedData.clientInfo);
         setUploadedLogoDataUrl(importedData.uploadedLogoDataUrl || null);
         
-        // Sanitize imported floor and subitem IDs like in handleLoadInspection
         const sanitizedFloors = importedData.floors.map(floor => ({
           ...floor,
           id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
@@ -908,20 +914,17 @@ export default function FireCheckPage() {
 
         toast({ title: "Vistoria Importada", description: `Vistoria Nº ${importedData.id} carregada do arquivo.` });
         
-        // Optionally, save the imported data to local storage immediately
-        // handleSaveInspection(false); // This might show another toast, consider if needed
       } catch (error) {
         console.error("Erro ao importar JSON:", error);
         toast({ title: "Erro na Importação", description: "Não foi possível importar a vistoria do arquivo. Verifique o formato do arquivo e tente novamente.", variant: "destructive"});
       } finally {
-        // Reset file input to allow importing the same file again if needed
         if (event.target) {
           event.target.value = '';
         }
       }
     };
     reader.readAsText(file);
-  }, [toast, setSavedInspections /* handleSaveInspection might be added here */]);
+  }, [toast]);
 
   const triggerJsonImport = useCallback(() => {
     jsonImportFileInputRef.current?.click();
@@ -983,7 +986,6 @@ export default function FireCheckPage() {
                   <Card key={floorData.id} className="mb-6 shadow-md">
                     <CardContent className="p-4 space-y-3">
                        <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-3 mb-3">
-                          {/* Floor Name and Label Group - Row 1 on Mobile */}
                           <div className="flex flex-row items-center gap-x-2 flex-grow md:flex-grow-0">
                             <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
                               ANDAR:
@@ -997,7 +999,6 @@ export default function FireCheckPage() {
                             />
                           </div>
                           
-                          {/* Floor Action Buttons Group - Row 2 on Mobile, or appended to Row 1 on MD+ */}
                           <div className="flex flex-row items-center gap-x-2 md:ml-auto">
                              <Button 
                               onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
@@ -1070,14 +1071,14 @@ export default function FireCheckPage() {
         </div>
         
         <ActionButtonsPanel
-          onSave={() => handleSaveInspection(false)}
+          onSave={() => handleSaveInspection(false)} // false indica que não é autosave
           onNewInspection={resetInspectionForm}
           onNewFloor={handleNewFloorInspection}
           onToggleSavedInspections={toggleSavedInspections}
           isSavedInspectionsVisible={isSavedInspectionsVisible}
           onGeneratePdf={handleGeneratePdf}
           onPrint={handlePrintPage}
-          onExportJson={handleExportInspectionToJson}
+          onExportJson={handleExportCurrentInspectionToJson} // Renomeado para clareza
           onTriggerImportJson={triggerJsonImport}
         />
         <input 
@@ -1107,3 +1108,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
