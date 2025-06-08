@@ -55,7 +55,7 @@ export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps)
 
         {/* Company Details Section */}
         <div className="text-left order-2">
-          <h1 className="text-lg sm:text-xl font-bold text-primary font-headline mb-2">
+          <h1 className="text-base sm:text-lg md:text-xl font-bold text-primary font-headline mb-2">
             BRAZIL EXTINTORES - SP
           </h1>
           <p className="text-xs text-muted-foreground">
