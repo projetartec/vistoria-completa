@@ -960,11 +960,11 @@ export default function FireCheckPage() {
               </div>
 
               {activeFloorsData.map((floorData, floorIndex) => (
-                <Card key={floorData.id} className="mb-6 shadow-md overflow-hidden">
+                <Card key={floorData.id} className="mb-6 shadow-md">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
                       <div className="flex items-center gap-x-3 flex-grow mr-2 w-full sm:w-auto">
-                        <Label htmlFor={`floorName-${floorData.id}`} className="text-lg font-medium whitespace-nowrap">
+                        <Label htmlFor={`floorName-${floorData.id}`} className="text-base sm:text-lg font-medium whitespace-nowrap">
                           ANDAR:
                         </Label>
                         <Input

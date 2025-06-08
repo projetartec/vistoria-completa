@@ -330,7 +330,7 @@ const InspectionCategoryItemComponent = ({
               ) : (
                 <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
               )}
-              <h3 className="text-lg font-semibold font-headline">{category.title}</h3>
+              <h3 className="text-base sm:text-lg font-semibold font-headline">{category.title}</h3>
             </div>
             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />
           </AccordionPrimitive.Trigger>
@@ -426,12 +426,12 @@ const InspectionCategoryItemComponent = ({
             return (
               <div key={subItem.id} className="py-2 border-t first:border-t-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                  <Label className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
-                  <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0">
+                  <Label className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
+                  <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0 flex-wrap">
                     <RadioGroup
                       value={subItem.status || ''}
                       onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
-                      className="flex items-center space-x-2"
+                      className="flex items-center gap-2 flex-wrap"
                     >
                       {STATUS_OPTIONS.map(opt => (
                         <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1">
@@ -481,7 +481,7 @@ const InspectionCategoryItemComponent = ({
 
           {category.type === 'standard' && (
             <div className="mt-4 pt-4 border-t">
-              <Label htmlFor={`add-subitem-${category.id}`} className="font-medium">Adicionar Novo Subitem:</Label>
+              <Label htmlFor={`add-subitem-${category.id}`} className="text-sm font-medium">Adicionar Novo Subitem:</Label>
               <div className="flex items-center gap-2 mt-1">
                 <Input
                   id={`add-subitem-${category.id}`}
@@ -503,12 +503,12 @@ const InspectionCategoryItemComponent = ({
           {category.type === 'special' && (
             <div className="py-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
-                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
+                <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
+                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
                   <RadioGroup
                     value={category.status || ''}
                     onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)}
-                    className="flex items-center space-x-2"
+                    className="flex items-center gap-2 flex-wrap"
                   >
                     {STATUS_OPTIONS.map(opt => (
                       <div key={`${category.id}-${opt}`} className="flex items-center space-x-1">
@@ -549,12 +549,12 @@ const InspectionCategoryItemComponent = ({
           {category.type === 'pressure' && (
             <div className="py-3 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                <span className="font-medium text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
-                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
+                <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
+                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
                   <RadioGroup
                     value={category.status || ''}
                     onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)}
-                    className="flex items-center space-x-2"
+                    className="flex items-center gap-2 flex-wrap"
                   >
                     {STATUS_OPTIONS.map(opt => (
                       <div key={`${category.id}-${opt}-pressure`} className="flex items-center space-x-1">
