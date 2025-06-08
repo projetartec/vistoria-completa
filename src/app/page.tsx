@@ -91,9 +91,9 @@ export default function FireCheckPage() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then(registration => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          // console.log('ServiceWorker registration successful with scope: ', registration.scope);
         }).catch(err => {
-          console.log('ServiceWorker registration failed: ', err);
+          // console.log('ServiceWorker registration failed: ', err);
         });
       });
     }
@@ -484,7 +484,7 @@ export default function FireCheckPage() {
       if (!isAutoSave) {
         // console.log("Erro ao Salvar: CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.");
       } else {
-        console.log("Auto-save: Client info/Inspection Number incomplete, not saving.");
+        // console.log("Auto-save: Client info/Inspection Number incomplete, not saving.");
       }
       return;
     }
@@ -492,7 +492,7 @@ export default function FireCheckPage() {
       if (!isAutoSave) {
         // console.log("Erro ao Salvar: DATA DA VISTORIA é obrigatória.");
       } else {
-        console.log("Auto-save: Inspection date missing, not saving.");
+        // console.log("Auto-save: Inspection date missing, not saving.");
       }
       return;
     }
@@ -502,7 +502,7 @@ export default function FireCheckPage() {
       if (!isAutoSave) {
         // console.log("Nenhum Andar Nomeado: Adicione e nomeie pelo menos um andar para salvar a vistoria.");
       } else {
-        console.log("Auto-save: No named floors, not saving.");
+        // console.log("Auto-save: No named floors, not saving.");
       }
       return;
     }
@@ -532,7 +532,7 @@ export default function FireCheckPage() {
     });
 
     if (isAutoSave) {
-      console.log(`Auto-save: Vistoria ${fullInspectionToSave.id} atualizada.`);
+      // console.log(`Auto-save: Vistoria ${fullInspectionToSave.id} atualizada.`);
     } else {
       // console.log(`Vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.`);
     }
@@ -550,7 +550,7 @@ export default function FireCheckPage() {
         clearTimeout(debounceTimeoutRef.current);
       }
       debounceTimeoutRef.current = setTimeout(() => {
-        console.log('Attempting auto-save...');
+        // console.log('Attempting auto-save...');
         handleSaveInspection(true); 
       }, 2500); 
     }
@@ -619,17 +619,17 @@ export default function FireCheckPage() {
   }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm]);
 
   const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
-    console.log('Attempting to delete inspection IDs:', inspectionIds);
+    // console.log('Attempting to delete inspection IDs:', inspectionIds);
     setSavedInspections(prev => {
       const filteredList = prev.filter(insp => !inspectionIds.includes(insp.id));
       const newList = [...filteredList]; 
-      console.log('New list after filtering (and spreading):', newList.length, 'items. Previous list:', prev.length, 'items.');
+      // console.log('New list after filtering (and spreading):', newList.length, 'items. Previous list:', prev.length, 'items.');
       return newList;
     });
     // console.log(`${inspectionIds.length} vistoria(s) foram excluídas com sucesso.`);
 
     if (clientInfo.inspectionNumber && inspectionIds.includes(clientInfo.inspectionNumber)) {
-      console.log('Current inspection was deleted, resetting form.');
+      // console.log('Current inspection was deleted, resetting form.');
       resetInspectionForm();
     }
   }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm]);
@@ -900,7 +900,7 @@ export default function FireCheckPage() {
                           value={floorData.floor}
                           onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
                           placeholder="Ex: Térreo, 1A, Subsolo"
-                          className="flex-grow"
+                          className="w-full max-w-xs"
                         />
                       </div>
                       <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
