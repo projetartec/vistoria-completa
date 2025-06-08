@@ -112,7 +112,9 @@ export default function FireCheckPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setUploadedLogoDataUrl(reader.result as string);
-        toast({ title: "Logo Carregado", description: "O logo foi carregado com sucesso." });
+        setTimeout(() => {
+          toast({ title: "Logo Carregado", description: "O logo foi carregado com sucesso." });
+        }, 0);
       };
       reader.readAsDataURL(file);
     }
@@ -309,11 +311,12 @@ export default function FireCheckPage() {
               break;
             case 'removeSubItem':
               if (cat.subItems && update.subItemId) {
+                const subItemToRemove = cat.subItems.find(sub => sub.id === update.subItemId);
                 updatedCatData.subItems = cat.subItems.filter(sub => sub.id !== update.subItemId);
                 categoryStructurallyChanged = true;
-                setTimeout(() => {
-                    toast({ title: "Subitem Removido", variant: "destructive" });
-                }, 0);
+                if (subItemToRemove) {
+                    // No confirmation needed as per user request
+                }
               }
               break;
             default: break;
@@ -385,7 +388,9 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
     setBlockAutoSaveOnce(true); 
-    toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
+    setTimeout(() => {
+      toast({ title: "Novo Formulário", description: "Formulário de vistoria reiniciado." });
+    }, 0);
   }, [toast]);
 
   const handleNewFloorInspection = useCallback(() => {
@@ -414,7 +419,7 @@ export default function FireCheckPage() {
               copiedSubItem.observation = '';
               copiedSubItem.showObservation = false;
               
-              if (subItem.isRegistry) {
+              if (subItem.isRegistry) { // Keep registered items
                 if (subItem.id === 'extintor_cadastro') {
                    copiedSubItem.registeredExtinguishers = subItem.registeredExtinguishers ? JSON.parse(JSON.stringify(subItem.registeredExtinguishers)) : [];
                 } else if (subItem.id === 'hidrantes_cadastro_mangueiras') {
@@ -450,7 +455,7 @@ export default function FireCheckPage() {
             showObservation: false,
           }),
           ...(configCat.type === 'pressure' && {
-            status: undefined, // Added status for pressure type
+            status: undefined, 
             pressureValue: '',
             pressureUnit: '' as InspectionCategoryState['pressureUnit'],
             observation: '',
@@ -463,32 +468,40 @@ export default function FireCheckPage() {
         id: newFloorId,
         floor: '', 
         categories: newFloorCategories,
-        isFloorContentVisible: true, // Default to visible
+        isFloorContentVisible: true,
       };
   
       return [...prevFloors, newFloorEntry];
     });
   
-    toast({
-      title: "Novo Andar Adicionado",
-      description: "Estrutura, ordem, itens cadastrados (extintores/mangueiras) e subitens personalizados foram copiados do andar anterior. Outros itens foram reiniciados.",
-    });
+    setTimeout(() => {
+      toast({
+        title: "Novo Andar Adicionado",
+        description: "Estrutura, ordem, itens cadastrados (extintores/mangueiras) e subitens personalizados foram copiados do andar anterior. Outros itens foram reiniciados.",
+      });
+    }, 0);
   }, [toast]);
 
   const handleRemoveFloor = useCallback((floorIndex: number) => {
     if (activeFloorsData.length <= 1) {
-      toast({ title: "Ação Inválida", description: "Deve haver pelo menos um andar.", variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "Ação Inválida", description: "Deve haver pelo menos um andar.", variant: "destructive" });
+      }, 0);
       return;
     }
     setActiveFloorsData(prev => prev.filter((_, index) => index !== floorIndex));
-    toast({ title: "Andar Removido", description: "O formulário do andar foi removido.", variant: "default" });
+    setTimeout(() => {
+      toast({ title: "Andar Removido", description: "O formulário do andar foi removido.", variant: "default" });
+    }, 0);
   }, [activeFloorsData.length, toast]);
 
 
   const handleSaveInspection = useCallback((isAutoSave = false) => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber) {
       if (!isAutoSave) {
-        toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.", variant: "destructive" });
+        setTimeout(() => {
+          toast({ title: "Erro ao Salvar", description: "CÓDIGO DO CLIENTE, LOCAL e NÚMERO DA VISTORIA são obrigatórios.", variant: "destructive" });
+        }, 0);
       } else {
         console.log("Auto-save: Client info/Inspection Number incomplete, not saving.");
       }
@@ -496,7 +509,9 @@ export default function FireCheckPage() {
     }
      if (!clientInfo.inspectionDate) {
       if (!isAutoSave) {
-        toast({ title: "Erro ao Salvar", description: "DATA DA VISTORIA é obrigatória.", variant: "destructive" });
+        setTimeout(() => {
+          toast({ title: "Erro ao Salvar", description: "DATA DA VISTORIA é obrigatória.", variant: "destructive" });
+        }, 0);
       } else {
         console.log("Auto-save: Inspection date missing, not saving.");
       }
@@ -506,7 +521,9 @@ export default function FireCheckPage() {
     const namedFloors = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (namedFloors.length === 0) {
       if (!isAutoSave) {
-        toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para salvar a vistoria.", variant: "destructive" });
+        setTimeout(() => {
+          toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para salvar a vistoria.", variant: "destructive" });
+        }, 0);
       } else {
         console.log("Auto-save: No named floors, not saving.");
       }
@@ -540,10 +557,12 @@ export default function FireCheckPage() {
     if (isAutoSave) {
       console.log(`Auto-save: Vistoria ${fullInspectionToSave.id} atualizada.`);
     } else {
-      toast({
-        title: "Vistoria Salva",
-        description: `A vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.`
-      });
+      setTimeout(() => {
+        toast({
+          title: "Vistoria Salva",
+          description: `A vistoria ${fullInspectionToSave.id} com ${fullInspectionToSave.floors.length} andar(es) foi salva com sucesso.`
+        });
+      }, 0);
     }
   }, [clientInfo, activeFloorsData, setSavedInspections, toast, uploadedLogoDataUrl]);
 
@@ -614,13 +633,17 @@ export default function FireCheckPage() {
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
       setIsChecklistVisible(true);
-      toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.id} carregada.` });
+      setTimeout(() => {
+        toast({ title: "Vistoria Carregada", description: `Vistoria ${inspectionToLoad.id} carregada.` });
+      }, 0);
     }
   };
 
   const handleDeleteInspection = useCallback((fullInspectionId: string) => {
     setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
-    toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
+    setTimeout(() => {
+      toast({ title: "Vistoria Excluída", description: "A vistoria salva foi excluída com sucesso.", variant: "destructive" });
+    }, 0);
 
     if (clientInfo.inspectionNumber === fullInspectionId) {
       resetInspectionForm();
@@ -635,11 +658,13 @@ export default function FireCheckPage() {
       console.log('New list after filtering (and spreading):', newList.length, 'items. Previous list:', prev.length, 'items.');
       return newList;
     });
-    toast({
-      title: "Vistorias Excluídas",
-      description: `${inspectionIds.length} vistoria(s) foram excluídas com sucesso.`,
-      variant: "destructive"
-    });
+    setTimeout(() => {
+      toast({
+        title: "Vistorias Excluídas",
+        description: `${inspectionIds.length} vistoria(s) foram excluídas com sucesso.`,
+        variant: "destructive"
+      });
+    }, 0);
 
     if (clientInfo.inspectionNumber && inspectionIds.includes(clientInfo.inspectionNumber)) {
       console.log('Current inspection was deleted, resetting form.');
@@ -650,13 +675,17 @@ export default function FireCheckPage() {
 
   const handleGeneratePdf = useCallback(() => {
     if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
-      toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL, DATA e NÚMERO DA VISTORIA são obrigatórios para gerar o PDF.", variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL, DATA e NÚMERO DA VISTORIA são obrigatórios para gerar o PDF.", variant: "destructive" });
+      }, 0);
       return;
     }
     const floorsToPrint = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
     if (floorsToPrint.length === 0) {
+      setTimeout(() => {
         toast({ title: "Nenhum Andar Nomeado", description: "Adicione e nomeie pelo menos um andar para gerar o PDF.", variant: "destructive" });
-        return;
+      }, 0);
+      return;
     }
     generateInspectionPdf(clientInfo, floorsToPrint, uploadedLogoDataUrl);
   }, [clientInfo, activeFloorsData, toast, uploadedLogoDataUrl]);
@@ -678,7 +707,9 @@ export default function FireCheckPage() {
         categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })),
       }))
     );
-    toast({ title: "Checklist Recolhido", description: "Todos os itens do checklist foram recolhidos." });
+    setTimeout(() => {
+      toast({ title: "Checklist Recolhido", description: "Todos os itens do checklist foram recolhidos." });
+    }, 0);
   }, [toast]);
 
   const handleExpandAllGlobal = useCallback(() => {
@@ -688,7 +719,9 @@ export default function FireCheckPage() {
         categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })),
       }))
     );
-    toast({ title: "Checklist Expandido", description: "Todos os itens do checklist foram expandidos." });
+    setTimeout(() => {
+      toast({ title: "Checklist Expandido", description: "Todos os itens do checklist foram expandidos." });
+    }, 0);
   }, [toast]);
 
   const handleExpandAllForFloor = useCallback((floorIndex: number) => {
@@ -703,7 +736,9 @@ export default function FireCheckPage() {
         return floor;
       })
     );
-    toast({ title: `Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Expandidos` });
+    setTimeout(() => {
+      toast({ title: `Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Expandidos` });
+    }, 0);
   }, [activeFloorsData, toast]);
   
   const handleCollapseAllForFloor = useCallback((floorIndex: number) => {
@@ -718,7 +753,9 @@ export default function FireCheckPage() {
         return floor;
       })
     );
-    toast({ title: `Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Recolhidos` });
+    setTimeout(() => {
+      toast({ title: `Itens do Andar ${activeFloorsData[floorIndex]?.floor || floorIndex + 1} Recolhidos` });
+    }, 0);
   }, [activeFloorsData, toast]);
 
   const handleToggleFloorContent = useCallback((floorIndex: number) => {
@@ -730,10 +767,12 @@ export default function FireCheckPage() {
       );
       const updatedFloor = newFloors[floorIndex];
       if (updatedFloor) {
-        toast({ 
-          title: `Conteúdo do Andar ${updatedFloor.floor || floorIndex + 1}`,
-          description: updatedFloor.isFloorContentVisible ? "Exibido" : "Ocultado"
-        });
+        setTimeout(() => {
+          toast({ 
+            title: `Conteúdo do Andar ${updatedFloor.floor || floorIndex + 1}`,
+            description: updatedFloor.isFloorContentVisible ? "Exibido" : "Ocultado"
+          });
+        }, 0);
       }
       return newFloors;
     });
@@ -772,6 +811,7 @@ export default function FireCheckPage() {
   }, []);
 
   const handleRemoveCategoryFromFloor = useCallback((floorIndex: number, categoryId: string) => {
+    // No confirmation needed as per user request
     setActiveFloorsData(prevFloors =>
       prevFloors.map((floor, fIndex) => {
         if (fIndex !== floorIndex) {
@@ -783,7 +823,9 @@ export default function FireCheckPage() {
         };
       })
     );
-    toast({ title: "Categoria Removida", description: "A categoria foi removida deste andar.", variant: "default" });
+    setTimeout(() => {
+      toast({ title: "Categoria Removida", description: "A categoria foi removida deste andar.", variant: "default" });
+    }, 0);
   }, [toast]);
 
 
