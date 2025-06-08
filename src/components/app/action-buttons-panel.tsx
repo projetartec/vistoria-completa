@@ -80,13 +80,13 @@ export function ActionButtonsPanel({
           </Button>
            <Button
             onClick={onExportJson}
-            variant="outline"
+            className="bg-teal-500 hover:bg-teal-600 text-white"
           >
             <Download className="mr-2 h-4 w-4" /> Exportar JSON
           </Button>
           <Button
             onClick={onTriggerImportJson}
-            variant="outline"
+            className="bg-teal-500 hover:bg-teal-600 text-white"
           >
             <Upload className="mr-2 h-4 w-4" /> Importar JSON
           </Button>
