@@ -1,8 +1,8 @@
 
-import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState, RegisteredExtinguisher, RegisteredHose, ExtinguisherTypeOption } from './types';
+import type { InspectionData, ClientInfo, SubItemState, StatusOption, InspectionCategoryState, RegisteredExtinguisher, RegisteredHose, ExtinguisherTypeOption, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from './types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { INSPECTION_CONFIG, EXTINGUISHER_TYPES } from '@/constants/inspection.config';
+import { INSPECTION_CONFIG, EXTINGUISHER_TYPES, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 
 // SVG Icons remain the same
 const checkCircleSvg = `
@@ -49,9 +49,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
   const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
-  const verifiedCategoriesOverall = new Set<string>();
-  const verifiedSubItemsOverall = new Set<string>();
-
   const processedFloorsData = relevantFloorsData.map(floor => {
     let floorHasPressureSPK = false;
     let floorPressureSPKValue = '';
@@ -61,11 +58,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     let floorPressureHidranteUnit = '';
     let floorRegisteredExtinguishers: RegisteredExtinguisher[] = [];
     let floorRegisteredHoses: RegisteredHose[] = [];
-    let floorHasNonConformingItems = false;
+    let floorHasNonConformingItems = false; // Only N/C
 
     const categories = floor.categories.map(category => {
       let hasVerifiedItemsFloor = false;
-      let categoryHasNCItems = false;
+      let categoryHasNCItems = false; // Only N/C
 
       if (category.id === 'pressao_spk' && category.status !== 'N/A' && category.pressureValue) {
         floorHasPressureSPK = true;
@@ -83,8 +80,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           const isVerified = subItem.status !== undefined && !subItem.isRegistry;
           if (isVerified) {
             hasVerifiedItemsFloor = true;
-            verifiedCategoriesOverall.add(category.id);
-            verifiedSubItemsOverall.add(`${category.id}_${subItem.id}`);
           }
           if (isVerified && subItem.status === 'N/C') {
             categoryHasNCItems = true;
@@ -102,7 +97,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
       } else if (category.type === 'special' || category.type === 'pressure') {
         if (category.status !== undefined) {
           hasVerifiedItemsFloor = true;
-          verifiedCategoriesOverall.add(category.id);
         }
         if (category.status === 'N/C') { 
           categoryHasNCItems = true;
@@ -126,9 +120,19 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     };
   });
 
-  // Calculate totals for extinguishers by type and hoses
+  // Calculate totals for extinguishers by type and hoses by characteristics
   const extinguisherTypeTotals: { [key: string]: number } = {};
   let grandTotalExtinguishersCount = 0;
+  
+  interface HoseCombinationTotals {
+    [key: string]: {
+      quantity: number;
+      length: HoseLengthOption | '';
+      diameter: HoseDiameterOption | '';
+      type: HoseTypeOption | '';
+    };
+  }
+  const hoseCombinationTotals: HoseCombinationTotals = {};
   let grandTotalHosesCount = 0;
 
   processedFloorsData.forEach(floor => {
@@ -139,6 +143,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
       grandTotalExtinguishersCount += (ext.quantity || 0);
     });
     floor.floorRegisteredHoses.forEach(hose => {
+      if (hose.length && hose.diameter && hose.type && hose.quantity > 0) {
+        const hoseKey = `${hose.length}_${hose.diameter}_${hose.type}`;
+        if (!hoseCombinationTotals[hoseKey]) {
+          hoseCombinationTotals[hoseKey] = { quantity: 0, length: hose.length, diameter: hose.diameter, type: hose.type };
+        }
+        hoseCombinationTotals[hoseKey].quantity += hose.quantity;
+      }
       grandTotalHosesCount += (hose.quantity || 0);
     });
   });
@@ -347,7 +358,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
           
           if (category.type === 'standard' && category.subItems) {
             category.subItems.forEach(subItem => {
-              if (!subItem.isRegistry && subItem.status === 'N/C') {
+              if (!subItem.isRegistry && subItem.status === 'N/C') { // Only N/C
                 pdfHtml += `<div class="pdf-subitem-wrapper">
                               <div class="pdf-subitem">
                                 <span class="pdf-subitem-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
@@ -359,11 +370,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 pdfHtml += `</div>`;
               }
             });
-          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
+          } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') { // Only N/C
             const detailsClass = category.type === 'special' ? 'pdf-special-details' : 'pdf-pressure-details';
             pdfHtml += `<div class="${detailsClass}">
                           <p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-            if (category.type === 'pressure' && category.status !== 'N/A') { // Only show pressure if not N/A, relevant for N/C
+            if (category.type === 'pressure' && category.status !== 'N/A') { 
                  pdfHtml += `<p><span class="pdf-subitem-name">Pressão:</span> <span>${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</span></p>`;
             }
             if (category.showObservation && category.observation) {
@@ -383,7 +394,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   }
   pdfHtml += `</section>`;
 
-  // <!-- NEW PAGE: Pressure Readings (by Floor) -->
   pdfHtml += `<div class="page-break-before"></div>
               <section class="pdf-pressure-reading-section">
                 <h3 class="pdf-section-title">Registros de Pressão (SPK e Hidrante)</h3>`;
@@ -416,7 +426,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   pdfHtml += `</section>`;
 
 
-  // <!-- NEW PAGE: Registered Items (Extinguishers & Hoses by Floor) & Totals -->
   pdfHtml += `<div class="page-break-before"></div>
               <section class="pdf-registered-items-outer-section">
                 <h3 class="pdf-section-title">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
@@ -452,7 +461,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     }
   });
 
-   if (!anyRegisteredItemsOnFloors && grandTotalExtinguishersCount === 0 && grandTotalHosesCount === 0) { // Check grand totals too
+   if (!anyRegisteredItemsOnFloors && grandTotalExtinguishersCount === 0 && grandTotalHosesCount === 0) {
     pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 20px;">Nenhum extintor ou mangueira cadastrado nesta vistoria.</p>`;
   }
 
@@ -462,21 +471,38 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                 <ul class="pdf-type-breakdown">`;
 
   let hasAnyExtinguisherTypeTotal = false;
-  EXTINGUISHER_TYPES.forEach(type => { // Iterate over predefined types to maintain order
+  EXTINGUISHER_TYPES.forEach(type => {
     if (extinguisherTypeTotals[type] && extinguisherTypeTotals[type] > 0) {
       pdfHtml += `<li>${type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}: ${extinguisherTypeTotals[type]}</li>`;
       hasAnyExtinguisherTypeTotal = true;
     }
   });
-   if (!hasAnyExtinguisherTypeTotal && grandTotalExtinguishersCount > 0) { // If there are ext but not categorized by type somehow (fallback)
+   if (!hasAnyExtinguisherTypeTotal && grandTotalExtinguishersCount > 0) {
     pdfHtml += `<li>Total (não especificado por tipo): ${grandTotalExtinguishersCount}</li>`;
   } else if (!hasAnyExtinguisherTypeTotal && grandTotalExtinguishersCount === 0) {
     pdfHtml += `<li>Nenhum extintor cadastrado.</li>`;
   }
-
   pdfHtml += `</ul>
               <p style="margin-top: 5px;"><strong>Total Geral de Extintores:</strong> ${grandTotalExtinguishersCount}</p>
-              <p style="margin-top: 10px;"><strong>Total de Mangueiras Registradas na Vistoria:</strong> ${grandTotalHosesCount}</p>
+              
+              <p style="margin-top: 10px;"><strong>Total de Mangueiras Registradas na Vistoria:</strong></p>
+              <ul class="pdf-type-breakdown">`;
+  
+  let hasAnyHoseCombinationTotal = false;
+  Object.values(hoseCombinationTotals).forEach(detail => {
+    if (detail.quantity > 0) {
+      pdfHtml += `<li>${detail.quantity}x - ${detail.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
+      hasAnyHoseCombinationTotal = true;
+    }
+  });
+  if (!hasAnyHoseCombinationTotal && grandTotalHosesCount > 0) {
+    pdfHtml += `<li>Total (não especificado por combinação): ${grandTotalHosesCount}</li>`;
+  } else if (!hasAnyHoseCombinationTotal && grandTotalHosesCount === 0) {
+    pdfHtml += `<li>Nenhuma mangueira cadastrada.</li>`;
+  }
+
+  pdfHtml += `</ul>
+              <p style="margin-top: 5px;"><strong>Total Geral de Mangueiras:</strong> ${grandTotalHosesCount}</p>
             </div>
           </section>`;
 
@@ -508,4 +534,3 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
-
