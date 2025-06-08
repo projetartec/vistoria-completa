@@ -891,17 +891,17 @@ export default function FireCheckPage() {
                               </>
                             )}
                           </Button>
-                        </div>
-                        <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
-                           <Button 
+                          <Button 
                               onClick={() => handleToggleFloorContent(floorIndex)} 
                               variant="outline" 
                               size="sm" 
                               title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
                             >
                               {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
-                              <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar Conteúdo" : "Mostrar Conteúdo"}</span>
-                            </Button>
+                              <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar" : "Mostrar"}</span>
+                           </Button>
+                        </div>
+                        <div className="flex space-x-2 flex-shrink-0 self-start sm:self-center">
                           {activeFloorsData.length > 1 && (
                             <Button
                               variant="ghost"
