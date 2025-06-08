@@ -861,57 +861,55 @@ export default function FireCheckPage() {
                 return (
                   <Card key={floorData.id} className="mb-6 shadow-md">
                     <CardContent className="p-4 space-y-3">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center mb-3 gap-3">
-                        <div className="flex items-center gap-x-2 flex-grow w-full sm:w-auto flex-wrap">
-                          <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
-                            ANDAR:
-                          </Label>
-                          <Input
-                            id={`floorName-${floorData.id}`}
-                            value={floorData.floor}
-                            onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
-                            placeholder="Ex: Térreo, 1A, Subsolo"
-                            className="flex-grow max-w-xs min-w-[100px]"
-                          />
-                          <Button 
-                            onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
+                      <div className="flex flex-row items-center flex-wrap gap-x-2 gap-y-3 mb-3">
+                        <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
+                          ANDAR:
+                        </Label>
+                        <Input
+                          id={`floorName-${floorData.id}`}
+                          value={floorData.floor}
+                          onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
+                          placeholder="Ex: Térreo, 1A, Subsolo"
+                          className="flex-grow max-w-xs min-w-[100px]"
+                        />
+                        <Button 
+                          onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
+                          variant="outline" 
+                          size="sm" 
+                          title={areAnyCategoriesExpanded ? "Recolher todos os itens deste andar" : "Expandir todos os itens deste andar"}
+                        >
+                          {areAnyCategoriesExpanded ? (
+                            <>
+                              <EyeOff className="mr-1 h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Recolher Itens</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="mr-1 h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Expandir Itens</span>
+                            </>
+                          )}
+                        </Button>
+                        <Button 
+                            onClick={() => handleToggleFloorContent(floorIndex)} 
                             variant="outline" 
                             size="sm" 
-                            title={areAnyCategoriesExpanded ? "Recolher todos os itens deste andar" : "Expandir todos os itens deste andar"}
+                            title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
                           >
-                            {areAnyCategoriesExpanded ? (
-                              <>
-                                <EyeOff className="mr-1 h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Recolher Itens</span>
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="mr-1 h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Expandir Itens</span>
-                              </>
-                            )}
+                            {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
+                            <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar" : "Mostrar"}</span>
+                         </Button>
+                         {activeFloorsData.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveFloor(floorIndex)}
+                            className="text-destructive hover:bg-destructive/10 h-9 w-9"
+                            title="Remover este andar"
+                          >
+                            <Trash2 className="h-5 w-5" />
                           </Button>
-                          <Button 
-                              onClick={() => handleToggleFloorContent(floorIndex)} 
-                              variant="outline" 
-                              size="sm" 
-                              title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
-                            >
-                              {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
-                              <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar" : "Mostrar"}</span>
-                           </Button>
-                           {activeFloorsData.length > 1 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveFloor(floorIndex)}
-                              className="text-destructive hover:bg-destructive/10 h-9 w-9"
-                              title="Remover este andar"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </Button>
-                          )}
-                        </div>
+                        )}
                       </div>
                       
                       {(floorData.isFloorContentVisible !== false) && (
@@ -971,5 +969,6 @@ export default function FireCheckPage() {
 }
 
     
+
 
 
