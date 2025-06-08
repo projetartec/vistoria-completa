@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy } from 'lucide-react';
 
@@ -65,6 +66,7 @@ const calculateNextInspectionNumber = (
 export default function FireCheckPage() {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [blockAutoSaveOnce, setBlockAutoSaveOnce] = useState(false);
+  const isMobile = useIsMobile();
 
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
@@ -86,6 +88,16 @@ export default function FireCheckPage() {
   const [isChecklistVisible, setIsChecklistVisible] = useState(true);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
   const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
+
+  // State for drag and drop
+  const [draggingState, setDraggingState] = useState<{
+    floorIndex: number | null;
+    itemId: string | null;    // ID of item being dragged
+    itemIndex: number | null; // Original index of item being dragged
+    targetItemId: string | null; // ID of item being hovered over
+    dropPlacement: 'before' | 'after' | null; // Where to drop relative to targetItemId
+  }>({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
+
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -646,8 +658,6 @@ export default function FireCheckPage() {
       setSavedInspections(prevSaved => {
         return [duplicatedInspection, ...prevSaved].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
-    } else {
-      // console.log("Erro: A vistoria original não foi encontrada.");
     }
   }, [savedInspections, setSavedInspections]);
 
@@ -806,6 +816,85 @@ export default function FireCheckPage() {
     );
   }, []);
 
+  // Drag and Drop Handlers
+  const handleCategoryDragStart = useCallback((floorIndex: number, categoryId: string, categoryIndex: number, event: React.TouchEvent) => {
+    if (isMobile && event.touches && event.touches.length === 1) {
+       // Optional: event.preventDefault() if scroll is an issue during drag start
+      setDraggingState({
+        floorIndex,
+        itemId: categoryId,
+        itemIndex: categoryIndex,
+        targetItemId: null,
+        dropPlacement: null,
+      });
+    }
+  }, [isMobile]);
+
+  const handleCategoryDragOver = useCallback((targetFloorIndex: number, targetCategoryId: string, event: React.TouchEvent) => {
+    if (!isMobile || !draggingState.itemId || draggingState.floorIndex !== targetFloorIndex || draggingState.itemId === targetCategoryId) {
+      return;
+    }
+    event.preventDefault(); // Important for D&D behavior
+
+    const targetElement = event.currentTarget as HTMLElement;
+    if (!targetElement) return;
+
+    const rect = targetElement.getBoundingClientRect();
+    const clientY = event.touches[0].clientY;
+    const midPointY = rect.top + rect.height / 2;
+    const placement = clientY < midPointY ? 'before' : 'after';
+
+    if (draggingState.targetItemId !== targetCategoryId || draggingState.dropPlacement !== placement) {
+      setDraggingState(prev => ({ ...prev, targetItemId, dropPlacement: placement }));
+    }
+  }, [isMobile, draggingState]);
+
+  const handleCategoryDrop = useCallback(() => {
+    if (!isMobile || !draggingState.itemId || !draggingState.targetItemId || draggingState.floorIndex === null || draggingState.itemIndex === null || !draggingState.dropPlacement) {
+      setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
+      return;
+    }
+
+    const { floorIndex, itemId: draggedItemId, itemIndex: originalIndex, targetItemId, dropPlacement } = draggingState;
+
+    setActiveFloorsData(prevFloors =>
+      prevFloors.map((floor, fIdx) => {
+        if (fIdx !== floorIndex) return floor;
+
+        const categories = [...floor.categories];
+        const draggedItem = categories[originalIndex];
+
+        if (!draggedItem || draggedItem.id !== draggedItemId) {
+          console.error("Drag consistency error: Dragged item mismatch.");
+          setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
+          return floor; 
+        }
+        
+        categories.splice(originalIndex, 1);
+
+        let newTargetIndexInModifiedArray = categories.findIndex(cat => cat.id === targetItemId);
+        
+        if (newTargetIndexInModifiedArray === -1) {
+          console.error("Drag consistency error: Target item not found in modified array.");
+           // Re-insert at original position as a fallback to prevent item loss
+          const originalCategoriesCopy = [...floor.categories]; // Get a fresh copy
+          setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
+          return {...floor, categories: originalCategoriesCopy };
+        }
+        
+        if (dropPlacement === 'after') {
+          newTargetIndexInModifiedArray++;
+        }
+
+        categories.splice(newTargetIndexInModifiedArray, 0, draggedItem);
+        return { ...floor, categories };
+      })
+    );
+
+    setDraggingState({ floorIndex: null, itemId: null, itemIndex: null, targetItemId: null, dropPlacement: null });
+  }, [isMobile, draggingState, setActiveFloorsData]);
+
+
 
   if (!isClientInitialized) {
     return (
@@ -861,63 +950,63 @@ export default function FireCheckPage() {
                 return (
                   <Card key={floorData.id} className="mb-6 shadow-md">
                     <CardContent className="p-4 space-y-3">
-                      <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-2 mb-3">
-                        {/* Floor Name and Label Group */}
-                        <div className="flex flex-row items-center gap-x-2 flex-grow">
-                          <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
-                            ANDAR:
-                          </Label>
-                          <Input
-                            id={`floorName-${floorData.id}`}
-                            value={floorData.floor}
-                            onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
-                            placeholder="Ex: Térreo, 1A, Subsolo"
-                            className="flex-grow max-w-xs min-w-[100px]"
-                          />
-                        </div>
-                        
-                        {/* Floor Action Buttons Group */}
-                        <div className="flex flex-row items-center gap-x-2">
-                          <Button 
-                            onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
-                            variant="outline" 
-                            size="sm" 
-                            title={areAnyCategoriesExpanded ? "Recolher todos os itens deste andar" : "Expandir todos os itens deste andar"}
-                          >
-                            {areAnyCategoriesExpanded ? (
-                              <>
-                                <EyeOff className="mr-1 h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Recolher Itens</span>
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="mr-1 h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Expandir Itens</span>
-                              </>
-                            )}
-                          </Button>
-                          <Button 
-                              onClick={() => handleToggleFloorContent(floorIndex)} 
+                       <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-3 mb-3">
+                          {/* Floor Name and Label Group - Row 1 on Mobile */}
+                          <div className="flex flex-row items-center gap-x-2 flex-grow md:flex-grow-0">
+                            <Label htmlFor={`floorName-${floorData.id}`} className="text-base font-medium whitespace-nowrap">
+                              ANDAR:
+                            </Label>
+                            <Input
+                              id={`floorName-${floorData.id}`}
+                              value={floorData.floor}
+                              onChange={(e) => handleFloorSpecificFieldChange(floorIndex, 'floor', e.target.value)}
+                              placeholder="Ex: Térreo, 1A, Subsolo"
+                              className="flex-grow max-w-xs min-w-[100px]"
+                            />
+                          </div>
+                          
+                          {/* Floor Action Buttons Group - Row 2 on Mobile */}
+                          <div className="flex flex-row items-center gap-x-2 md:ml-auto">
+                            <Button 
+                              onClick={() => handleToggleAllCategoriesForFloor(floorIndex)} 
                               variant="outline" 
                               size="sm" 
-                              title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
+                              title={areAnyCategoriesExpanded ? "Recolher todos os itens deste andar" : "Expandir todos os itens deste andar"}
                             >
-                              {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
-                              <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar" : "Mostrar"}</span>
-                           </Button>
-                           {activeFloorsData.length > 1 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveFloor(floorIndex)}
-                              className="text-destructive hover:bg-destructive/10 h-9 w-9"
-                              title="Remover este andar"
-                            >
-                              <Trash2 className="h-5 w-5" />
+                              {areAnyCategoriesExpanded ? (
+                                <>
+                                  <EyeOff className="mr-1 h-4 w-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Recolher Itens</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="mr-1 h-4 w-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Expandir Itens</span>
+                                </>
+                              )}
                             </Button>
-                          )}
+                            <Button 
+                                onClick={() => handleToggleFloorContent(floorIndex)} 
+                                variant="outline" 
+                                size="sm" 
+                                title={floorData.isFloorContentVisible !== false ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
+                              >
+                                {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-4 w-4 sm:mr-2" /> : <ChevronDown className="mr-1 h-4 w-4 sm:mr-2" />}
+                                <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar" : "Mostrar"}</span>
+                             </Button>
+                             {activeFloorsData.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveFloor(floorIndex)}
+                                className="text-destructive hover:bg-destructive/10 h-9 w-9"
+                                title="Remover este andar"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
                       
                       {(floorData.isFloorContentVisible !== false) && (
                         <>
@@ -934,6 +1023,13 @@ export default function FireCheckPage() {
                                 onRemoveCategory={handleRemoveCategoryFromFloor}
                                 categoryIndex={categoryIndex}
                                 totalCategoriesInFloor={floorData.categories.length}
+                                isMobile={isMobile}
+                                draggingItemId={draggingState.floorIndex === floorIndex ? draggingState.itemId : null}
+                                dragOverItemId={draggingState.floorIndex === floorIndex ? draggingState.targetItemId : null}
+                                dropPlacement={draggingState.floorIndex === floorIndex ? draggingState.dropPlacement : null}
+                                onCategoryDragStart={handleCategoryDragStart}
+                                onCategoryDragOver={handleCategoryDragOver}
+                                onCategoryDrop={handleCategoryDrop}
                               />
                             );
                           })}
@@ -974,3 +1070,4 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+

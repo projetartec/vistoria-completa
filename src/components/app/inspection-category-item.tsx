@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown, GripVertical } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,13 @@ interface InspectionCategoryItemProps {
   onRemoveCategory: (floorIndex: number, categoryId: string) => void;
   categoryIndex: number;
   totalCategoriesInFloor: number;
+  isMobile: boolean;
+  draggingItemId: string | null;
+  dragOverItemId: string | null;
+  dropPlacement: 'before' | 'after' | null;
+  onCategoryDragStart: (floorIndex: number, categoryId: string, categoryIndex: number, event: React.TouchEvent) => void;
+  onCategoryDragOver: (targetFloorIndex: number, targetCategoryId: string, event: React.TouchEvent) => void;
+  onCategoryDrop: () => void;
 }
 
 const ExtinguisherRegistrySubItem: React.FC<{
@@ -244,7 +251,14 @@ const InspectionCategoryItemComponent = ({
   onMoveCategoryItem,
   onRemoveCategory,
   categoryIndex,
-  totalCategoriesInFloor 
+  totalCategoriesInFloor,
+  isMobile,
+  draggingItemId,
+  dragOverItemId,
+  dropPlacement,
+  onCategoryDragStart,
+  onCategoryDragOver,
+  onCategoryDrop,
 }: InspectionCategoryItemProps) => {
   const [newSubItemName, setNewSubItemName] = useState('');
 
@@ -308,21 +322,40 @@ const InspectionCategoryItemComponent = ({
     return category.type === 'standard' && category.subItems && category.subItems.some(sub => !sub.isRegistry);
   }, [category.subItems, category.type]);
 
+  const isCurrentlyDraggingThis = isMobile && draggingItemId === category.id;
+  const isCurrentlyDragOverThis = isMobile && dragOverItemId === category.id && draggingItemId !== category.id;
+
   return (
     <Accordion
       type="single"
       collapsible
       value={category.isExpanded ? category.id : ""}
       onValueChange={handleAccordionValueChange}
-      className="mb-4 bg-card shadow-md rounded-lg group/item"
+      className={cn(
+        "mb-4 bg-card shadow-md rounded-lg group/item transition-all duration-150 ease-out",
+        isCurrentlyDraggingThis && "opacity-60 scale-105 shadow-2xl z-10",
+        isCurrentlyDragOverThis && dropPlacement === 'before' && "border-t-4 border-primary rounded-lg",
+        isCurrentlyDragOverThis && dropPlacement === 'after' && "border-b-4 border-primary rounded-lg"
+      )}
+      onTouchStart={isMobile ? (e) => onCategoryDragStart(floorIndex, category.id, categoryIndex, e) : undefined}
+      onTouchMove={isMobile && !!draggingItemId ? (e) => onCategoryDragOver(floorIndex, category.id, e) : undefined}
+      onTouchEnd={isMobile && !!draggingItemId ? onCategoryDrop : undefined}
+      
     >
       <AccordionPrimitive.Item value={category.id} className="border-b-0">
         <AccordionPrimitive.Header className="flex items-center justify-between px-4 py-3 group/item">
+         {isMobile && (
+            <div className="cursor-grab pr-2 text-muted-foreground" aria-label="Arrastar para reordenar">
+              <GripVertical className="h-5 w-5" />
+            </div>
+          )}
           <AccordionPrimitive.Trigger
             className={cn(
               "flex flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none",
               "[&[data-state=open]>svg.accordion-chevron]:rotate-180" 
             )}
+             // Prevent drag from triggering accordion if interacting with trigger directly on mobile
+            onClick={isMobile && !!draggingItemId ? (e) => e.preventDefault() : undefined}
           >
             <div className="flex items-center flex-1 mr-2"> 
               {overallStatus === 'all-items-selected' ? (
@@ -335,57 +368,70 @@ const InspectionCategoryItemComponent = ({
             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />
           </AccordionPrimitive.Trigger>
 
-          <div className="flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'top'); }}
-              disabled={categoryIndex === 0}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para o Topo"
-            >
-              <ChevronsUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'up'); }}
-              disabled={categoryIndex === 0}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para Cima"
-            >
-              <ChevronUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'down'); }}
-              disabled={categoryIndex >= totalCategoriesInFloor - 1}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para Baixo"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'bottom'); }}
-              disabled={categoryIndex >= totalCategoriesInFloor - 1}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para o Fim"
-            >
-              <ChevronsDown className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onRemoveCategory(floorIndex, category.id); }}
-              className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-              title="Remover esta categoria do andar"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {!isMobile && (
+            <div className="flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'top'); }}
+                disabled={categoryIndex === 0}
+                className="h-7 w-7 p-0"
+                title="Mover Categoria Para o Topo"
+              >
+                <ChevronsUp className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'up'); }}
+                disabled={categoryIndex === 0}
+                className="h-7 w-7 p-0"
+                title="Mover Categoria Para Cima"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'down'); }}
+                disabled={categoryIndex >= totalCategoriesInFloor - 1}
+                className="h-7 w-7 p-0"
+                title="Mover Categoria Para Baixo"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'bottom'); }}
+                disabled={categoryIndex >= totalCategoriesInFloor - 1}
+                className="h-7 w-7 p-0"
+                title="Mover Categoria Para o Fim"
+              >
+                <ChevronsDown className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); onRemoveCategory(floorIndex, category.id); }}
+                className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                title="Remover esta categoria do andar"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+           {isMobile && ( // Show only remove button on mobile next to accordion trigger
+             <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); onRemoveCategory(floorIndex, category.id); }}
+                className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10 ml-2"
+                title="Remover esta categoria do andar"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+           )}
         </AccordionPrimitive.Header>
         
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
@@ -466,7 +512,7 @@ const InspectionCategoryItemComponent = ({
                   </div>
                 </div>
                 {subItem.showObservation && (
-                  <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> 
+                  <div className="mt-1"> 
                     <Textarea
                       value={subItem.observation}
                       onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
@@ -534,7 +580,7 @@ const InspectionCategoryItemComponent = ({
                 </div>
               </div>
               {category.showObservation && (
-                 <div className="mt-1 sm:ml-[calc(33%+0.5rem)]"> 
+                 <div className="mt-1"> 
                   <Textarea
                     value={category.observation}
                     onChange={(e) => handleUpdate('observation', e.target.value, undefined)}
@@ -632,3 +678,4 @@ const InspectionCategoryItemComponent = ({
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
 
     
+
