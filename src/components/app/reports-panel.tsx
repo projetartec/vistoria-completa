@@ -9,7 +9,7 @@ interface ReportsPanelProps {
 }
 
 export function ReportsPanel({ onGenerateRegisteredItemsReport, onGenerateNCItemsReport }: ReportsPanelProps) {
-  const [isContentVisible, setIsContentVisible] = useState(true);
+  const [isContentVisible, setIsContentVisible] = useState(false);
 
   return (
     <div className="my-8 p-4 bg-card shadow-lg rounded-lg">

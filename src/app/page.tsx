@@ -31,7 +31,7 @@ const createNewFloorEntry = (): InspectionData => {
     ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Deep copy
     floor: '',
     categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)), // Deep copy
-    isFloorContentVisible: true, // Default to visible
+    isFloorContentVisible: false, // Default to hidden
   };
 };
 
@@ -105,7 +105,7 @@ export default function FireCheckPage() {
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
 
 
-  const [isChecklistVisible, setIsChecklistVisible] = useState(true);
+  const [isChecklistVisible, setIsChecklistVisible] = useState(false);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
   const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
 
@@ -407,6 +407,7 @@ export default function FireCheckPage() {
     };
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
+    setIsChecklistVisible(false); 
     setBlockAutoSaveOnce(true); 
   }, []);
 
@@ -485,7 +486,7 @@ export default function FireCheckPage() {
         id: newFloorId,
         floor: '', 
         categories: newFloorCategories,
-        isFloorContentVisible: true,
+        isFloorContentVisible: false, // New floors also start hidden
       };
   
       return [...prevFloors, newFloorEntry];
@@ -524,7 +525,7 @@ export default function FireCheckPage() {
         id: floor.id,
         floor: floor.floor,
         categories: JSON.parse(JSON.stringify(floor.categories)),
-        isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true,
+        isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : false,
       })),
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl
@@ -585,9 +586,10 @@ export default function FireCheckPage() {
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
             ? floor.id
             : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
-        isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true, 
+        isFloorContentVisible: false, // Ensure floors are collapsed
         categories: floor.categories.map(cat => ({
           ...cat,
+          isExpanded: false, // Ensure categories are collapsed
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
@@ -611,7 +613,7 @@ export default function FireCheckPage() {
       
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
-      setIsChecklistVisible(true);
+      setIsChecklistVisible(false); // Ensure main checklist is collapsed
       toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada.`});
     }
   };
@@ -653,8 +655,10 @@ export default function FireCheckPage() {
       duplicatedInspection.floors = duplicatedInspection.floors.map(floor => ({
         ...floor,
         id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-floorcopy`,
+        isFloorContentVisible: false, // Duplicated floors also start hidden
         categories: floor.categories.map(cat => ({
           ...cat,
+          isExpanded: false, // Duplicated categories also start hidden
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
             id: sub.id.startsWith('custom-') || sub.isRegistry 
@@ -845,7 +849,7 @@ export default function FireCheckPage() {
     setActiveFloorsData(prevFloors => {
       const newFloors = prevFloors.map((floor, index) =>
         index === floorIndex
-          ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) }
+          ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : false) } // Default to false if undefined
           : floor
       );
       return newFloors;
@@ -947,9 +951,10 @@ export default function FireCheckPage() {
           id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
               ? floor.id
               : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
-          isFloorContentVisible: floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true, 
+          isFloorContentVisible: false, // Ensure floors are collapsed on import
           categories: floor.categories.map(cat => ({
             ...cat,
+            isExpanded: false, // Ensure categories are collapsed on import
             subItems: cat.subItems ? cat.subItems.map(sub => ({
               ...sub,
               id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
@@ -971,6 +976,7 @@ export default function FireCheckPage() {
           }))
         }));
         setActiveFloorsData(sanitizedFloors);
+        setIsChecklistVisible(false); // Collapse main checklist on import
 
         toast({ title: "Vistoria Importada", description: `Vistoria Nº ${importedData.id} carregada do arquivo.` });
         

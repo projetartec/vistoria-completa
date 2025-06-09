@@ -18,7 +18,7 @@ export function ClientDataForm({
   onClientInfoChange,
   savedLocations,
 }: ClientDataFormProps) {
-  const [isContentVisible, setIsContentVisible] = useState(true);
+  const [isContentVisible, setIsContentVisible] = useState(false);
 
   return (
     <Card className="mb-6 shadow-lg">

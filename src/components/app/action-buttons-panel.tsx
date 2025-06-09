@@ -26,7 +26,7 @@ export function ActionButtonsPanel({
   onExportJson,
   onTriggerImportJson,
 }: ActionButtonsPanelProps) {
-  const [isActionsContentVisible, setIsActionsContentVisible] = useState(true);
+  const [isActionsContentVisible, setIsActionsContentVisible] = useState(false);
 
   return (
     <div className="my-8 p-4 bg-card shadow-lg rounded-lg">
