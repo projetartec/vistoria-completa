@@ -277,38 +277,39 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
       </head>
       <body>
         <div class="pdf-container">
-          <!-- Página 1: Cabeçalho e Dados do Cliente -->
-          <header class="pdf-header-main">
-            <div class="pdf-header-content-wrapper">
-              <div class="pdf-logo-container">
-                <img src="${isDataUrl ? logoToUse : (typeof window !== 'undefined' ? window.location.origin + logoToUse : logoToUse) }" alt="Brazil Extintores Logo" />
-              </div>
-              <div class="pdf-company-info-container">
-                <div class="company-name">BRAZIL EXTINTORES - SP</div>
-                <div class="company-details">
-                  <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
-                  <p>OSORIO MACHADO DE PAIVA, 915</p>
-                  <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
-                  <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
-                  <p>Registro Inmetro N°: 001459/2018</p>
-                  <p>e-mail: comercial@brazilexintores.com.br</p>
+          <div class="first-page-center-container">
+            <header class="pdf-header-main">
+              <div class="pdf-header-content-wrapper">
+                <div class="pdf-logo-container">
+                  <img src="${isDataUrl ? logoToUse : (typeof window !== 'undefined' ? window.location.origin + logoToUse : logoToUse) }" alt="Brazil Extintores Logo" />
+                </div>
+                <div class="pdf-company-info-container">
+                  <div class="company-name">BRAZIL EXTINTORES - SP</div>
+                  <div class="company-details">
+                    <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
+                    <p>OSORIO MACHADO DE PAIVA, 915</p>
+                    <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
+                    <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
+                    <p>Registro Inmetro N°: 001459/2018</p>
+                    <p>e-mail: comercial@brazilexintores.com.br</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-          <section class="pdf-client-info">
-            <h2 class="pdf-main-title">Relatório de Vistoria Técnica</h2>
-            <p class="pdf-subtitle">DADOS DO CLIENTE</p>
-            <div class="pdf-client-info-grid">
-              <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-              <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
-              <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-              <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-              ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
-              <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
-            </div>
-          </section>
+            <section class="pdf-client-info">
+              <h2 class="pdf-main-title">Relatório de Vistoria Técnica</h2>
+              <p class="pdf-subtitle">DADOS DO CLIENTE</p>
+              <div class="pdf-client-info-grid">
+                <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
+                <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
+                <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
+              </div>
+            </section>
+          </div>
           <div class="page-break-after"></div>
 
           <!-- Página 2: Lista de Itens e Subitens Verificados (Nomes) -->
@@ -442,9 +443,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   });
 
   if (anyPressureData) {
-    // pdfHtml += `<div class="page-break-before"></div>`; // Removed to avoid blank page if previous content is short
-    pdfHtml += `<section class="pdf-pressure-reading-section page-break-avoid">
-                  <h3 class="pdf-section-title">Registros de Pressão (SPK e Hidrante)</h3>`;
+    pdfHtml += `<div class="two-column-layout">
+                  <section class="pdf-pressure-reading-section page-break-avoid">
+                    <h3 class="pdf-section-title" style="column-span: all; -webkit-column-span: all;">Registros de Pressão (SPK e Hidrante)</h3>`;
     processedFloorsData.forEach((floor) => {
       if (floor.floorHasPressureSPK || floor.floorHasPressureHidrante) {
         pdfHtml += `<div class="pdf-floor-section page-break-avoid">
@@ -466,7 +467,8 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
                     </div>`;
       }
     });
-    pdfHtml += `</section>`;
+    pdfHtml += `  </section>
+                </div>`; // Close two-column-layout for pressure
   }
 
 
@@ -479,9 +481,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   });
 
   if (anyRegisteredItemsOnFloors || grandTotalExtinguishersCount > 0 || grandTotalHosesCount > 0) {
-    // pdfHtml += `<div class="page-break-before"></div>`; // Removed to avoid blank page
-    pdfHtml += `<section class="pdf-registered-items-outer-section page-break-avoid">
-                  <h3 class="pdf-section-title">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
+    pdfHtml += `<div class="two-column-layout">
+                  <section class="pdf-registered-items-outer-section page-break-avoid">
+                    <h3 class="pdf-section-title" style="column-span: all; -webkit-column-span: all;">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
     if (anyRegisteredItemsOnFloors) {
         processedFloorsData.forEach((floor) => {
             if (floor.floorRegisteredExtinguishers.length > 0 || floor.floorRegisteredHoses.length > 0) {
@@ -513,12 +515,12 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             }
         });
     } else {
-         pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhum extintor ou mangueira cadastrado nos andares para esta vistoria.</p>`;
+         pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 12px; column-span: all; -webkit-column-span: all;">Nenhum extintor ou mangueira cadastrado nos andares para esta vistoria.</p>`;
     }
 
     // Resumo Geral de Itens Cadastrados
     pdfHtml += `<div class="pdf-totals-summary page-break-avoid">
-                  <h4>Totais Gerais de Itens Cadastrados</h4>
+                  <h4 style="column-span: all; -webkit-column-span: all;">Totais Gerais de Itens Cadastrados</h4>
                   <p><strong>Total de Extintores Registrados na Vistoria:</strong></p>
                   <ul class="pdf-type-breakdown">`;
 
@@ -556,7 +558,8 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     pdfHtml += `</ul>
                 <p style="margin-top: 2px;"><strong>Total Geral de Mangueiras:</strong> ${grandTotalHosesCount}</p>
               </div>
-            </section>`;
+            </section>
+          </div>`; // Close two-column-layout for registered items
   }
 
 
@@ -953,3 +956,4 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
