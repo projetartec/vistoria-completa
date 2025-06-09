@@ -1,8 +1,7 @@
 
 import * as React from 'react';
 import { useCallback, useState, useMemo } from 'react';
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { Accordion, AccordionContent } from '@/components/ui/accordion'; 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -370,8 +369,8 @@ const InspectionCategoryItemComponent = ({
       onValueChange={handleAccordionValueChange}
       className="mb-4 bg-card shadow-md rounded-lg group/item transition-all duration-150 ease-out"
     >
-      <AccordionPrimitive.Item value={category.id} className="border-b-0">
-        <AccordionPrimitive.Header className="flex items-center justify-between px-4 py-3 group/item">
+      <AccordionItem value={category.id} className="border-b-0">
+        <div className="flex items-center justify-between px-4 py-3 group/item"> {/* This div acts as the header container */}
           {isEditingCategoryTitle ? (
             <div className="flex items-center gap-2 w-full flex-1 mr-2">
               <Input
@@ -393,11 +392,12 @@ const InspectionCategoryItemComponent = ({
               </Button>
             </div>
           ) : (
-            <AccordionPrimitive.Trigger
+            <AccordionTrigger
               className={cn(
-                "flex flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none",
-                "[&[data-state=open]>svg.accordion-chevron]:rotate-180" 
+                "flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none py-0 px-0 justify-between",
+                "[&[data-state=open]>svg]:rotate-180" // Default chevron rotation for ui/accordion trigger
               )}
+              disabled={isEditingCategoryTitle} // Disable trigger when editing title
             >
               <div className="flex items-center flex-1 mr-2"> 
                 {overallStatus === 'all-items-selected' ? (
@@ -408,7 +408,7 @@ const InspectionCategoryItemComponent = ({
                 <h3 
                   className="text-base sm:text-lg font-semibold font-headline cursor-pointer hover:text-primary/80 transition-colors"
                   onClick={(e) => { 
-                    e.stopPropagation(); 
+                    e.stopPropagation(); // Stop propagation to prevent accordion toggle
                     handleEditCategoryTitle();
                   }}
                   title="Clique para editar o título"
@@ -416,8 +416,8 @@ const InspectionCategoryItemComponent = ({
                   {category.title}
                 </h3>
               </div>
-              <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />
-            </AccordionPrimitive.Trigger>
+              {/* Chevron is now part of AccordionTrigger from @/components/ui/accordion */}
+            </AccordionTrigger>
           )}
           
           <div className={cn(
@@ -474,7 +474,7 @@ const InspectionCategoryItemComponent = ({
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        </AccordionPrimitive.Header>
+        </div>
         
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && hasNonRegistrySubItems && (
@@ -632,6 +632,13 @@ const InspectionCategoryItemComponent = ({
                     </span>
                  ) : (
                     <div className="flex items-center gap-2 w-full">
+                       {/* This empty div is a placeholder when title is being edited, matching structure for non-editing state to avoid layout shifts
+                           or ensure title editing input takes full width if that's handled in the `isEditingCategoryTitle` block above.
+                           The current structure for edit mode is handled outside this conditional path for 'special' type.
+                           If title editing for 'special'/'pressure' types should also be inline, this needs adjustment.
+                           However, the `isEditingCategoryTitle` at the top level of the component seems to handle this.
+                           This specific span for `category.title Status` is only for display mode.
+                       */}
                     </div>
                  )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
@@ -692,6 +699,7 @@ const InspectionCategoryItemComponent = ({
                     </span>
                  ) : (
                      <div className="flex items-center gap-2 w-full">
+                        {/* Placeholder, similar to 'special' type above */}
                      </div>
                  )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
@@ -768,10 +776,9 @@ const InspectionCategoryItemComponent = ({
             </div>
           )}
         </AccordionContent>
-      </AccordionPrimitive.Item>
+      </AccordionItem>
     </Accordion>
   );
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
-
