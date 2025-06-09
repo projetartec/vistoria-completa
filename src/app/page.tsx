@@ -6,7 +6,7 @@ import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
 import { ActionButtonsPanel } from '@/components/app/action-buttons-panel';
-import { ReportsPanel } from '@/components/app/reports-panel'; // Importa o novo componente
+import { ReportsPanel } from '@/components/app/reports-panel'; 
 import { SavedInspectionsList } from '@/components/app/saved-inspections-list';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,7 +17,7 @@ import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientI
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf } from '@/lib/pdfGenerator'; // Importa a nova função PDF
+import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf } from '@/lib/pdfGenerator'; 
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy, Edit2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,7 +31,7 @@ const createNewFloorEntry = (): InspectionData => {
     ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Deep copy
     floor: '',
     categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)), // Deep copy
-    isFloorContentVisible: false, // Default to hidden
+    isFloorContentVisible: false, 
   };
 };
 
@@ -486,7 +486,7 @@ export default function FireCheckPage() {
         id: newFloorId,
         floor: '', 
         categories: newFloorCategories,
-        isFloorContentVisible: false, // New floors also start hidden
+        isFloorContentVisible: false, 
       };
   
       return [...prevFloors, newFloorEntry];
@@ -586,10 +586,10 @@ export default function FireCheckPage() {
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
             ? floor.id
             : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
-        isFloorContentVisible: false, // Ensure floors are collapsed
+        isFloorContentVisible: false, 
         categories: floor.categories.map(cat => ({
           ...cat,
-          isExpanded: false, // Ensure categories are collapsed
+          isExpanded: false, 
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
@@ -613,7 +613,7 @@ export default function FireCheckPage() {
       
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
-      setIsChecklistVisible(false); // Ensure main checklist is collapsed
+      setIsChecklistVisible(false); 
       toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada.`});
     }
   };
@@ -655,10 +655,10 @@ export default function FireCheckPage() {
       duplicatedInspection.floors = duplicatedInspection.floors.map(floor => ({
         ...floor,
         id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-floorcopy`,
-        isFloorContentVisible: false, // Duplicated floors also start hidden
+        isFloorContentVisible: false, 
         categories: floor.categories.map(cat => ({
           ...cat,
-          isExpanded: false, // Duplicated categories also start hidden
+          isExpanded: false, 
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
             id: sub.id.startsWith('custom-') || sub.isRegistry 
@@ -849,7 +849,7 @@ export default function FireCheckPage() {
     setActiveFloorsData(prevFloors => {
       const newFloors = prevFloors.map((floor, index) =>
         index === floorIndex
-          ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : false) } // Default to false if undefined
+          ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : false) } 
           : floor
       );
       return newFloors;
@@ -951,10 +951,10 @@ export default function FireCheckPage() {
           id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
               ? floor.id
               : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
-          isFloorContentVisible: false, // Ensure floors are collapsed on import
+          isFloorContentVisible: false, 
           categories: floor.categories.map(cat => ({
             ...cat,
-            isExpanded: false, // Ensure categories are collapsed on import
+            isExpanded: false, 
             subItems: cat.subItems ? cat.subItems.map(sub => ({
               ...sub,
               id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
@@ -976,7 +976,7 @@ export default function FireCheckPage() {
           }))
         }));
         setActiveFloorsData(sanitizedFloors);
-        setIsChecklistVisible(false); // Collapse main checklist on import
+        setIsChecklistVisible(false); 
 
         toast({ title: "Vistoria Importada", description: `Vistoria Nº ${importedData.id} carregada do arquivo.` });
         
@@ -1142,7 +1142,6 @@ export default function FireCheckPage() {
           onNewFloor={handleNewFloorInspection}
           onToggleSavedInspections={toggleSavedInspections}
           isSavedInspectionsVisible={isSavedInspectionsVisible}
-          onGeneratePdf={handleGeneratePdf}
           onPrint={handlePrintPage}
           onExportJson={handleExportCurrentInspectionToJson}
           onTriggerImportJson={triggerJsonImport}
@@ -1159,6 +1158,7 @@ export default function FireCheckPage() {
         <ReportsPanel 
           onGenerateRegisteredItemsReport={handleGenerateRegisteredItemsReport}
           onGenerateNCItemsReport={handleGenerateNCItemsReport}
+          onGeneratePdf={handleGeneratePdf}
         />
 
 

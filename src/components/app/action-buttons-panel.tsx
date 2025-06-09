@@ -9,7 +9,6 @@ interface ActionButtonsPanelProps {
   onNewFloor: () => void;
   onToggleSavedInspections: () => void;
   isSavedInspectionsVisible: boolean;
-  onGeneratePdf: () => void;
   onPrint: () => void;
   onExportJson: () => void;
   onTriggerImportJson: () => void;
@@ -21,7 +20,6 @@ export function ActionButtonsPanel({
   onNewFloor,
   onToggleSavedInspections,
   isSavedInspectionsVisible,
-  onGeneratePdf,
   onPrint,
   onExportJson,
   onTriggerImportJson,
@@ -61,14 +59,6 @@ export function ActionButtonsPanel({
             size="sm"
           >
             <CopyPlus className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Novo Andar</span>
-          </Button>
-          <Button
-            onClick={onGeneratePdf}
-            className="bg-orange-500 hover:bg-orange-600 text-white"
-            title="Gerar Relatório PDF"
-            size="sm"
-          >
-            <FileText className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Gerar PDF</span>
           </Button>
           <Button
             onClick={onPrint}
