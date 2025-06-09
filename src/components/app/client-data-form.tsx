@@ -12,21 +12,21 @@ import { PREDEFINED_CLIENTS } from '@/constants/client.data';
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
   onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
-  savedLocations: string[];
+  savedLocations: string[]; // This prop remains for now, though not directly used in the Select options
 }
 
 export function ClientDataForm({ 
   clientInfoData, 
   onClientInfoChange,
-  savedLocations,
+  savedLocations, // Kept for potential future use or if other parts of the system rely on it
 }: ClientDataFormProps) {
   const [isContentVisible, setIsContentVisible] = useState(false);
 
   const allLocationSuggestions = React.useMemo(() => {
+    // Now only uses predefined clients for the Select options
     const predefinedNames = PREDEFINED_CLIENTS.map(client => client.name);
-    const combined = [...new Set([...predefinedNames, ...savedLocations])];
-    return combined.sort((a, b) => a.localeCompare(b));
-  }, [savedLocations]);
+    return predefinedNames.sort((a, b) => a.localeCompare(b));
+  }, []); // PREDEFINED_CLIENTS is constant, so empty dependency array is fine
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -61,7 +61,7 @@ export function ClientDataForm({
                 onValueChange={(value) => onClientInfoChange('clientLocation', value)}
               >
                 <SelectTrigger id="clientLocationSelect">
-                  <SelectValue placeholder="Selecione um local" />
+                  <SelectValue placeholder="Selecione um local pré-cadastrado" />
                 </SelectTrigger>
                 <SelectContent>
                   {allLocationSuggestions.map((loc) => (
