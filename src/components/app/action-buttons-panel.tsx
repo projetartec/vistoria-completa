@@ -1,7 +1,15 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Save, FolderOpen, PlusSquare, ListChecks, CopyPlus, FileText, Printer, Download, Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Save, PlusSquare, ListChecks, CopyPlus, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText } from 'lucide-react';
 
 interface ActionButtonsPanelProps {
   onSave: () => void;
@@ -12,6 +20,9 @@ interface ActionButtonsPanelProps {
   onPrint: () => void;
   onExportJson: () => void;
   onTriggerImportJson: () => void;
+  onGenerateRegisteredItemsReport: () => void;
+  onGenerateNCItemsReport: () => void;
+  onGeneratePdf: () => void;
 }
 
 export function ActionButtonsPanel({
@@ -23,6 +34,9 @@ export function ActionButtonsPanel({
   onPrint,
   onExportJson,
   onTriggerImportJson,
+  onGenerateRegisteredItemsReport,
+  onGenerateNCItemsReport,
+  onGeneratePdf,
 }: ActionButtonsPanelProps) {
   const [isActionsContentVisible, setIsActionsContentVisible] = useState(false);
 
@@ -60,7 +74,7 @@ export function ActionButtonsPanel({
           >
             <CopyPlus className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Novo Andar</span>
           </Button>
-          <Button
+           <Button
             onClick={onPrint}
             variant="secondary"
             title="Imprimir Vistoria"
@@ -92,7 +106,7 @@ export function ActionButtonsPanel({
           >
             <Upload className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Importar JSON</span>
           </Button>
-          <Button
+           <Button
             onClick={onNewInspection}
             variant="destructive"
             title="Nova Vistoria (Limpar Formulário Atual)"
@@ -100,6 +114,31 @@ export function ActionButtonsPanel({
           >
             <PlusSquare className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Nova Vistoria</span>
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" title="Baixar Relatório" className="border-primary text-primary hover:bg-primary/10">
+                <FileDown className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Baixar Relatório</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Tipos de Relatório PDF</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onGenerateRegisteredItemsReport}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                <span>Itens Cadastrados</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onGenerateNCItemsReport} className="text-orange-600 focus:text-orange-700 focus:bg-orange-500/10">
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                <span>Itens N/C</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onGeneratePdf}>
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Relatório Completo</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
         </div>
       )}
     </div>
