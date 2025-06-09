@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown, Save, X } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -249,6 +249,12 @@ const InspectionCategoryItemComponent = ({
   isMobile,
 }: InspectionCategoryItemProps) => {
   const [newSubItemName, setNewSubItemName] = useState('');
+  const [isEditingCategoryTitle, setIsEditingCategoryTitle] = useState(false);
+  const [editingCategoryTitleValue, setEditingCategoryTitleValue] = useState(category.title);
+  
+  const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
+  const [editingSubItemNameValue, setEditingSubItemNameValue] = useState('');
+
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
@@ -258,6 +264,10 @@ const InspectionCategoryItemComponent = ({
         payload = { field, categoryId: category.id, value: value as string };
     } else if (field === 'removeSubItem' && subItemId) {
         payload = { field, categoryId: category.id, subItemId };
+    } else if (field === 'renameCategoryTitle') {
+        payload = { field, newTitle: value as string };
+    } else if (field === 'renameSubItemName' && subItemId) {
+        payload = { field, subItemId, newName: value as string };
     } else if (subItemId) {
       if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
       else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
@@ -310,6 +320,42 @@ const InspectionCategoryItemComponent = ({
     return category.type === 'standard' && category.subItems && category.subItems.some(sub => !sub.isRegistry);
   }, [category.subItems, category.type]);
 
+  const handleEditCategoryTitle = () => {
+    setEditingCategoryTitleValue(category.title);
+    setIsEditingCategoryTitle(true);
+  };
+
+  const handleSaveCategoryTitle = () => {
+    if (editingCategoryTitleValue.trim() === '') {
+      alert('O título da categoria não pode ser vazio.');
+      return;
+    }
+    handleUpdate('renameCategoryTitle', editingCategoryTitleValue.trim());
+    setIsEditingCategoryTitle(false);
+  };
+
+  const handleCancelEditCategoryTitle = () => {
+    setIsEditingCategoryTitle(false);
+  };
+
+  const handleEditSubItemName = (subItem: SubItemState) => {
+    setEditingSubItemId(subItem.id);
+    setEditingSubItemNameValue(subItem.name);
+  };
+
+  const handleSaveSubItemName = (subItemId: string) => {
+    if (editingSubItemNameValue.trim() === '') {
+      alert('O nome do subitem não pode ser vazio.');
+      return;
+    }
+    handleUpdate('renameSubItemName', editingSubItemNameValue.trim(), subItemId);
+    setEditingSubItemId(null);
+  };
+
+  const handleCancelEditSubItemName = () => {
+    setEditingSubItemId(null);
+  };
+
 
   return (
     <Accordion
@@ -326,6 +372,7 @@ const InspectionCategoryItemComponent = ({
               "flex flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none",
               "[&[data-state=open]>svg.accordion-chevron]:rotate-180" 
             )}
+            disabled={isEditingCategoryTitle} // Disable trigger while editing title
           >
             <div className="flex items-center flex-1 mr-2"> 
               {overallStatus === 'all-items-selected' ? (
@@ -333,17 +380,51 @@ const InspectionCategoryItemComponent = ({
               ) : (
                 <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
               )}
-              <h3 className="text-base sm:text-lg font-semibold font-headline">{category.title}</h3>
+              {!isEditingCategoryTitle ? (
+                <h3 className="text-base sm:text-lg font-semibold font-headline">{category.title}</h3>
+              ) : (
+                <div className="flex items-center gap-2 w-full">
+                  <Input
+                    value={editingCategoryTitleValue}
+                    onChange={(e) => setEditingCategoryTitleValue(e.target.value)}
+                    onClick={(e) => e.stopPropagation()} // Prevent accordion toggle
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); handleSaveCategoryTitle(); }
+                        if (e.key === 'Escape') { e.preventDefault(); handleCancelEditCategoryTitle(); }
+                    }}
+                    className="h-9 text-base sm:text-lg"
+                    autoFocus
+                  />
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSaveCategoryTitle();}} className="h-9 w-9 text-green-600 hover:bg-green-500/10">
+                    <Save className="h-5 w-5"/>
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCancelEditCategoryTitle();}} className="h-9 w-9 text-red-600 hover:bg-red-500/10">
+                    <X className="h-5 w-5"/>
+                  </Button>
+                </div>
+              )}
             </div>
-            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />
+            {!isEditingCategoryTitle && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />}
           </AccordionPrimitive.Trigger>
+          
+          {!isEditingCategoryTitle && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); handleEditCategoryTitle(); }}
+              className="ml-2 h-7 w-7 p-0 opacity-50 hover:opacity-100 group-hover/item:opacity-100 focus-within:opacity-100"
+              title="Editar Título da Categoria"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          )}
 
           <div className="flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'top'); }}
-              disabled={categoryIndex === 0}
+              disabled={categoryIndex === 0 || isEditingCategoryTitle}
               className="h-7 w-7 p-0"
               title="Mover Categoria Para o Topo"
             >
@@ -353,7 +434,7 @@ const InspectionCategoryItemComponent = ({
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'up'); }}
-              disabled={categoryIndex === 0}
+              disabled={categoryIndex === 0 || isEditingCategoryTitle}
               className="h-7 w-7 p-0"
               title="Mover Categoria Para Cima"
             >
@@ -363,7 +444,7 @@ const InspectionCategoryItemComponent = ({
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'down'); }}
-              disabled={categoryIndex >= totalCategoriesInFloor - 1}
+              disabled={categoryIndex >= totalCategoriesInFloor - 1 || isEditingCategoryTitle}
               className="h-7 w-7 p-0"
               title="Mover Categoria Para Baixo"
             >
@@ -373,7 +454,7 @@ const InspectionCategoryItemComponent = ({
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'bottom'); }}
-              disabled={categoryIndex >= totalCategoriesInFloor - 1}
+              disabled={categoryIndex >= totalCategoriesInFloor - 1 || isEditingCategoryTitle}
               className="h-7 w-7 p-0"
               title="Mover Categoria Para o Fim"
             >
@@ -383,6 +464,7 @@ const InspectionCategoryItemComponent = ({
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); onRemoveCategory(floorIndex, category.id); }}
+              disabled={isEditingCategoryTitle}
               className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
               title="Remover esta categoria do andar"
             >
@@ -429,8 +511,41 @@ const InspectionCategoryItemComponent = ({
             return (
               <div key={subItem.id} className="py-2 border-t first:border-t-0">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:gap-x-3 gap-y-1 mb-1">
-                  <Label className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
+                  {editingSubItemId === subItem.id ? (
+                    <div className="flex items-center gap-2 flex-grow">
+                       <Input
+                          value={editingSubItemNameValue}
+                          onChange={(e) => setEditingSubItemNameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleSaveSubItemName(subItem.id); }
+                            if (e.key === 'Escape') { e.preventDefault(); handleCancelEditSubItemName(); }
+                          }}
+                          className="h-9 text-sm sm:text-base"
+                          autoFocus
+                        />
+                        <Button variant="ghost" size="icon" onClick={() => handleSaveSubItemName(subItem.id)} className="h-9 w-9 text-green-600 hover:bg-green-500/10">
+                          <Save className="h-5 w-5"/>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={handleCancelEditSubItemName} className="h-9 w-9 text-red-600 hover:bg-red-500/10">
+                          <X className="h-5 w-5"/>
+                        </Button>
+                    </div>
+                  ) : (
+                    <Label className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{subItem.name}</Label>
+                  )}
+                  
                   <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0 flex-wrap">
+                    {editingSubItemId !== subItem.id && (
+                       <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditSubItemName(subItem)}
+                        className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                        title="Editar Nome do Subitem"
+                      >
+                        <Edit2 className="h-5 w-5" />
+                      </Button>
+                    )}
                     <RadioGroup
                       value={subItem.status || ''}
                       onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
@@ -506,7 +621,13 @@ const InspectionCategoryItemComponent = ({
           {category.type === 'special' && (
             <div className="py-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
+                 {isEditingCategoryTitle ? (
+                     <div className="flex items-center gap-2 w-full">
+                        {/* Title editing for special/pressure types is handled at the top level */}
+                     </div>
+                 ) : (
+                    <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
+                 )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
                   <RadioGroup
                     value={category.status || ''}
@@ -552,7 +673,13 @@ const InspectionCategoryItemComponent = ({
           {category.type === 'pressure' && (
             <div className="py-3 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
+                {isEditingCategoryTitle ? (
+                     <div className="flex items-center gap-2 w-full">
+                       {/* Title editing for special/pressure types is handled at the top level */}
+                     </div>
+                 ) : (
+                    <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto">{category.title} Status</span>
+                 )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
                   <RadioGroup
                     value={category.status || ''}

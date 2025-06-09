@@ -226,9 +226,16 @@ export default function FireCheckPage() {
                 updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; categoryStructurallyChanged = true;
               }
               break;
+            case 'renameCategoryTitle':
+              if (updatedCatData.title !== update.newTitle) {
+                updatedCatData.title = update.newTitle;
+                categoryStructurallyChanged = true;
+              }
+              break;
             case 'subItemStatus':
             case 'subItemObservation':
             case 'subItemShowObservation':
+            case 'renameSubItemName':
               if (cat.subItems && update.subItemId) {
                 updatedCatData.subItems = cat.subItems.map(sub => {
                   if (sub.id !== update.subItemId) return sub;
@@ -245,6 +252,9 @@ export default function FireCheckPage() {
                   } else if (update.field === 'subItemShowObservation' && newSubItemState.showObservation !== (update.value as boolean)) { 
                     newSubItemState.showObservation = update.value as boolean; 
                     changed = true; 
+                  } else if (update.field === 'renameSubItemName' && newSubItemState.name !== update.newName) {
+                    newSubItemState.name = update.newName;
+                    changed = true;
                   }
                   
                   if (changed) categoryStructurallyChanged = true;
