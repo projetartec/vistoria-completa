@@ -36,57 +36,57 @@ function getStatusClass(status: StatusOption | undefined): string {
 const PDF_COMMON_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap');
   body {
-    font-family: 'PT Sans', Arial, sans-serif; margin: 0; padding: 15px; line-height: 1.4; font-size: 9.5pt; background-color: #FFFFFF; color: #1A1A1A;
+    font-family: 'PT Sans', Arial, sans-serif; margin: 0; padding: 10px; line-height: 1.3; font-size: 9pt; background-color: #FFFFFF; color: #1A1A1A;
   }
-  .pdf-container { max-width: 850px; margin: 0 auto; background-color: #FFFFFF; padding: 20px; border: 1px solid #DDD; }
-  .pdf-header-main { display: flex; flex-direction: row; justify-content: center; align-items: center; border-bottom: 1px solid #D1D5DB; padding-bottom: 10px; margin-bottom: 20px; }
-  .pdf-header-content-wrapper { display: flex; align-items: center; gap: 15px; }
+  .pdf-container { max-width: 850px; margin: 0 auto; background-color: #FFFFFF; padding: 15px; border: 1px solid #DDD; }
+  .pdf-header-main { display: flex; flex-direction: row; justify-content: center; align-items: center; border-bottom: 1px solid #D1D5DB; padding-bottom: 8px; margin-bottom: 15px; }
+  .pdf-header-content-wrapper { display: flex; align-items: center; gap: 12px; }
   .pdf-logo-container { flex-shrink: 0; }
-  .pdf-logo-container img { max-height: 100px; width: auto; max-width: 200px; display: block; }
+  .pdf-logo-container img { max-height: 80px; width: auto; max-width: 180px; display: block; }
   .pdf-company-info-container { text-align: left; }
-  .pdf-header-main .company-name { font-size: 16pt; font-weight: 700; color: #2563EB; margin-bottom: 3px; }
-  .pdf-header-main .company-details p { font-size: 8.5pt; color: #374151; margin: 1px 0; line-height: 1.2; }
-  .pdf-client-info { border: 1px solid #D1D5DB; border-radius: 6px; padding: 15px; margin-bottom: 20px; background-color: #F9FAFB; }
-  .pdf-client-info .pdf-main-title { font-size: 16pt; font-weight: 700; color: #2563EB; margin-top: 0; margin-bottom: 3px; text-align: center; }
-  .pdf-client-info .pdf-subtitle { font-size: 11pt; font-weight: 700; color: #6B7280; margin-top: 0; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #E5E7EB; text-align: center; }
-  .pdf-client-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 15px; font-size: 9pt; text-align: left; }
-  .pdf-client-info-grid div { padding: 2px 0; }
+  .pdf-header-main .company-name { font-size: 14pt; font-weight: 700; color: #2563EB; margin-bottom: 2px; }
+  .pdf-header-main .company-details p { font-size: 8pt; color: #374151; margin: 0.5px 0; line-height: 1.1; }
+  .pdf-client-info { border: 1px solid #D1D5DB; border-radius: 5px; padding: 12px; margin-bottom: 15px; background-color: #F9FAFB; }
+  .pdf-client-info .pdf-main-title { font-size: 14pt; font-weight: 700; color: #2563EB; margin-top: 0; margin-bottom: 2px; text-align: center; }
+  .pdf-client-info .pdf-subtitle { font-size: 10pt; font-weight: 700; color: #6B7280; margin-top: 0; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #E5E7EB; text-align: center; }
+  .pdf-client-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 8.5pt; text-align: left; }
+  .pdf-client-info-grid div { padding: 1px 0; }
   .pdf-client-info-grid strong { color: #111827; font-weight: 600; }
 
-  .pdf-section-title { font-size: 14pt; font-weight: 700; color: #1F2937; margin-top: 20px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1.5px solid #2563EB; }
+  .pdf-section-title { font-size: 12pt; font-weight: 700; color: #1F2937; margin-top: 15px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1.5px solid #2563EB; }
   
   .page-break-before { page-break-before: always; }
 
-  .pdf-floor-section { margin-bottom: 20px; }
-  .pdf-floor-title { font-size: 16pt; font-weight: 700; color: #1F2937; margin-top: 20px; margin-bottom: 15px; padding-bottom: 6px; border-bottom: 2px solid #2563EB; }
-  .pdf-floor-section:first-of-type .pdf-floor-title { margin-top: 5px; }
+  .pdf-floor-section { margin-bottom: 15px; }
+  .pdf-floor-title { font-size: 14pt; font-weight: 700; color: #1F2937; margin-top: 15px; margin-bottom: 12px; padding-bottom: 5px; border-bottom: 2px solid #2563EB; }
+  .pdf-floor-section:first-of-type .pdf-floor-title { margin-top: 3px; }
   
-  .pdf-registered-items-section { margin-top: 15px; }
-  .pdf-registered-items-section h4 { font-size: 11pt; font-weight: 600; color: #374151; margin-top: 10px; margin-bottom: 6px; }
-  .pdf-registered-items-section ul { list-style: disc; margin-left: 20px; padding-left: 0; margin-top: 0; margin-bottom: 8px; }
-  .pdf-registered-items-section li { font-size: 9pt; color: #4B5563; margin-bottom: 2px; }
-  .pdf-no-items { font-style: italic; color: #6B7280; margin-left: 5px; font-size: 9pt; }
+  .pdf-registered-items-section { margin-top: 12px; }
+  .pdf-registered-items-section h4 { font-size: 10pt; font-weight: 600; color: #374151; margin-top: 8px; margin-bottom: 5px; }
+  .pdf-registered-items-section ul { list-style: disc; margin-left: 18px; padding-left: 0; margin-top: 0; margin-bottom: 6px; }
+  .pdf-registered-items-section li { font-size: 8.5pt; color: #4B5563; margin-bottom: 1px; }
+  .pdf-no-items { font-style: italic; color: #6B7280; margin-left: 5px; font-size: 8.5pt; }
   
-  .pdf-totals-summary { margin-top: 20px; padding-top: 10px; border-top: 1px solid #E5E7EB; }
-  .pdf-totals-summary h4 { font-size: 12pt; font-weight: 600; color: #111827; margin-bottom: 8px; }
-  .pdf-totals-summary p { font-size: 10pt; color: #1F2937; margin-bottom: 3px; }
-  .pdf-totals-summary .pdf-type-breakdown { list-style: none; padding-left: 10px; margin-top: 1px; margin-bottom: 6px; }
-  .pdf-totals-summary .pdf-type-breakdown li { font-size: 9pt; color: #374151; margin-bottom: 1px; }
-  .pdf-totals-summary .pdf-type-breakdown ul { list-style: circle; margin-left: 15px; padding-left: 0; margin-top: 1px; }
-  .pdf-totals-summary .pdf-type-breakdown ul li { font-size: 8.5pt; }
+  .pdf-totals-summary { margin-top: 15px; padding-top: 8px; border-top: 1px solid #E5E7EB; }
+  .pdf-totals-summary h4 { font-size: 11pt; font-weight: 600; color: #111827; margin-bottom: 6px; }
+  .pdf-totals-summary p { font-size: 9pt; color: #1F2937; margin-bottom: 2px; }
+  .pdf-totals-summary .pdf-type-breakdown { list-style: none; padding-left: 8px; margin-top: 0.5px; margin-bottom: 5px; }
+  .pdf-totals-summary .pdf-type-breakdown li { font-size: 8.5pt; color: #374151; margin-bottom: 0.5px; }
+  .pdf-totals-summary .pdf-type-breakdown ul { list-style: circle; margin-left: 12px; padding-left: 0; margin-top: 0.5px; }
+  .pdf-totals-summary .pdf-type-breakdown ul li { font-size: 8pt; }
 
 
-  .pdf-footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #E5E7EB; font-size: 8pt; color: #6B7280; }
+  .pdf-footer { text-align: center; margin-top: 25px; padding-top: 12px; border-top: 1px solid #E5E7EB; font-size: 7.5pt; color: #6B7280; }
 
   @media print {
     html, body { 
       height: auto; 
       background-color: #FFFFFF !important; 
       margin: 0 !important; 
-      padding: 8mm 6mm !important; 
+      padding: 6mm 5mm !important; 
       print-color-adjust: exact !important; 
       -webkit-print-color-adjust: exact !important; 
-      font-size: 9.5pt;
+      font-size: 9pt;
       overflow: visible !important;
     }
     .pdf-container { 
@@ -123,23 +123,23 @@ const PDF_COMMON_STYLES = `
 `;
 
 const PDF_SPECIFIC_STYLES_VISTORIA = `
-  .pdf-verified-summary-overall { margin-bottom: 15px; page-break-inside: auto; }
-  .pdf-verified-summary-overall h4 { font-size: 12pt; font-weight: 600; color: #374151; margin-top: 0; margin-bottom: 8px; }
-  .pdf-verified-summary-category-overall { margin-bottom: 6px; }
-  .pdf-verified-summary-category-title-overall { font-size: 10pt; font-weight: 600; color: #111827; margin-bottom: 3px; }
-  .pdf-verified-summary-overall ul { list-style: disc; margin-left: 18px; padding-left: 0; margin-top: 0; margin-bottom: 4px; }
-  .pdf-verified-summary-overall li { font-size: 9pt; color: #4B5563; margin-bottom: 1px; }
-  .pdf-category-card { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); page-break-inside: avoid; }
-  .pdf-category-header { display: flex; align-items: center; padding: 8px 12px; background-color: #F3F4F6; border-bottom: 1px solid #E5E7EB; border-top-left-radius: 6px; border-top-right-radius: 6px; }
-  .pdf-category-title-text { font-size: 12pt; font-weight: 600; color: #111827; flex-grow: 1; }
-  .pdf-category-content { padding: 12px; font-size: 9pt; }
-  .pdf-subitem-wrapper { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #E5E7EB; page-break-inside: avoid; }
+  .pdf-verified-summary-overall { margin-bottom: 12px; page-break-inside: auto; }
+  .pdf-verified-summary-overall h4 { font-size: 11pt; font-weight: 600; color: #374151; margin-top: 0; margin-bottom: 6px; }
+  .pdf-verified-summary-category-overall { margin-bottom: 5px; }
+  .pdf-verified-summary-category-title-overall { font-size: 9.5pt; font-weight: 600; color: #111827; margin-bottom: 2px; }
+  .pdf-verified-summary-overall ul { list-style: disc; margin-left: 16px; padding-left: 0; margin-top: 0; margin-bottom: 3px; }
+  .pdf-verified-summary-overall li { font-size: 8.5pt; color: #4B5563; margin-bottom: 0.5px; }
+  .pdf-category-card { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 5px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); page-break-inside: avoid; }
+  .pdf-category-header { display: flex; align-items: center; padding: 6px 10px; background-color: #F3F4F6; border-bottom: 1px solid #E5E7EB; border-top-left-radius: 5px; border-top-right-radius: 5px; }
+  .pdf-category-title-text { font-size: 11pt; font-weight: 600; color: #111827; flex-grow: 1; }
+  .pdf-category-content { padding: 10px; font-size: 8.5pt; }
+  .pdf-subitem-wrapper { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #E5E7EB; page-break-inside: avoid; }
   .pdf-subitem-wrapper:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   .pdf-subitem { display: flex; justify-content: space-between; align-items: center; }
-  .pdf-subitem-name { font-weight: 600; color: #1F2937; flex-grow: 1; margin-right: 8px; font-size: 9pt; }
-  .pdf-status { padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 0.85em; white-space: nowrap; }
-  .pdf-observation { color: #4B5563; margin-top: 4px; padding: 6px 8px; background-color: #F9FAFB; border-left: 2px solid #9CA3AF; font-size: 0.9em; white-space: pre-wrap; width: 100%; box-sizing: border-box; }
-  .pdf-pressure-details p, .pdf-special-details p { margin: 3px 0 6px 0; display: flex; justify-content: space-between; align-items: center; font-size: 9pt;}
+  .pdf-subitem-name { font-weight: 600; color: #1F2937; flex-grow: 1; margin-right: 6px; font-size: 8.5pt; }
+  .pdf-status { padding: 1.5px 5px; border-radius: 3px; font-weight: 600; font-size: 0.8em; white-space: nowrap; }
+  .pdf-observation { color: #4B5563; margin-top: 3px; padding: 5px 7px; background-color: #F9FAFB; border-left: 2px solid #9CA3AF; font-size: 0.85em; white-space: pre-wrap; width: 100%; box-sizing: border-box; }
+  .pdf-pressure-details p, .pdf-special-details p { margin: 2px 0 5px 0; display: flex; justify-content: space-between; align-items: center; font-size: 8.5pt;}
   .pdf-pressure-details .pdf-subitem-name, .pdf-special-details .pdf-subitem-name { flex-grow: 0; font-weight: 600; }
   @media print {
     .pdf-verified-summary-overall { page-break-inside: auto !important; }
@@ -672,7 +672,7 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
           <section class="pdf-items-by-floor">
             <h3 class="pdf-section-title">Itens Cadastrados por Andar</h3>`;
 
-  if (processedFloorsForReport.length > 0) {
+  if (processedFloorsForReport.length > 0 && (grandTotalExtinguishersCount > 0 || grandTotalHosesCount > 0)) {
     processedFloorsForReport.forEach(floor => {
       if (floor.extinguishers.length > 0 || floor.hoses.length > 0) {
         pdfHtml += `<div class="pdf-floor-section">
@@ -724,8 +724,10 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
       pdfHtml += `<li><strong>${type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</strong><ul>${typeSubList}</ul></li>`;
     }
   });
-  if (!foundExtinguishersInSummary) {
+  if (!foundExtinguishersInSummary && grandTotalExtinguishersCount === 0) {
     pdfHtml += `<li>Nenhum extintor cadastrado.</li>`;
+  } else if (!foundExtinguishersInSummary && grandTotalExtinguishersCount > 0) {
+     pdfHtml += `<li>Total (detalhes não especificados): ${grandTotalExtinguishersCount}</li>`;
   }
   pdfHtml += `</ul>
               <p><strong>Total Geral de Extintores: ${grandTotalExtinguishersCount}</strong></p>
@@ -738,8 +740,10 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
          pdfHtml += `<li>${detail.quantity}x - ${detail.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
       }
     });
-  } else {
+  } else if (grandTotalHosesCount === 0){
     pdfHtml += `<li>Nenhuma mangueira cadastrada.</li>`;
+  } else {
+     pdfHtml += `<li>Total (detalhes não especificados): ${grandTotalHosesCount}</li>`;
   }
   pdfHtml += `</ul>
               <p><strong>Total Geral de Mangueiras: ${grandTotalHosesCount}</strong></p>
@@ -772,5 +776,146 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
   }
 }
 
+export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
+  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+    alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o relatório N/C.");
+    return;
+  }
+  const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
+  if (relevantFloorsData.length === 0) {
+    alert("Nenhum andar com nome preenchido para incluir no relatório N/C.");
+    return;
+  }
 
+  const defaultLogoUrl = '/brazil-extintores-logo.png';
+  const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
+  const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
+  let ncItemsFoundOverall = false;
+
+  let pdfHtml = `
+    <html>
+      <head>
+        <title>Relatório de Itens N/C - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+        <style>
+          ${PDF_COMMON_STYLES}
+          ${PDF_SPECIFIC_STYLES_VISTORIA} /* Reusing some styles */
+          .pdf-nc-item-category { font-weight: bold; margin-top: 8px; margin-bottom: 2px; font-size: 10pt; color: #111827; }
+          .pdf-nc-item-name { margin-left: 10px; font-size: 9pt; color: #1F2937;}
+          .pdf-nc-observation { margin-left: 10px; margin-top: 1px; padding: 4px 6px; background-color: #FEF2F2; border-left: 2px solid #F87171; font-size: 8.5pt; color: #7F1D1D; white-space: pre-wrap;}
+          .pdf-nc-pressure-details { margin-left: 10px; font-size: 8.5pt;}
+        </style>
+      </head>
+      <body>
+        <div class="pdf-container">
+          <header class="pdf-header-main">
+             <div class="pdf-header-content-wrapper">
+              <div class="pdf-logo-container">
+                <img src="${isDataUrl ? logoToUse : (typeof window !== 'undefined' ? window.location.origin + logoToUse : logoToUse) }" alt="Brazil Extintores Logo" />
+              </div>
+              <div class="pdf-company-info-container">
+                 <div class="company-name">BRAZIL EXTINTORES - SP</div>
+                 <div class="company-details">
+                    <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
+                    <p>OSORIO MACHADO DE PAIVA, 915</p>
+                    <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
+                    <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
+                    <p>Registro Inmetro N°: 001459/2018</p>
+                    <p>e-mail: comercial@brazilexintores.com.br</p>
+                 </div>
+              </div>
+            </div>
+          </header>
+
+          <section class="pdf-client-info">
+            <h2 class="pdf-main-title">Relatório de Itens Não Conformes (N/C)</h2>
+            <p class="pdf-subtitle">DADOS DA VISTORIA</p>
+            <div class="pdf-client-info-grid">
+              <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
+              <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
+              <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
+            </div>
+          </section>
+
+          <section class="pdf-nc-items-section">
+            <h3 class="pdf-section-title">Detalhes dos Itens Marcados como "Não Conforme"</h3>`;
+
+  relevantFloorsData.forEach(floor => {
+    let floorHasNCItems = false;
+    let floorNCItemsHtml = '';
+
+    floor.categories.forEach(category => {
+      let categoryHasNCItems = false;
+      let categoryNCItemsHtml = '';
+
+      if (category.type === 'standard' && category.subItems) {
+        category.subItems.forEach(subItem => {
+          if (!subItem.isRegistry && subItem.status === 'N/C') {
+            floorHasNCItems = true;
+            categoryHasNCItems = true;
+            ncItemsFoundOverall = true;
+            categoryNCItemsHtml += `<div class="pdf-nc-item-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+            if (subItem.showObservation && subItem.observation) {
+              categoryNCItemsHtml += `<div class="pdf-nc-observation">${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+            }
+          }
+        });
+      } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
+        floorHasNCItems = true;
+        categoryHasNCItems = true;
+        ncItemsFoundOverall = true;
+        // For special/pressure, the category title itself is the item
+        if (category.type === 'pressure') {
+          categoryNCItemsHtml += `<div class="pdf-nc-pressure-details">Pressão: ${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</div>`;
+        }
+        if (category.showObservation && category.observation) {
+          categoryNCItemsHtml += `<div class="pdf-nc-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+        }
+      }
+
+      if (categoryHasNCItems) {
+        floorNCItemsHtml += `<div class="pdf-nc-item-category">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${categoryNCItemsHtml}`;
+      }
+    });
+
+    if (floorHasNCItems) {
+      pdfHtml += `<div class="pdf-floor-section" style="page-break-inside: auto;">
+                    <h3 class="pdf-floor-title" style="font-size: 12pt; margin-bottom: 6px;">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                    ${floorNCItemsHtml}
+                  </div>`;
+    }
+  });
+
+  if (!ncItemsFoundOverall) {
+    pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 20px;">Nenhum item "Não Conforme" (N/C) encontrado nesta vistoria.</p>`;
+  }
+
+  pdfHtml += `  </section>
+                <footer class="pdf-footer">
+                  FireCheck Brazil &copy; ${new Date().getFullYear()} - BRAZIL EXTINTORES
+                </footer>
+              </div>
+            </body>
+          </html>`;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(pdfHtml);
+    printWindow.document.close();
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (e) {
+        console.error("Error during print:", e);
+        alert("Ocorreu um erro ao tentar imprimir o PDF. Verifique o console do navegador para mais detalhes.");
+      }
+    }, 750);
+  } else {
+    alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
+  }
+}

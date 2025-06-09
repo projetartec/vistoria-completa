@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileSpreadsheet, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileSpreadsheet, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 
 interface ReportsPanelProps {
   onGenerateRegisteredItemsReport: () => void;
+  onGenerateNCItemsReport: () => void; // Nova prop
 }
 
-export function ReportsPanel({ onGenerateRegisteredItemsReport }: ReportsPanelProps) {
+export function ReportsPanel({ onGenerateRegisteredItemsReport, onGenerateNCItemsReport }: ReportsPanelProps) {
   const [isContentVisible, setIsContentVisible] = useState(true);
 
   return (
@@ -38,11 +39,22 @@ export function ReportsPanel({ onGenerateRegisteredItemsReport }: ReportsPanelPr
             title="Gerar Relatório de Itens Cadastrados"
             size="sm"
             variant="outline"
-            className="col-span-1" 
+            className="col-span-1"
           >
             <FileSpreadsheet className="mr-1 h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Itens Cadastrados</span>
             <span className="sm:hidden">Itens Cad.</span>
+          </Button>
+          <Button
+            onClick={onGenerateNCItemsReport} // Novo callback
+            title="Gerar Relatório de Itens Não Conformes (N/C)"
+            size="sm"
+            variant="outline"
+            className="col-span-1 border-orange-500 text-orange-600 hover:bg-orange-500/10 hover:text-orange-700"
+          >
+            <AlertTriangle className="mr-1 h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Itens N/C</span>
+            <span className="sm:hidden">N/C</span>
           </Button>
           {/* Outros botões de relatório podem ser adicionados aqui no futuro */}
         </div>

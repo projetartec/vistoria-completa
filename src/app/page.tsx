@@ -17,7 +17,7 @@ import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientI
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { generateInspectionPdf, generateRegisteredItemsPdf } from '@/lib/pdfGenerator'; // Importa a nova função PDF
+import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf } from '@/lib/pdfGenerator'; // Importa a nova função PDF
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy, Edit2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -740,6 +740,19 @@ export default function FireCheckPage() {
     generateRegisteredItemsPdf(clientInfo, floorsToReport, uploadedLogoDataUrl);
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
 
+  const handleGenerateNCItemsReport = useCallback(() => {
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+       toast({ title: "Dados Incompletos para Relatório N/C", description: "Preencha os dados do cliente para gerar o relatório.", variant: "destructive" });
+      return;
+    }
+    const floorsToReport = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
+    if (floorsToReport.length === 0) {
+       toast({ title: "Sem Andares Nomeados para Relatório N/C", description: "Nomeie pelo menos um andar para incluir no relatório.", variant: "destructive" });
+      return;
+    }
+    generateNCItemsPdf(clientInfo, floorsToReport, uploadedLogoDataUrl);
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+
 
   const handlePrintPage = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -1139,6 +1152,7 @@ export default function FireCheckPage() {
 
         <ReportsPanel 
           onGenerateRegisteredItemsReport={handleGenerateRegisteredItemsReport}
+          onGenerateNCItemsReport={handleGenerateNCItemsReport}
         />
 
 
