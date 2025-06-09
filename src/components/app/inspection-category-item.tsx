@@ -293,7 +293,7 @@ const InspectionCategoryItemComponent = ({
 
   const handleAccordionValueChange = useCallback((openItemId: string) => {
     const newIsExpanded = openItemId === category.id;
-    if (newIsExpanded !== category.isExpanded && !isEditingCategoryTitle) { // Prevent toggle if editing title
+    if (newIsExpanded !== category.isExpanded && !isEditingCategoryTitle) { 
       handleUpdate('isExpanded', newIsExpanded, undefined);
     }
   }, [category.id, category.isExpanded, handleUpdate, isEditingCategoryTitle]);
@@ -313,7 +313,7 @@ const InspectionCategoryItemComponent = ({
       return;
     }
     handleUpdate('addSubItem', newSubItemName.trim());
-    setNewSubItemName(''); // Reset input after adding
+    setNewSubItemName(''); 
   }, [newSubItemName, handleUpdate]);
 
   const hasNonRegistrySubItems = useMemo(() => {
@@ -321,7 +321,7 @@ const InspectionCategoryItemComponent = ({
   }, [category.subItems, category.type]);
 
   const handleEditCategoryTitle = () => {
-    if(isEditingCategoryTitle) return; // Already editing
+    if(isEditingCategoryTitle) return; 
     setEditingCategoryTitleValue(category.title);
     setIsEditingCategoryTitle(true);
   };
@@ -337,11 +337,11 @@ const InspectionCategoryItemComponent = ({
 
   const handleCancelEditCategoryTitle = () => {
     setIsEditingCategoryTitle(false);
-    setEditingCategoryTitleValue(category.title); // Reset to original
+    setEditingCategoryTitleValue(category.title); 
   };
 
   const handleEditSubItemName = (subItem: SubItemState) => {
-    if(editingSubItemId === subItem.id) return; // Already editing this one
+    if(editingSubItemId === subItem.id) return; 
     setEditingSubItemId(subItem.id);
     setEditingSubItemNameValue(subItem.name);
   };
@@ -357,7 +357,7 @@ const InspectionCategoryItemComponent = ({
 
   const handleCancelEditSubItemName = () => {
     const subItem = category.subItems?.find(s => s.id === editingSubItemId);
-    if(subItem) setEditingSubItemNameValue(subItem.name); // Reset to original
+    if(subItem) setEditingSubItemNameValue(subItem.name); 
     setEditingSubItemId(null);
   };
 
@@ -366,65 +366,63 @@ const InspectionCategoryItemComponent = ({
     <Accordion
       type="single"
       collapsible
-      value={category.isExpanded && !isEditingCategoryTitle ? category.id : ""} // Collapse if editing title
+      value={category.isExpanded && !isEditingCategoryTitle ? category.id : ""} 
       onValueChange={handleAccordionValueChange}
       className="mb-4 bg-card shadow-md rounded-lg group/item transition-all duration-150 ease-out"
     >
       <AccordionPrimitive.Item value={category.id} className="border-b-0">
         <AccordionPrimitive.Header className="flex items-center justify-between px-4 py-3 group/item">
-          <AccordionPrimitive.Trigger
-            className={cn(
-              "flex flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none",
-              "[&[data-state=open]>svg.accordion-chevron]:rotate-180" 
-            )}
-            disabled={isEditingCategoryTitle} 
-          >
-            <div className="flex items-center flex-1 mr-2"> 
-              {overallStatus === 'all-items-selected' ? (
-                <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
-              ) : (
-                <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
+          {isEditingCategoryTitle ? (
+            <div className="flex items-center gap-2 w-full flex-1 mr-2">
+              <Input
+                value={editingCategoryTitleValue}
+                onChange={(e) => setEditingCategoryTitleValue(e.target.value)}
+                onClick={(e) => e.stopPropagation()} 
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleSaveCategoryTitle(); }
+                    if (e.key === 'Escape') { e.preventDefault(); handleCancelEditCategoryTitle(); }
+                }}
+                className="h-9 text-base sm:text-lg"
+                autoFocus
+              />
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSaveCategoryTitle();}} className="h-9 w-9 text-green-600 hover:bg-green-500/10">
+                <Save className="h-5 w-5"/>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCancelEditCategoryTitle();}} className="h-9 w-9 text-red-600 hover:bg-red-500/10">
+                <X className="h-5 w-5"/>
+              </Button>
+            </div>
+          ) : (
+            <AccordionPrimitive.Trigger
+              className={cn(
+                "flex flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none",
+                "[&[data-state=open]>svg.accordion-chevron]:rotate-180" 
               )}
-              {!isEditingCategoryTitle ? (
+            >
+              <div className="flex items-center flex-1 mr-2"> 
+                {overallStatus === 'all-items-selected' ? (
+                  <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
+                ) : (
+                  <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
+                )}
                 <h3 
                   className="text-base sm:text-lg font-semibold font-headline cursor-pointer hover:text-primary/80 transition-colors"
                   onClick={(e) => { 
-                    e.stopPropagation(); // Prevent accordion toggle from this click
+                    e.stopPropagation(); 
                     handleEditCategoryTitle();
                   }}
                   title="Clique para editar o título"
                 >
                   {category.title}
                 </h3>
-              ) : (
-                <div className="flex items-center gap-2 w-full">
-                  <Input
-                    value={editingCategoryTitleValue}
-                    onChange={(e) => setEditingCategoryTitleValue(e.target.value)}
-                    onClick={(e) => e.stopPropagation()} 
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') { e.preventDefault(); handleSaveCategoryTitle(); }
-                        if (e.key === 'Escape') { e.preventDefault(); handleCancelEditCategoryTitle(); }
-                    }}
-                    className="h-9 text-base sm:text-lg"
-                    autoFocus
-                  />
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSaveCategoryTitle();}} className="h-9 w-9 text-green-600 hover:bg-green-500/10">
-                    <Save className="h-5 w-5"/>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCancelEditCategoryTitle();}} className="h-9 w-9 text-red-600 hover:bg-red-500/10">
-                    <X className="h-5 w-5"/>
-                  </Button>
-                </div>
-              )}
-            </div>
-            {!isEditingCategoryTitle && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />}
-          </AccordionPrimitive.Trigger>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 accordion-chevron" />
+            </AccordionPrimitive.Trigger>
+          )}
           
-          {/* Movement and Remove buttons remain outside the trigger but in the header */}
           <div className={cn(
             "flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2",
-            isEditingCategoryTitle && "hidden" // Hide move/delete buttons when editing title
+            isEditingCategoryTitle && "hidden" 
             )}>
             <Button
               variant="ghost"
@@ -546,7 +544,6 @@ const InspectionCategoryItemComponent = ({
                   )}
                   
                   <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0 flex-wrap">
-                    {/* Edit button for subitem removed here */}
                     <RadioGroup
                       value={subItem.status || ''}
                       onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
@@ -622,7 +619,7 @@ const InspectionCategoryItemComponent = ({
           {category.type === 'special' && (
             <div className="py-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                 {!isEditingCategoryTitle ? ( // Use the same logic as category title for special/pressure display
+                 {!isEditingCategoryTitle ? ( 
                     <span 
                         className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors"
                         onClick={(e) => { 
@@ -635,7 +632,6 @@ const InspectionCategoryItemComponent = ({
                     </span>
                  ) : (
                     <div className="flex items-center gap-2 w-full">
-                         {/* Input handled at the top level, this part shows when not editing. For special, title is part of main display */}
                     </div>
                  )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
@@ -683,7 +679,7 @@ const InspectionCategoryItemComponent = ({
           {category.type === 'pressure' && (
             <div className="py-3 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                {!isEditingCategoryTitle ? ( // Use the same logic as category title
+                {!isEditingCategoryTitle ? ( 
                     <span 
                         className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors"
                         onClick={(e) => { 
@@ -696,7 +692,6 @@ const InspectionCategoryItemComponent = ({
                     </span>
                  ) : (
                      <div className="flex items-center gap-2 w-full">
-                       {/* Input handled at the top level */}
                      </div>
                  )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
