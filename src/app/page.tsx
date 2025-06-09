@@ -6,6 +6,7 @@ import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
 import { ActionButtonsPanel } from '@/components/app/action-buttons-panel';
+import { ReportsPanel } from '@/components/app/reports-panel'; // Importa o novo componente
 import { SavedInspectionsList } from '@/components/app/saved-inspections-list';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,8 +17,8 @@ import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientI
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { generateInspectionPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy } from 'lucide-react';
+import { generateInspectionPdf, generateRegisteredItemsPdf } from '@/lib/pdfGenerator'; // Importa a nova função PDF
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy, Edit2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const createNewFloorEntry = (): InspectionData => {
@@ -707,10 +708,8 @@ export default function FireCheckPage() {
       return sortedList;
     });
 
-    // If the currently loaded inspection was the one updated, update its clientInfo
     if (clientInfo.inspectionNumber === inspectionId) {
       setClientInfo(prev => ({ ...prev, clientLocation: newClientLocation.trim() }));
-      // No need for blockAutoSaveOnce here as it's not an ID change that affects filename logic
     }
   }, [savedInspections, setSavedInspections, clientInfo.inspectionNumber, toast]);
 
@@ -727,6 +726,20 @@ export default function FireCheckPage() {
     }
     generateInspectionPdf(clientInfo, floorsToPrint, uploadedLogoDataUrl);
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+
+  const handleGenerateRegisteredItemsReport = useCallback(() => {
+    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+       toast({ title: "Dados Incompletos para Relatório", description: "Preencha os dados do cliente para gerar o relatório.", variant: "destructive" });
+      return;
+    }
+    const floorsToReport = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
+    if (floorsToReport.length === 0) {
+       toast({ title: "Sem Andares Nomeados para Relatório", description: "Nomeie pelo menos um andar para incluir no relatório.", variant: "destructive" });
+      return;
+    }
+    generateRegisteredItemsPdf(clientInfo, floorsToReport, uploadedLogoDataUrl);
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+
 
   const handlePrintPage = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -1115,13 +1128,17 @@ export default function FireCheckPage() {
           onExportJson={handleExportCurrentInspectionToJson}
           onTriggerImportJson={triggerJsonImport}
         />
-        <input 
+         <input 
           type="file"
           ref={jsonImportFileInputRef}
           accept=".json,application/json"
           onChange={handleImportInspectionFromJson}
           className="hidden"
           id="json-import-input"
+        />
+
+        <ReportsPanel 
+          onGenerateRegisteredItemsReport={handleGenerateRegisteredItemsReport}
         />
 
 
@@ -1143,4 +1160,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
