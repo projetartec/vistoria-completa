@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ClientInfo } from '@/lib/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,18 +12,16 @@ import { PREDEFINED_CLIENTS } from '@/constants/client.data';
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
   onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
-  savedLocations: string[]; // Continuamos usando savedLocations para o datalist de locais gerais
+  savedLocations: string[];
 }
 
 export function ClientDataForm({ 
   clientInfoData, 
   onClientInfoChange,
-  savedLocations, // Esta prop ainda pode ser útil para sugestões gerais além dos predefinidos
+  savedLocations,
 }: ClientDataFormProps) {
   const [isContentVisible, setIsContentVisible] = useState(false);
 
-  // Combinar clientes predefinidos com outros locais salvos para o datalist
-  // Garantindo que os nomes predefinidos apareçam e não haja duplicatas na sugestão.
   const allLocationSuggestions = React.useMemo(() => {
     const predefinedNames = PREDEFINED_CLIENTS.map(client => client.name);
     const combined = [...new Set([...predefinedNames, ...savedLocations])];
@@ -56,19 +55,22 @@ export function ClientDataForm({
         <CardContent id="client-data-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="clientLocationInput">LOCAL (Nome do Cliente)</Label>
-              <Input
-                id="clientLocationInput"
+              <Label htmlFor="clientLocationSelect">LOCAL (Nome do Cliente)</Label>
+              <Select
                 value={clientInfoData.clientLocation}
-                onChange={(e) => onClientInfoChange('clientLocation', e.target.value)}
-                placeholder="Digite ou selecione um local"
-                list="client-locations-datalist" 
-              />
-              <datalist id="client-locations-datalist">
-                {allLocationSuggestions.map((loc) => (
-                  <option key={loc} value={loc} />
-                ))}
-              </datalist>
+                onValueChange={(value) => onClientInfoChange('clientLocation', value)}
+              >
+                <SelectTrigger id="clientLocationSelect">
+                  <SelectValue placeholder="Selecione um local" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allLocationSuggestions.map((loc) => (
+                    <SelectItem key={loc} value={loc}>
+                      {loc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="clientCode">CÓDIGO DO CLIENTE</Label>
@@ -77,7 +79,6 @@ export function ClientDataForm({
                 value={clientInfoData.clientCode}
                 onChange={(e) => {
                   const val = e.target.value;
-                  // Permite até 5 dígitos ou vazio
                   if (/^\d{0,5}$/.test(val) || val === '') { 
                     onClientInfoChange('clientCode', val);
                   }
