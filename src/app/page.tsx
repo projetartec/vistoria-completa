@@ -6,7 +6,6 @@ import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
 import { ActionButtonsPanel } from '@/components/app/action-buttons-panel';
-// ReportsPanel is no longer used directly here
 import { SavedInspectionsList } from '@/components/app/saved-inspections-list';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
+import { PREDEFINED_CLIENTS } from '@/constants/client.data'; // Importar clientes predefinidos
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf } from '@/lib/pdfGenerator'; 
@@ -30,7 +30,7 @@ const createNewFloorEntry = (): InspectionData => {
     id: newId,
     ...JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA)), // Deep copy
     floor: '',
-    categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false})), // Deep copy and ensure categories are collapsed
+    categories: JSON.parse(JSON.stringify(INITIAL_INSPECTION_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false})),
     isFloorContentVisible: false, 
   };
 };
@@ -39,7 +39,7 @@ const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOv
   if (category.type === 'standard' && category.subItems) {
     const relevantSubItems = category.subItems.filter(subItem => !subItem.isRegistry);
     if (relevantSubItems.length === 0) {
-      return 'all-items-selected'; // Or a more appropriate status if no non-registry items
+      return 'all-items-selected'; 
     }
     const allSelected = relevantSubItems.every(subItem => subItem.status !== undefined);
     return allSelected ? 'all-items-selected' : 'some-items-pending';
@@ -64,7 +64,6 @@ const calculateNextInspectionNumber = (
   return randomNumber.toString();
 };
 
-// Helper function to initiate file download
 const initiateFileDownload = (inspectionData: FullInspectionData, clientInfoForFilename: ClientInfo) => {
   const jsonString = JSON.stringify(inspectionData, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
@@ -77,7 +76,7 @@ const initiateFileDownload = (inspectionData: FullInspectionData, clientInfoForF
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  return fileName; // Return filename for toast messages
+  return fileName; 
 };
 
 
@@ -143,12 +142,27 @@ export default function FireCheckPage() {
     setClientInfo(prevClientInfo => {
       const newClientInfoState = { ...prevClientInfo, [field]: value };
       
-      if (field === 'clientCode' || field === 'clientLocation') {
-        if (!prevClientInfo.inspectionNumber || prevClientInfo.clientCode !== newClientInfoState.clientCode || prevClientInfo.clientLocation !== newClientInfoState.clientLocation) {
-            newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
-              newClientInfoState.clientCode,
-              newClientInfoState.clientLocation
-            );
+      if (field === 'clientLocation') {
+        const matchedClient = PREDEFINED_CLIENTS.find(
+          client => client.name.trim().toLowerCase() === value.trim().toLowerCase()
+        );
+        if (matchedClient) {
+          newClientInfoState.clientCode = matchedClient.code || ''; // Use predefinido, ou vazio se nulo
+        }
+        // Se não encontrou predefinido E o código está vazio (ou era de um predefinido anterior), 
+        // permite que o usuário digite um novo código ou mantenha o que já estava.
+        // A geração do número da vistoria abaixo cuidará de usar o código correto.
+      }
+
+      if (field === 'clientLocation' || field === 'clientCode') {
+         // Recalcular número da vistoria se local ou código mudou, ou se número não existe
+        if (!newClientInfoState.inspectionNumber || 
+            (field === 'clientLocation' && prevClientInfo.clientLocation !== newClientInfoState.clientLocation) ||
+            (field === 'clientCode' && prevClientInfo.clientCode !== newClientInfoState.clientCode) ) {
+             newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
+                newClientInfoState.clientCode,
+                newClientInfoState.clientLocation // Usar o novo clientLocation
+             );
         }
 
         if (value && field === 'clientLocation') {
@@ -504,7 +518,6 @@ export default function FireCheckPage() {
 
   const handleRemoveFloor = useCallback((floorIndex: number) => {
     if (activeFloorsData.length <= 1) {
-      // Prevent removing the last floor or if only one floor exists
       return;
     }
     setActiveFloorsData(prev => prev.filter((_, index) => index !== floorIndex));
@@ -595,10 +608,10 @@ export default function FireCheckPage() {
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
             ? floor.id
             : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
-        isFloorContentVisible: false, // Ensure floors are collapsed on load
+        isFloorContentVisible: false, 
         categories: floor.categories.map(cat => ({
           ...cat,
-          isExpanded: false, // Ensure categories are collapsed on load
+          isExpanded: false, 
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
@@ -622,7 +635,7 @@ export default function FireCheckPage() {
       
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
-      setIsChecklistVisible(false); // Ensure main checklist is collapsed on load
+      setIsChecklistVisible(false); 
       toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada.`});
     }
   };
@@ -664,10 +677,10 @@ export default function FireCheckPage() {
       duplicatedInspection.floors = duplicatedInspection.floors.map(floor => ({
         ...floor,
         id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-floorcopy`,
-        isFloorContentVisible: false, // Keep duplicated floors collapsed
+        isFloorContentVisible: false, 
         categories: floor.categories.map(cat => ({
           ...cat,
-          isExpanded: false, // Keep duplicated categories collapsed
+          isExpanded: false, 
           subItems: cat.subItems ? cat.subItems.map(sub => ({
             ...sub,
             id: sub.id.startsWith('custom-') || sub.isRegistry 
@@ -706,12 +719,12 @@ export default function FireCheckPage() {
       }
 
       const updatedInspection: FullInspectionData = {
-        ...JSON.parse(JSON.stringify(inspectionToUpdate)), // Deep copy
+        ...JSON.parse(JSON.stringify(inspectionToUpdate)), 
         clientInfo: {
           ...inspectionToUpdate.clientInfo,
           clientLocation: newClientLocation.trim(),
         },
-        timestamp: Date.now(), // Update timestamp to reflect modification
+        timestamp: Date.now(), 
       };
 
       const updatedList = prevSaved.map(insp => insp.id === inspectionId ? updatedInspection : insp);
@@ -721,7 +734,6 @@ export default function FireCheckPage() {
       return sortedList;
     });
 
-    // If the currently loaded inspection is the one being renamed, update the form state
     if (clientInfo.inspectionNumber === inspectionId) {
       setClientInfo(prev => ({ ...prev, clientLocation: newClientLocation.trim() }));
     }
@@ -995,7 +1007,7 @@ export default function FireCheckPage() {
         toast({ title: "Erro na Importação", description: "Não foi possível importar a vistoria do arquivo. Verifique o formato do arquivo e tente novamente.", variant: "destructive"});
       } finally {
         if (event.target) {
-          event.target.value = ''; // Clear the input for next import
+          event.target.value = ''; 
         }
       }
     };
@@ -1167,8 +1179,6 @@ export default function FireCheckPage() {
           className="hidden"
           id="json-import-input"
         />
-
-        {/* ReportsPanel is removed from here */}
 
         {isSavedInspectionsVisible && (
           <SavedInspectionsList

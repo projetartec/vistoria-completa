@@ -6,19 +6,28 @@ import { Label } from '@/components/ui/label';
 import type { ClientInfo } from '@/lib/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PREDEFINED_CLIENTS } from '@/constants/client.data';
 
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
   onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
-  savedLocations: string[];
+  savedLocations: string[]; // Continuamos usando savedLocations para o datalist de locais gerais
 }
 
 export function ClientDataForm({ 
   clientInfoData, 
   onClientInfoChange,
-  savedLocations,
+  savedLocations, // Esta prop ainda pode ser útil para sugestões gerais além dos predefinidos
 }: ClientDataFormProps) {
   const [isContentVisible, setIsContentVisible] = useState(false);
+
+  // Combinar clientes predefinidos com outros locais salvos para o datalist
+  // Garantindo que os nomes predefinidos apareçam e não haja duplicatas na sugestão.
+  const allLocationSuggestions = React.useMemo(() => {
+    const predefinedNames = PREDEFINED_CLIENTS.map(client => client.name);
+    const combined = [...new Set([...predefinedNames, ...savedLocations])];
+    return combined.sort((a, b) => a.localeCompare(b));
+  }, [savedLocations]);
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -53,10 +62,10 @@ export function ClientDataForm({
                 value={clientInfoData.clientLocation}
                 onChange={(e) => onClientInfoChange('clientLocation', e.target.value)}
                 placeholder="Digite ou selecione um local"
-                list="client-locations-list" 
+                list="client-locations-datalist" 
               />
-              <datalist id="client-locations-list">
-                {savedLocations.map((loc) => (
+              <datalist id="client-locations-datalist">
+                {allLocationSuggestions.map((loc) => (
                   <option key={loc} value={loc} />
                 ))}
               </datalist>
@@ -68,11 +77,12 @@ export function ClientDataForm({
                 value={clientInfoData.clientCode}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (/^\d{0,5}$/.test(val)) { 
+                  // Permite até 5 dígitos ou vazio
+                  if (/^\d{0,5}$/.test(val) || val === '') { 
                     onClientInfoChange('clientCode', val);
                   }
                 }}
-                placeholder="Ex: 12345"
+                placeholder="Ex: 12345 (ou será preenchido)"
                 maxLength={5}
                 pattern="\d*" 
               />
