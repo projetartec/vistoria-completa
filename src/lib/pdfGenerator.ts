@@ -36,57 +36,57 @@ function getStatusClass(status: StatusOption | undefined): string {
 const PDF_COMMON_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap');
   body {
-    font-family: 'PT Sans', Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.5; font-size: 10pt; background-color: #FFFFFF; color: #1A1A1A;
+    font-family: 'PT Sans', Arial, sans-serif; margin: 0; padding: 15px; line-height: 1.4; font-size: 9.5pt; background-color: #FFFFFF; color: #1A1A1A;
   }
-  .pdf-container { max-width: 850px; margin: 0 auto; background-color: #FFFFFF; padding: 25px; border: 1px solid #DDD; }
-  .pdf-header-main { display: flex; flex-direction: row; justify-content: center; align-items: center; border-bottom: 2px solid #D1D5DB; padding-bottom: 15px; margin-bottom: 25px; }
-  .pdf-header-content-wrapper { display: flex; align-items: center; gap: 20px; }
+  .pdf-container { max-width: 850px; margin: 0 auto; background-color: #FFFFFF; padding: 20px; border: 1px solid #DDD; }
+  .pdf-header-main { display: flex; flex-direction: row; justify-content: center; align-items: center; border-bottom: 1px solid #D1D5DB; padding-bottom: 10px; margin-bottom: 20px; }
+  .pdf-header-content-wrapper { display: flex; align-items: center; gap: 15px; }
   .pdf-logo-container { flex-shrink: 0; }
-  .pdf-logo-container img { max-height: 112px; width: auto; max-width: 224px; display: block; }
+  .pdf-logo-container img { max-height: 100px; width: auto; max-width: 200px; display: block; }
   .pdf-company-info-container { text-align: left; }
-  .pdf-header-main .company-name { font-size: 18pt; font-weight: 700; color: #2563EB; margin-bottom: 5px; }
-  .pdf-header-main .company-details p { font-size: 9pt; color: #374151; margin: 2px 0; line-height: 1.3; }
-  .pdf-client-info { border: 1px solid #D1D5DB; border-radius: 8px; padding: 20px; margin-bottom: 30px; background-color: #F9FAFB; }
-  .pdf-client-info .pdf-main-title { font-size: 18pt; font-weight: 700; color: #2563EB; margin-top: 0; margin-bottom: 5px; text-align: center; }
-  .pdf-client-info .pdf-subtitle { font-size: 12pt; font-weight: 700; color: #6B7280; margin-top: 0; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #E5E7EB; text-align: center; }
-  .pdf-client-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size: 10pt; text-align: left; }
-  .pdf-client-info-grid div { padding: 3px 0; }
+  .pdf-header-main .company-name { font-size: 16pt; font-weight: 700; color: #2563EB; margin-bottom: 3px; }
+  .pdf-header-main .company-details p { font-size: 8.5pt; color: #374151; margin: 1px 0; line-height: 1.2; }
+  .pdf-client-info { border: 1px solid #D1D5DB; border-radius: 6px; padding: 15px; margin-bottom: 20px; background-color: #F9FAFB; }
+  .pdf-client-info .pdf-main-title { font-size: 16pt; font-weight: 700; color: #2563EB; margin-top: 0; margin-bottom: 3px; text-align: center; }
+  .pdf-client-info .pdf-subtitle { font-size: 11pt; font-weight: 700; color: #6B7280; margin-top: 0; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #E5E7EB; text-align: center; }
+  .pdf-client-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 15px; font-size: 9pt; text-align: left; }
+  .pdf-client-info-grid div { padding: 2px 0; }
   .pdf-client-info-grid strong { color: #111827; font-weight: 600; }
 
-  .pdf-section-title { font-size: 16pt; font-weight: 700; color: #1F2937; margin-top: 25px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #2563EB; }
+  .pdf-section-title { font-size: 14pt; font-weight: 700; color: #1F2937; margin-top: 20px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1.5px solid #2563EB; }
   
   .page-break-before { page-break-before: always; }
 
-  .pdf-floor-section { margin-bottom: 30px; }
-  .pdf-floor-title { font-size: 18pt; font-weight: 700; color: #1F2937; margin-top: 25px; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 3px solid #2563EB; }
-  .pdf-floor-section:first-of-type .pdf-floor-title { margin-top: 10px; }
+  .pdf-floor-section { margin-bottom: 20px; }
+  .pdf-floor-title { font-size: 16pt; font-weight: 700; color: #1F2937; margin-top: 20px; margin-bottom: 15px; padding-bottom: 6px; border-bottom: 2px solid #2563EB; }
+  .pdf-floor-section:first-of-type .pdf-floor-title { margin-top: 5px; }
   
-  .pdf-registered-items-section { margin-top: 20px; }
-  .pdf-registered-items-section h4 { font-size: 12pt; font-weight: 600; color: #374151; margin-top: 15px; margin-bottom: 8px; }
-  .pdf-registered-items-section ul { list-style: disc; margin-left: 25px; padding-left: 0; margin-top: 0; margin-bottom: 10px; }
-  .pdf-registered-items-section li { font-size: 10pt; color: #4B5563; margin-bottom: 3px; }
-  .pdf-no-items { font-style: italic; color: #6B7280; margin-left: 5px; }
+  .pdf-registered-items-section { margin-top: 15px; }
+  .pdf-registered-items-section h4 { font-size: 11pt; font-weight: 600; color: #374151; margin-top: 10px; margin-bottom: 6px; }
+  .pdf-registered-items-section ul { list-style: disc; margin-left: 20px; padding-left: 0; margin-top: 0; margin-bottom: 8px; }
+  .pdf-registered-items-section li { font-size: 9pt; color: #4B5563; margin-bottom: 2px; }
+  .pdf-no-items { font-style: italic; color: #6B7280; margin-left: 5px; font-size: 9pt; }
   
-  .pdf-totals-summary { margin-top: 30px; padding-top: 15px; border-top: 1px solid #E5E7EB; }
-  .pdf-totals-summary h4 { font-size: 13pt; font-weight: 600; color: #111827; margin-bottom: 10px; }
-  .pdf-totals-summary p { font-size: 11pt; color: #1F2937; margin-bottom: 5px; }
-  .pdf-totals-summary .pdf-type-breakdown { list-style: none; padding-left: 15px; margin-top: 2px; margin-bottom: 8px; }
-  .pdf-totals-summary .pdf-type-breakdown li { font-size: 10pt; color: #374151; margin-bottom: 1px; }
-  .pdf-totals-summary .pdf-type-breakdown ul { list-style: circle; margin-left: 20px; padding-left: 0; margin-top: 2px; }
-  .pdf-totals-summary .pdf-type-breakdown ul li { font-size: 9.5pt; }
+  .pdf-totals-summary { margin-top: 20px; padding-top: 10px; border-top: 1px solid #E5E7EB; }
+  .pdf-totals-summary h4 { font-size: 12pt; font-weight: 600; color: #111827; margin-bottom: 8px; }
+  .pdf-totals-summary p { font-size: 10pt; color: #1F2937; margin-bottom: 3px; }
+  .pdf-totals-summary .pdf-type-breakdown { list-style: none; padding-left: 10px; margin-top: 1px; margin-bottom: 6px; }
+  .pdf-totals-summary .pdf-type-breakdown li { font-size: 9pt; color: #374151; margin-bottom: 1px; }
+  .pdf-totals-summary .pdf-type-breakdown ul { list-style: circle; margin-left: 15px; padding-left: 0; margin-top: 1px; }
+  .pdf-totals-summary .pdf-type-breakdown ul li { font-size: 8.5pt; }
 
 
-  .pdf-footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; font-size: 9pt; color: #6B7280; }
+  .pdf-footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #E5E7EB; font-size: 8pt; color: #6B7280; }
 
   @media print {
     html, body { 
       height: auto; 
       background-color: #FFFFFF !important; 
       margin: 0 !important; 
-      padding: 10mm 8mm !important; 
+      padding: 8mm 6mm !important; 
       print-color-adjust: exact !important; 
       -webkit-print-color-adjust: exact !important; 
-      font-size: 10pt;
+      font-size: 9.5pt;
       overflow: visible !important;
     }
     .pdf-container { 
@@ -108,7 +108,7 @@ const PDF_COMMON_STYLES = `
     .pdf-section-title, .pdf-floor-title { color: #1F2937 !important; border-bottom-color: #2563EB !important; }
     .pdf-category-title-text { color: #111827 !important; }
     .pdf-subitem-name { color: #1F2937 !important; }
-    .pdf-observation { color: #4B5563 !important; border-left: 3px solid #9CA3AF !important; background-color: #F9FAFB !important; }
+    .pdf-observation { color: #4B5563 !important; border-left: 2px solid #9CA3AF !important; background-color: #F9FAFB !important; }
     .status-ok { background-color: #ECFDF5 !important; color: #047857 !important; border: 1px solid #A7F3D0 !important; }
     .status-nc { background-color: #FEF2F2 !important; color: #B91C1C !important; border: 1px solid #FECACA !important; }
     .status-na { background-color: #FFFBEB !important; color: #B45309 !important; border: 1px solid #FDE68A !important; }
@@ -123,23 +123,23 @@ const PDF_COMMON_STYLES = `
 `;
 
 const PDF_SPECIFIC_STYLES_VISTORIA = `
-  .pdf-verified-summary-overall { margin-bottom: 20px; page-break-inside: auto; }
-  .pdf-verified-summary-overall h4 { font-size: 13pt; font-weight: 600; color: #374151; margin-top: 0; margin-bottom: 10px; }
-  .pdf-verified-summary-category-overall { margin-bottom: 8px; }
-  .pdf-verified-summary-category-title-overall { font-size: 11pt; font-weight: 600; color: #111827; margin-bottom: 4px; }
-  .pdf-verified-summary-overall ul { list-style: disc; margin-left: 20px; padding-left: 0; margin-top: 0; margin-bottom: 5px; }
-  .pdf-verified-summary-overall li { font-size: 10pt; color: #4B5563; margin-bottom: 2px; }
-  .pdf-category-card { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); page-break-inside: avoid; }
-  .pdf-category-header { display: flex; align-items: center; padding: 10px 15px; background-color: #F3F4F6; border-bottom: 1px solid #E5E7EB; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-  .pdf-category-title-text { font-size: 13pt; font-weight: 600; color: #111827; flex-grow: 1; }
-  .pdf-category-content { padding: 15px; font-size: 10pt; }
-  .pdf-subitem-wrapper { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #E5E7EB; page-break-inside: avoid; }
+  .pdf-verified-summary-overall { margin-bottom: 15px; page-break-inside: auto; }
+  .pdf-verified-summary-overall h4 { font-size: 12pt; font-weight: 600; color: #374151; margin-top: 0; margin-bottom: 8px; }
+  .pdf-verified-summary-category-overall { margin-bottom: 6px; }
+  .pdf-verified-summary-category-title-overall { font-size: 10pt; font-weight: 600; color: #111827; margin-bottom: 3px; }
+  .pdf-verified-summary-overall ul { list-style: disc; margin-left: 18px; padding-left: 0; margin-top: 0; margin-bottom: 4px; }
+  .pdf-verified-summary-overall li { font-size: 9pt; color: #4B5563; margin-bottom: 1px; }
+  .pdf-category-card { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); page-break-inside: avoid; }
+  .pdf-category-header { display: flex; align-items: center; padding: 8px 12px; background-color: #F3F4F6; border-bottom: 1px solid #E5E7EB; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+  .pdf-category-title-text { font-size: 12pt; font-weight: 600; color: #111827; flex-grow: 1; }
+  .pdf-category-content { padding: 12px; font-size: 9pt; }
+  .pdf-subitem-wrapper { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #E5E7EB; page-break-inside: avoid; }
   .pdf-subitem-wrapper:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   .pdf-subitem { display: flex; justify-content: space-between; align-items: center; }
-  .pdf-subitem-name { font-weight: 600; color: #1F2937; flex-grow: 1; margin-right: 10px; }
-  .pdf-status { padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 0.9em; white-space: nowrap; }
-  .pdf-observation { color: #4B5563; margin-top: 6px; padding: 8px 10px; background-color: #F9FAFB; border-left: 3px solid #9CA3AF; font-size: 0.95em; white-space: pre-wrap; width: 100%; box-sizing: border-box; }
-  .pdf-pressure-details p, .pdf-special-details p { margin: 4px 0 8px 0; display: flex; justify-content: space-between; align-items: center; }
+  .pdf-subitem-name { font-weight: 600; color: #1F2937; flex-grow: 1; margin-right: 8px; font-size: 9pt; }
+  .pdf-status { padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 0.85em; white-space: nowrap; }
+  .pdf-observation { color: #4B5563; margin-top: 4px; padding: 6px 8px; background-color: #F9FAFB; border-left: 2px solid #9CA3AF; font-size: 0.9em; white-space: pre-wrap; width: 100%; box-sizing: border-box; }
+  .pdf-pressure-details p, .pdf-special-details p { margin: 3px 0 6px 0; display: flex; justify-content: space-between; align-items: center; font-size: 9pt;}
   .pdf-pressure-details .pdf-subitem-name, .pdf-special-details .pdf-subitem-name { flex-grow: 0; font-weight: 600; }
   @media print {
     .pdf-verified-summary-overall { page-break-inside: auto !important; }
@@ -674,28 +674,30 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
 
   if (processedFloorsForReport.length > 0) {
     processedFloorsForReport.forEach(floor => {
-      pdfHtml += `<div class="pdf-floor-section">
-                    <h3 class="pdf-floor-title">${floor.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
-                    <div class="pdf-registered-items-section">`;
-      if (floor.extinguishers.length > 0) {
-        pdfHtml += `<h4>Extintores Cadastrados:</h4><ul>`;
-        floor.extinguishers.forEach(ext => {
-          pdfHtml += `<li>${ext.quantity}x - ${ext.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${ext.weight.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
-        });
-        pdfHtml += `</ul>`;
-      } else {
-        pdfHtml += `<h4>Extintores Cadastrados:</h4><p class="pdf-no-items">Nenhum extintor cadastrado neste andar.</p>`;
+      if (floor.extinguishers.length > 0 || floor.hoses.length > 0) {
+        pdfHtml += `<div class="pdf-floor-section">
+                      <h3 class="pdf-floor-title">${floor.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                      <div class="pdf-registered-items-section">`;
+        if (floor.extinguishers.length > 0) {
+          pdfHtml += `<h4>Extintores Cadastrados:</h4><ul>`;
+          floor.extinguishers.forEach(ext => {
+            pdfHtml += `<li>${ext.quantity}x - ${ext.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${ext.weight.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
+          });
+          pdfHtml += `</ul>`;
+        } else {
+          pdfHtml += `<h4>Extintores Cadastrados:</h4><p class="pdf-no-items">Nenhum extintor cadastrado neste andar.</p>`;
+        }
+        if (floor.hoses.length > 0) {
+          pdfHtml += `<h4>Mangueiras Cadastradas:</h4><ul>`;
+          floor.hoses.forEach(hose => {
+            pdfHtml += `<li>${hose.quantity}x - ${hose.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
+          });
+          pdfHtml += `</ul>`;
+        } else {
+          pdfHtml += `<h4>Mangueiras Cadastradas:</h4><p class="pdf-no-items">Nenhuma mangueira cadastrada neste andar.</p>`;
+        }
+        pdfHtml += `  </div></div>`;
       }
-      if (floor.hoses.length > 0) {
-        pdfHtml += `<h4>Mangueiras Cadastradas:</h4><ul>`;
-        floor.hoses.forEach(hose => {
-          pdfHtml += `<li>${hose.quantity}x - ${hose.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${hose.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
-        });
-        pdfHtml += `</ul>`;
-      } else {
-        pdfHtml += `<h4>Mangueiras Cadastradas:</h4><p class="pdf-no-items">Nenhuma mangueira cadastrada neste andar.</p>`;
-      }
-      pdfHtml += `  </div></div>`;
     });
   } else {
      pdfHtml += `<p class="pdf-no-items" style="text-align:center; padding: 15px;">Nenhum item cadastrado nos andares especificados.</p>`;
@@ -769,5 +771,6 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
 
 
