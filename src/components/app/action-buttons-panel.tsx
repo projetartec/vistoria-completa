@@ -9,12 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Save, PlusSquare, ListChecks, CopyPlus, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText, Image as ImageIcon } from 'lucide-react';
+import { Save, PlusSquare, ListChecks, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText, Image as ImageIcon, Building } from 'lucide-react'; // Added Building
 
 interface ActionButtonsPanelProps {
   onSave: () => void;
   onNewInspection: () => void;
-  onNewFloor: () => void;
+  onAddNewTower: () => void; // Changed from onNewFloor
   onToggleSavedInspections: () => void;
   isSavedInspectionsVisible: boolean;
   onPrint: () => void;
@@ -23,13 +23,13 @@ interface ActionButtonsPanelProps {
   onGenerateRegisteredItemsReport: () => void;
   onGenerateNCItemsReport: () => void;
   onGeneratePdf: () => void;
-  onGeneratePhotoReportPdf: () => void; // New prop
+  onGeneratePhotoReportPdf: () => void;
 }
 
 export function ActionButtonsPanel({
   onSave,
   onNewInspection,
-  onNewFloor,
+  onAddNewTower, // Changed
   onToggleSavedInspections,
   isSavedInspectionsVisible,
   onPrint,
@@ -38,7 +38,7 @@ export function ActionButtonsPanel({
   onGenerateRegisteredItemsReport,
   onGenerateNCItemsReport,
   onGeneratePdf,
-  onGeneratePhotoReportPdf, // New prop
+  onGeneratePhotoReportPdf,
 }: ActionButtonsPanelProps) {
   const [isActionsContentVisible, setIsActionsContentVisible] = useState(false);
 
@@ -69,12 +69,12 @@ export function ActionButtonsPanel({
             <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar</span>
           </Button>
           <Button
-            onClick={onNewFloor}
+            onClick={onAddNewTower} // Changed
             className="bg-green-500 hover:bg-green-600 text-white"
-            title="Novo Andar"
+            title="Nova Torre" // Changed
             size="sm"
           >
-            <CopyPlus className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Novo Andar</span>
+            <Building className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Nova Torre</span> 
           </Button>
            <Button
             onClick={onPrint}

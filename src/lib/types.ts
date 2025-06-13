@@ -32,8 +32,8 @@ export interface SubItemState {
   isRegistry?: boolean;
   registeredExtinguishers?: RegisteredExtinguisher[];
   registeredHoses?: RegisteredHose[];
-  photoDataUri?: string | null; // Added for photo
-  photoDescription?: string; // Added for photo observation
+  photoDataUri?: string | null;
+  photoDescription?: string;
 }
 
 export interface InspectionCategoryState {
@@ -42,19 +42,26 @@ export interface InspectionCategoryState {
   isExpanded: boolean;
   type: 'standard' | 'special' | 'pressure';
   subItems?: SubItemState[];
-  status?: StatusOption | undefined; // Agora aplicável a special e pressure
+  status?: StatusOption | undefined;
   observation?: string;
   showObservation?: boolean;
   pressureValue?: string;
   pressureUnit?: 'Kg' | 'PSI' | 'Bar' | '';
 }
 
-// Represents a single floor's data within a full inspection
-export interface InspectionData {
+// Renamed from InspectionData to FloorData
+export interface FloorData {
   id: string; // Unique ID for this floor entry
-  floor: string;
+  floor: string; // Name of the floor, e.g., "Térreo", "1A"
   categories: InspectionCategoryState[];
-  isFloorContentVisible?: boolean; // Added to control visibility of the entire floor's content
+  isFloorContentVisible?: boolean;
+}
+
+export interface TowerData {
+  id: string; // Unique ID for this tower entry
+  towerName: string;
+  floors: FloorData[];
+  isTowerContentVisible?: boolean; // Added to control visibility of the entire tower's content
 }
 
 export interface ClientInfo {
@@ -62,16 +69,16 @@ export interface ClientInfo {
   clientCode: string;
   inspectionNumber: string;
   inspectionDate: string;
-  inspectedBy?: string; // Added field
+  inspectedBy?: string;
 }
 
-// Represents a full inspection, including client info and all its floors
+// Updated to use TowerData[]
 export interface FullInspectionData {
-  id: string; // Unique ID for the full inspection (typically inspectionNumber)
+  id: string;
   clientInfo: ClientInfo;
-  floors: InspectionData[];
+  towers: TowerData[]; // Changed from floors: InspectionData[]
   timestamp: number;
-  uploadedLogoDataUrl?: string | null; // Added to store uploaded logo
+  uploadedLogoDataUrl?: string | null;
 }
 
 
@@ -92,19 +99,17 @@ export type CategoryUpdatePayload =
   | { field: 'subItemStatus'; subItemId: string; value: StatusOption | undefined }
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean }
-  | { field: 'subItemPhotoDataUri'; subItemId: string; value: string | null } // Added for photo
-  | { field: 'subItemPhotoDescription'; subItemId: string; value: string } // Added for photo observation
-  | { field: 'removeSubItemPhoto'; subItemId: string } // Added to remove photo and its description
+  | { field: 'subItemPhotoDataUri'; subItemId: string; value: string | null }
+  | { field: 'subItemPhotoDescription'; subItemId: string; value: string }
+  | { field: 'removeSubItemPhoto'; subItemId: string }
   | { field: 'addRegisteredExtinguisher'; subItemId: string; value: Omit<RegisteredExtinguisher, 'id'> }
   | { field: 'removeRegisteredExtinguisher'; subItemId: string; extinguisherId: string }
   | { field: 'addRegisteredHose'; subItemId: string; value: Omit<RegisteredHose, 'id'> }
   | { field: 'removeRegisteredHose'; subItemId: string; hoseId: string }
   | { field: 'markAllSubItemsNA' }
-  | { field: 'addSubItem'; categoryId: string; value: string } // value is new subitem name
+  | { field: 'addSubItem'; categoryId: string; value: string }
   | { field: 'removeSubItem'; categoryId: string; subItemId: string }
   | { field: 'renameCategoryTitle'; newTitle: string }
   | { field: 'renameSubItemName'; subItemId: string; newName: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';
-
-    

@@ -1,5 +1,5 @@
 
-import type { InspectionData, InspectionCategoryState, InspectionCategoryConfig, StatusOption, ExtinguisherTypeOption, ExtinguisherWeightOption, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
+import type { FloorData, InspectionCategoryState, InspectionCategoryConfig, StatusOption, ExtinguisherTypeOption, ExtinguisherWeightOption, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 
 export const EXTINGUISHER_TYPES: ExtinguisherTypeOption[] = ['AP', 'ABC', 'BC', 'EPM', 'CO²'];
 export const EXTINGUISHER_WEIGHTS: ExtinguisherWeightOption[] = ['4kg', '6kg', '8kg', '10kg', '12kg', '20kg', '50kg', '75kg'];
@@ -65,7 +65,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
     subItems: [
       { id: 'hidrantes_chaves', name: 'Chaves' },
       { id: 'hidrantes_esguichos', name: 'Esguichos' },
-      { id: 'hidrantes_mangueiras_verificacao', name: 'Mangueiras', isRegistry: false },
+      { id: 'hidrantes_mangueiras_verificacao', name: 'Mangueiras (Verificação Status)', isRegistry: false }, // Updated name for clarity
       { id: 'hidrantes_caixa_abrigo', name: 'Caixa Abrigo' },
       { id: 'hidrantes_sinalizacao_solo', name: 'Sinalização De Solo' },
       { id: 'hidrantes_placa_sinalizacao', name: 'Placa De Sinalização' },
@@ -85,14 +85,14 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
 export const STATUS_OPTIONS: StatusOption[] = ['OK', 'N/C', 'N/A'];
 export const PRESSURE_UNITS: InspectionCategoryState['pressureUnit'][] = ['Kg', 'PSI', 'Bar'];
 
-// This now defines the structure for a single floor, without client info.
-export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id'> = {
+// Defines the structure for a single floor.
+export const INITIAL_FLOOR_DATA: Omit<FloorData, 'id'> = {
   floor: '',
   categories: INSPECTION_CONFIG.map(category => ({
     id: category.id,
     title: category.title,
     type: category.type,
-    isExpanded: false, // Default to collapsed
+    isExpanded: false,
     ...(category.type === 'standard' && {
       subItems: category.subItems!.map(subItem => ({
         id: subItem.id,
@@ -101,8 +101,8 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id'> = {
         observation: '',
         showObservation: false,
         isRegistry: subItem.isRegistry || false,
-        photoDataUri: null, // Added
-        photoDescription: '', // Added
+        photoDataUri: null,
+        photoDescription: '',
         ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
         ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
       })),
@@ -113,12 +113,12 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id'> = {
       showObservation: false,
     }),
     ...(category.type === 'pressure' && {
-      status: undefined, // Added status for pressure type
+      status: undefined,
       pressureValue: '',
       pressureUnit: '' as InspectionCategoryState['pressureUnit'],
       observation: '',
       showObservation: false,
     }),
   })),
+  isFloorContentVisible: false,
 };
-

@@ -18,11 +18,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface InspectionCategoryItemProps {
   category: InspectionCategoryState;
-  onCategoryItemUpdate: (floorIndex: number, categoryId: string, update: CategoryUpdatePayload) => void;
+  // onCategoryItemUpdate now implicitly receives towerIndex and floorIndex from its parent closure in page.tsx
+  onCategoryItemUpdate: (categoryId: string, update: CategoryUpdatePayload) => void;
   overallStatus: CategoryOverallStatus;
-  floorIndex: number;
-  onMoveCategoryItem: (floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
-  onRemoveCategory: (floorIndex: number, categoryId: string) => void;
+  // floorIndex and towerIndex are used for onMoveCategoryItem and onRemoveCategory
+  floorIndex: number; 
+  towerIndex: number;
+  onMoveCategoryItem: (towerIndex: number, floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
+  onRemoveCategory: (towerIndex: number, floorIndex: number, categoryId: string) => void;
   categoryIndex: number;
   totalCategoriesInFloor: number;
   isMobile: boolean;
@@ -241,6 +244,7 @@ const InspectionCategoryItemComponent = ({
   category, 
   onCategoryItemUpdate, 
   overallStatus, 
+  towerIndex, // Added
   floorIndex,
   onMoveCategoryItem,
   onRemoveCategory,
@@ -260,17 +264,12 @@ const InspectionCategoryItemComponent = ({
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
-    if (field === 'markAllSubItemsNA') {
-      payload = { field };
-    } else if (field === 'addSubItem') {
-        payload = { field, categoryId: category.id, value: value as string };
-    } else if (field === 'removeSubItem' && subItemId) {
-        payload = { field, categoryId: category.id, subItemId };
-    } else if (field === 'renameCategoryTitle') {
-        payload = { field, newTitle: value as string };
-    } else if (field === 'renameSubItemName' && subItemId) {
-        payload = { field, subItemId, newName: value as string };
-    } else if (subItemId) {
+    if (field === 'markAllSubItemsNA') payload = { field };
+    else if (field === 'addSubItem') payload = { field, categoryId: category.id, value: value as string };
+    else if (field === 'removeSubItem' && subItemId) payload = { field, categoryId: category.id, subItemId };
+    else if (field === 'renameCategoryTitle') payload = { field, newTitle: value as string };
+    else if (field === 'renameSubItemName' && subItemId) payload = { field, subItemId, newName: value as string };
+    else if (subItemId) {
       if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
       else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
       else if (field === 'subItemShowObservation') payload = { field, subItemId, value: value as boolean };
@@ -286,14 +285,14 @@ const InspectionCategoryItemComponent = ({
       if (field === 'status') payload = { field, value: value as StatusOption | undefined };
       else payload = { field, value } as CategoryUpdatePayload;
     }
-    onCategoryItemUpdate(floorIndex, category.id, payload);
-  }, [floorIndex, category.id, onCategoryItemUpdate]);
+    onCategoryItemUpdate(category.id, payload); // towerIndex and floorIndex are now part of the closure
+  }, [category.id, onCategoryItemUpdate]);
 
   const handleSubItemRegistryUpdate = useCallback(
     (updatePayload: CategoryUpdatePayload) => {
-      onCategoryItemUpdate(floorIndex, category.id, updatePayload);
+      onCategoryItemUpdate(category.id, updatePayload); // towerIndex and floorIndex are part of the closure
     },
-    [floorIndex, category.id, onCategoryItemUpdate]
+    [category.id, onCategoryItemUpdate]
   );
 
   const handlePhotoChange = useCallback((event: React.ChangeEvent<HTMLInputElement>, subItemId: string) => {
@@ -305,10 +304,7 @@ const InspectionCategoryItemComponent = ({
       };
       reader.readAsDataURL(file);
     }
-    // Reset file input value to allow re-uploading the same file if needed
-    if (event.target) {
-      event.target.value = '';
-    }
+    if (event.target) event.target.value = '';
   }, [handleUpdate]);
 
   const handleRemovePhoto = useCallback((subItemId: string) => {
@@ -344,198 +340,58 @@ const InspectionCategoryItemComponent = ({
     return category.type === 'standard' && category.subItems && category.subItems.some(sub => !sub.isRegistry);
   }, [category.subItems, category.type]);
 
-  const handleEditCategoryTitle = () => {
-    if(isEditingCategoryTitle) return; 
-    setEditingCategoryTitleValue(category.title);
-    setIsEditingCategoryTitle(true);
-  };
-
-  const handleSaveCategoryTitle = () => {
-    if (editingCategoryTitleValue.trim() === '') {
-      alert('O título da categoria não pode ser vazio.');
-      return;
-    }
-    handleUpdate('renameCategoryTitle', editingCategoryTitleValue.trim());
-    setIsEditingCategoryTitle(false);
-  };
-
-  const handleCancelEditCategoryTitle = () => {
-    setIsEditingCategoryTitle(false);
-    setEditingCategoryTitleValue(category.title); 
-  };
-
-  const handleEditSubItemName = (subItem: SubItemState) => {
-    if(editingSubItemId === subItem.id) return; 
-    setEditingSubItemId(subItem.id);
-    setEditingSubItemNameValue(subItem.name);
-  };
-
-  const handleSaveSubItemName = (subItemId: string) => {
-    if (editingSubItemNameValue.trim() === '') {
-      alert('O nome do subitem não pode ser vazio.');
-      return;
-    }
-    handleUpdate('renameSubItemName', editingSubItemNameValue.trim(), subItemId);
-    setEditingSubItemId(null);
-  };
-
-  const handleCancelEditSubItemName = () => {
-    const subItem = category.subItems?.find(s => s.id === editingSubItemId);
-    if(subItem) setEditingSubItemNameValue(subItem.name); 
-    setEditingSubItemId(null);
-  };
-
+  const handleEditCategoryTitle = () => { if(isEditingCategoryTitle) return; setEditingCategoryTitleValue(category.title); setIsEditingCategoryTitle(true); };
+  const handleSaveCategoryTitle = () => { if (editingCategoryTitleValue.trim() === '') { alert('O título não pode ser vazio.'); return; } handleUpdate('renameCategoryTitle', editingCategoryTitleValue.trim()); setIsEditingCategoryTitle(false); };
+  const handleCancelEditCategoryTitle = () => { setIsEditingCategoryTitle(false); setEditingCategoryTitleValue(category.title); };
+  const handleEditSubItemName = (subItem: SubItemState) => { if(editingSubItemId === subItem.id) return; setEditingSubItemId(subItem.id); setEditingSubItemNameValue(subItem.name); };
+  const handleSaveSubItemName = (subItemId: string) => { if (editingSubItemNameValue.trim() === '') { alert('O nome não pode ser vazio.'); return; } handleUpdate('renameSubItemName', editingSubItemNameValue.trim(), subItemId); setEditingSubItemId(null); };
+  const handleCancelEditSubItemName = () => { const subItem = category.subItems?.find(s => s.id === editingSubItemId); if(subItem) setEditingSubItemNameValue(subItem.name); setEditingSubItemId(null); };
 
   return (
     <Accordion
-      type="single"
-      collapsible
-      value={category.isExpanded && !isEditingCategoryTitle ? category.id : ""} 
-      onValueChange={handleAccordionValueChange}
-      className="mb-4 bg-card shadow-md rounded-lg group/item transition-all duration-150 ease-out"
+      type="single" collapsible value={category.isExpanded && !isEditingCategoryTitle ? category.id : ""} 
+      onValueChange={handleAccordionValueChange} className="mb-4 bg-card shadow-md rounded-lg group/item transition-all duration-150 ease-out"
     >
       <AccordionItem value={category.id} className="border-b-0">
-        <div className="flex items-center justify-between px-4 py-3 group/item"> {/* This div acts as the header container */}
+        <div className="flex items-center justify-between px-4 py-3 group/item">
           {isEditingCategoryTitle ? (
             <div className="flex items-center gap-2 w-full flex-1 mr-2">
-              <Input
-                value={editingCategoryTitleValue}
-                onChange={(e) => setEditingCategoryTitleValue(e.target.value)}
-                onClick={(e) => e.stopPropagation()} 
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); handleSaveCategoryTitle(); }
-                    if (e.key === 'Escape') { e.preventDefault(); handleCancelEditCategoryTitle(); }
-                }}
-                className="h-9 text-base sm:text-lg"
-                autoFocus
-              />
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSaveCategoryTitle();}} className="h-9 w-9 text-green-600 hover:bg-green-500/10">
-                <Save className="h-5 w-5"/>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCancelEditCategoryTitle();}} className="h-9 w-9 text-red-600 hover:bg-red-500/10">
-                <X className="h-5 w-5"/>
-              </Button>
+              <Input value={editingCategoryTitleValue} onChange={(e) => setEditingCategoryTitleValue(e.target.value)} onClick={(e) => e.stopPropagation()} 
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveCategoryTitle(); } if (e.key === 'Escape') { e.preventDefault(); handleCancelEditCategoryTitle(); }}}
+                className="h-9 text-base sm:text-lg" autoFocus />
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSaveCategoryTitle();}} className="h-9 w-9 text-green-600 hover:bg-green-500/10"><Save className="h-5 w-5"/></Button>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCancelEditCategoryTitle();}} className="h-9 w-9 text-red-600 hover:bg-red-500/10"><X className="h-5 w-5"/></Button>
             </div>
           ) : (
-            <AccordionTrigger
-              className={cn(
-                "flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none py-0 px-0 justify-between",
-                "[&[data-state=open]>svg]:rotate-180" 
-              )}
-              disabled={isEditingCategoryTitle} 
-            >
+            <AccordionTrigger className={cn("flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none py-0 px-0 justify-between", "[&[data-state=open]>svg]:rotate-180")} disabled={isEditingCategoryTitle}>
               <div className="flex items-center flex-1 mr-2"> 
-                {overallStatus === 'all-items-selected' ? (
-                  <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" />
-                ) : (
-                  <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />
-                )}
-                <h3 
-                  className="text-base sm:text-lg font-semibold font-headline cursor-pointer hover:text-primary/80 transition-colors"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    handleEditCategoryTitle();
-                  }}
-                  title="Clique para editar o título"
-                >
-                  {category.title}
-                </h3>
+                {overallStatus === 'all-items-selected' ? <CheckCircle2 className="h-5 w-5 mr-2 text-green-600 dark:text-green-400 flex-shrink-0" /> : <XCircle className="h-5 w-5 mr-2 text-red-600 dark:text-red-400 flex-shrink-0" />}
+                <h3 className="text-base sm:text-lg font-semibold font-headline cursor-pointer hover:text-primary/80 transition-colors" onClick={(e) => { e.stopPropagation(); handleEditCategoryTitle(); }} title="Clique para editar">{category.title}</h3>
               </div>
             </AccordionTrigger>
           )}
           
-          <div className={cn(
-            "flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2",
-            isEditingCategoryTitle && "hidden" 
-            )}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'top'); }}
-              disabled={categoryIndex === 0}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para o Topo"
-            >
-              <ChevronsUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'up'); }}
-              disabled={categoryIndex === 0}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para Cima"
-            >
-              <ChevronUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'down'); }}
-              disabled={categoryIndex >= totalCategoriesInFloor - 1}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para Baixo"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(floorIndex, category.id, 'bottom'); }}
-              disabled={categoryIndex >= totalCategoriesInFloor - 1}
-              className="h-7 w-7 p-0"
-              title="Mover Categoria Para o Fim"
-            >
-              <ChevronsDown className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); onRemoveCategory(floorIndex, category.id); }}
-              className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-              title="Remover esta categoria do andar"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          <div className={cn("flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2", isEditingCategoryTitle && "hidden")}>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'top'); }} disabled={categoryIndex === 0} className="h-7 w-7 p-0" title="Mover Para o Topo"><ChevronsUp className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'up'); }} disabled={categoryIndex === 0} className="h-7 w-7 p-0" title="Mover Para Cima"><ChevronUp className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'down'); }} disabled={categoryIndex >= totalCategoriesInFloor - 1} className="h-7 w-7 p-0" title="Mover Para Baixo"><ChevronDown className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'bottom'); }} disabled={categoryIndex >= totalCategoriesInFloor - 1} className="h-7 w-7 p-0" title="Mover Para o Fim"><ChevronsDown className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onRemoveCategory(towerIndex, floorIndex, category.id); }} className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" title="Remover categoria"><Trash2 className="h-4 w-4" /></Button>
           </div>
         </div>
         
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && hasNonRegistrySubItems && (
             <div className="mb-3 mt-1 flex justify-start">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleUpdate('markAllSubItemsNA')}
-                className="text-yellow-600 border-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-700"
-              >
-                <ListX className="mr-2 h-4 w-4" /> Marcar Todos N/A
-              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleUpdate('markAllSubItemsNA')} className="text-yellow-600 border-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-700"><ListX className="mr-2 h-4 w-4" /> Marcar Todos N/A</Button>
             </div>
           )}
 
           {category.type === 'standard' && category.subItems?.map((subItem) => {
-            // Assign a ref for the file input specific to this sub-item
             const subItemFileInputRef = React.createRef<HTMLInputElement>();
-            
             if (subItem.isRegistry) {
-              if (subItem.id === 'extintor_cadastro') {
-                return (
-                  <ExtinguisherRegistrySubItem
-                    key={subItem.id}
-                    subItem={subItem}
-                    onUpdate={handleSubItemRegistryUpdate}
-                  />
-                );
-              } else if (subItem.id === 'hidrantes_cadastro_mangueiras') {
-                return (
-                  <HoseRegistrySubItem
-                    key={subItem.id}
-                    subItem={subItem}
-                    onUpdate={handleSubItemRegistryUpdate}
-                  />
-                );
-              }
+              if (subItem.id === 'extintor_cadastro') return <ExtinguisherRegistrySubItem key={subItem.id} subItem={subItem} onUpdate={handleSubItemRegistryUpdate} />;
+              else if (subItem.id === 'hidrantes_cadastro_mangueiras') return <HoseRegistrySubItem key={subItem.id} subItem={subItem} onUpdate={handleSubItemRegistryUpdate} />;
               return null;
             }
             return (
@@ -543,114 +399,31 @@ const InspectionCategoryItemComponent = ({
                 <div className="flex flex-col sm:flex-row sm:items-start sm:gap-x-3 gap-y-1 mb-1">
                   {editingSubItemId === subItem.id ? (
                     <div className="flex items-center gap-2 flex-grow">
-                       <Input
-                          value={editingSubItemNameValue}
-                          onChange={(e) => setEditingSubItemNameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { e.preventDefault(); handleSaveSubItemName(subItem.id); }
-                            if (e.key === 'Escape') { e.preventDefault(); handleCancelEditSubItemName(); }
-                          }}
-                          className="h-9 text-sm sm:text-base"
-                          autoFocus
-                        />
-                        <Button variant="ghost" size="icon" onClick={() => handleSaveSubItemName(subItem.id)} className="h-9 w-9 text-green-600 hover:bg-green-500/10" title="Salvar nome do subitem">
-                          <Save className="h-5 w-5"/>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={handleCancelEditSubItemName} className="h-9 w-9 text-red-600 hover:bg-red-500/10" title="Cancelar edição">
-                          <X className="h-5 w-5"/>
-                        </Button>
+                       <Input value={editingSubItemNameValue} onChange={(e) => setEditingSubItemNameValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveSubItemName(subItem.id); } if (e.key === 'Escape') { e.preventDefault(); handleCancelEditSubItemName(); }}}
+                          className="h-9 text-sm sm:text-base" autoFocus />
+                        <Button variant="ghost" size="icon" onClick={() => handleSaveSubItemName(subItem.id)} className="h-9 w-9 text-green-600 hover:bg-green-500/10" title="Salvar"><Save className="h-5 w-5"/></Button>
+                        <Button variant="ghost" size="icon" onClick={handleCancelEditSubItemName} className="h-9 w-9 text-red-600 hover:bg-red-500/10" title="Cancelar"><X className="h-5 w-5"/></Button>
                     </div>
-                  ) : (
-                    <Label 
-                      className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors"
-                      onClick={() => handleEditSubItemName(subItem)}
-                      title="Clique para editar o nome"
-                    >
-                      {subItem.name}
-                    </Label>
-                  )}
-                  
+                  ) : ( <Label className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors" onClick={() => handleEditSubItemName(subItem)} title="Clique para editar">{subItem.name}</Label> )}
                   <div className="flex items-center gap-x-1 sm:gap-x-2 flex-shrink-0 flex-wrap">
-                    <RadioGroup
-                      value={subItem.status || ''}
-                      onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)}
-                      className="flex items-center gap-2 flex-wrap"
-                    >
-                      {STATUS_OPTIONS.map(opt => (
-                        <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1">
-                          <RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} className="h-5 w-5"/>
-                          <Label
-                            htmlFor={`${subItem.id}-${opt}-rg-item`}
-                            className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}
-                          >
-                            {opt}
-                          </Label>
-                        </div>
-                      ))}
+                    <RadioGroup value={subItem.status || ''} onValueChange={(value) => handleUpdate('subItemStatus', value as StatusOption, subItem.id)} className="flex items-center gap-2 flex-wrap">
+                      {STATUS_OPTIONS.map(opt => ( <div key={`${subItem.id}-${opt}`} className="flex items-center space-x-1"><RadioGroupItem value={opt} id={`${subItem.id}-${opt}-rg-item`} className="h-5 w-5"/><Label htmlFor={`${subItem.id}-${opt}-rg-item`} className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}>{opt}</Label></div> ))}
                     </RadioGroup>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)}
-                      className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                      title={subItem.showObservation ? 'Esconder Observação' : 'Mostrar Observação'}
-                    >
-                      {subItem.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleUpdate('removeSubItem', undefined, subItem.id)}
-                        className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                        title="Remover este subitem"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)} className="h-9 w-9 text-muted-foreground hover:text-foreground" title={subItem.showObservation ? 'Esconder Obs.' : 'Mostrar Obs.'}>{subItem.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleUpdate('removeSubItem', undefined, subItem.id)} className="h-9 w-9 text-destructive hover:bg-destructive/10" title="Remover subitem"><Trash2 className="h-5 w-5" /></Button>
                   </div>
                 </div>
-                {subItem.showObservation && (
-                  <div className="mt-1"> 
-                    <Textarea
-                      value={subItem.observation}
-                      onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
-                      placeholder="Observações do subitem..."
-                      className="w-full text-sm"
-                    />
-                  </div>
-                )}
-                {/* Photo Section */}
+                {subItem.showObservation && ( <div className="mt-1"><Textarea value={subItem.observation} onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)} placeholder="Observações..." className="w-full text-sm"/></div> )}
                 <div className="mt-2 space-y-2 p-2 border rounded-md bg-muted/20">
                   {subItem.photoDataUri ? (
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium">Foto do Subitem:</Label>
+                      <Label className="text-xs font-medium">Foto:</Label>
                       <Image src={subItem.photoDataUri} alt={`Foto de ${subItem.name}`} width={150} height={150} className="rounded-md object-contain max-h-[150px] w-auto border" />
-                      <Textarea
-                        value={subItem.photoDescription || ''}
-                        onChange={(e) => handleUpdate('subItemPhotoDescription', e.target.value, subItem.id)}
-                        placeholder="Observação da foto..."
-                        className="w-full text-sm"
-                        rows={2}
-                      />
-                      <Button onClick={() => handleRemovePhoto(subItem.id)} variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 border-destructive/50">
-                        <Trash2 className="mr-1 h-4 w-4" /> Remover Foto
-                      </Button>
+                      <Textarea value={subItem.photoDescription || ''} onChange={(e) => handleUpdate('subItemPhotoDescription', e.target.value, subItem.id)} placeholder="Obs. da foto..." className="w-full text-sm" rows={2}/>
+                      <Button onClick={() => handleRemovePhoto(subItem.id)} variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 border-destructive/50"><Trash2 className="mr-1 h-4 w-4" /> Remover Foto</Button>
                     </div>
-                  ) : (
-                    <>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment" // Prioritizes back camera on mobile
-                        ref={el => fileInputRefs.current[subItem.id] = el}
-                        onChange={(e) => handlePhotoChange(e, subItem.id)}
-                        className="hidden"
-                        id={`photo-input-${subItem.id}`}
-                      />
-                      <Button onClick={() => fileInputRefs.current[subItem.id]?.click()} variant="outline" size="sm">
-                        <Camera className="mr-2 h-4 w-4" /> Adicionar Foto
-                      </Button>
-                    </>
-                  )}
+                  ) : ( <> <input type="file" accept="image/*" capture="environment" ref={el => fileInputRefs.current[subItem.id] = el} onChange={(e) => handlePhotoChange(e, subItem.id)} className="hidden" id={`photo-input-${subItem.id}`}/> <Button onClick={() => fileInputRefs.current[subItem.id]?.click()} variant="outline" size="sm"><Camera className="mr-2 h-4 w-4" /> Adicionar Foto</Button> </> )}
                 </div>
               </div>
             );
@@ -660,174 +433,14 @@ const InspectionCategoryItemComponent = ({
             <div className="mt-4 pt-4 border-t">
               <Label htmlFor={`add-subitem-${category.id}`} className="text-sm font-medium">Adicionar Novo Subitem:</Label>
               <div className="flex items-center gap-2 mt-1">
-                <Input
-                  id={`add-subitem-${category.id}`}
-                  type="text"
-                  value={newSubItemName}
-                  onChange={(e) => setNewSubItemName(e.target.value)}
-                  placeholder="Nome do novo subitem"
-                  className="flex-grow"
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSubItem();}}}
-                />
-                <Button onClick={handleAddCustomSubItem} size="sm">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
-                </Button>
+                <Input id={`add-subitem-${category.id}`} type="text" value={newSubItemName} onChange={(e) => setNewSubItemName(e.target.value)} placeholder="Nome do novo subitem" className="flex-grow" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSubItem();}}}/>
+                <Button onClick={handleAddCustomSubItem} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Adicionar</Button>
               </div>
             </div>
           )}
 
-
-          {category.type === 'special' && (
-            <div className="py-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                 {!isEditingCategoryTitle ? ( 
-                    <span 
-                        className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors"
-                        onClick={(e) => { 
-                            e.stopPropagation(); 
-                            handleEditCategoryTitle();
-                        }}
-                        title="Clique para editar o título"
-                    >
-                        {category.title} Status
-                    </span>
-                 ) : (
-                    <div className="flex items-center gap-2 w-full">
-                    </div>
-                 )}
-                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
-                  <RadioGroup
-                    value={category.status || ''}
-                    onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)}
-                    className="flex items-center gap-2 flex-wrap"
-                  >
-                    {STATUS_OPTIONS.map(opt => (
-                      <div key={`${category.id}-${opt}`} className="flex items-center space-x-1">
-                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-rg-item`} className="h-5 w-5" />
-                        <Label
-                          htmlFor={`${category.id}-${opt}-rg-item`}
-                          className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}
-                        >
-                          {opt}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)}
-                    className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                  >
-                    {category.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    <span className="sr-only">{category.showObservation ? 'Esconder' : 'Mostrar'} Observação</span>
-                  </Button>
-                </div>
-              </div>
-              {category.showObservation && (
-                 <div className="mt-1"> 
-                  <Textarea
-                    value={category.observation}
-                    onChange={(e) => handleUpdate('observation', e.target.value, undefined)}
-                    placeholder={`Observações para ${category.title}...`}
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {category.type === 'pressure' && (
-            <div className="py-3 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                {!isEditingCategoryTitle ? ( 
-                    <span 
-                        className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors"
-                        onClick={(e) => { 
-                            e.stopPropagation(); 
-                            handleEditCategoryTitle();
-                        }}
-                        title="Clique para editar o título"
-                    >
-                        {category.title} Status
-                    </span>
-                 ) : (
-                     <div className="flex items-center gap-2 w-full">
-                     </div>
-                 )}
-                 <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
-                  <RadioGroup
-                    value={category.status || ''}
-                    onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)}
-                    className="flex items-center gap-2 flex-wrap"
-                  >
-                    {STATUS_OPTIONS.map(opt => (
-                      <div key={`${category.id}-${opt}-pressure`} className="flex items-center space-x-1">
-                        <RadioGroupItem value={opt} id={`${category.id}-${opt}-pressure-rg-item`} className="h-5 w-5"/>
-                        <Label
-                          htmlFor={`${category.id}-${opt}-pressure-rg-item`}
-                          className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}
-                        >
-                          {opt}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-              </div>
-
-              {category.status !== 'N/A' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                  <div>
-                    <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label>
-                    <Input
-                      id={`${category.id}-pressureValue`}
-                      type="text"
-                      value={category.pressureValue || ''}
-                      onChange={(e) => handleUpdate('pressureValue', e.target.value, undefined)}
-                      placeholder="Ex: 7.5"
-                      disabled={category.status === 'N/A'}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`${category.id}-pressureUnit`}>Unidade</Label>
-                    <Select
-                      value={category.pressureUnit || ''}
-                      onValueChange={(value) => handleUpdate('pressureUnit', value as InspectionCategoryState['pressureUnit'], undefined)}
-                      disabled={category.status === 'N/A'}
-                    >
-                      <SelectTrigger id={`${category.id}-pressureUnit`}>
-                        <SelectValue placeholder="Selecione Unidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRESSURE_UNITS.map(unit => (
-                          <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                {category.showObservation ? <EyeOff className="mr-2 h-5 w-5" /> : <Eye className="mr-2 h-5 w-5" />}
-                {category.showObservation ? 'Esconder' : 'Mostrar'} Observação
-              </Button>
-              {category.showObservation && (
-                <Textarea
-                  value={category.observation}
-                  onChange={(e) => handleUpdate('observation', e.target.value, undefined)}
-                  placeholder={`Observações para ${category.title}...`}
-                  className="mt-1"
-                />
-              )}
-            </div>
-          )}
+          {category.type === 'special' && ( <div className="py-2"> <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1"> {!isEditingCategoryTitle ? ( <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors" onClick={(e) => { e.stopPropagation(); handleEditCategoryTitle(); }} title="Clique para editar">{category.title} Status</span> ) : ( <div className="flex items-center gap-2 w-full"></div> )} <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap"> <RadioGroup value={category.status || ''} onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)} className="flex items-center gap-2 flex-wrap"> {STATUS_OPTIONS.map(opt => ( <div key={`${category.id}-${opt}`} className="flex items-center space-x-1"><RadioGroupItem value={opt} id={`${category.id}-${opt}-rg-item`} className="h-5 w-5" /><Label htmlFor={`${category.id}-${opt}-rg-item`} className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}>{opt}</Label></div> ))} </RadioGroup> <Button variant="ghost" size="icon" onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)} className="h-9 w-9 text-muted-foreground hover:text-foreground">{category.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}<span className="sr-only">{category.showObservation ? 'Esconder' : 'Mostrar'} Obs.</span></Button> </div> </div> {category.showObservation && ( <div className="mt-1"><Textarea value={category.observation} onChange={(e) => handleUpdate('observation', e.target.value, undefined)} placeholder={`Observações para ${category.title}...`} className="w-full"/></div> )} </div> )}
+          {category.type === 'pressure' && ( <div className="py-3 space-y-3"> <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2"> {!isEditingCategoryTitle ? ( <span className="font-medium text-sm sm:text-base flex-grow break-words min-w-0 sm:w-auto cursor-pointer hover:text-primary/80 transition-colors" onClick={(e) => { e.stopPropagation(); handleEditCategoryTitle(); }} title="Clique para editar">{category.title} Status</span> ) : ( <div className="flex items-center gap-2 w-full"></div> )} <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap"> <RadioGroup value={category.status || ''} onValueChange={(value) => handleUpdate('status', value as StatusOption, undefined)} className="flex items-center gap-2 flex-wrap"> {STATUS_OPTIONS.map(opt => ( <div key={`${category.id}-${opt}-pressure`} className="flex items-center space-x-1"><RadioGroupItem value={opt} id={`${category.id}-${opt}-pressure-rg-item`} className="h-5 w-5"/><Label htmlFor={`${category.id}-${opt}-pressure-rg-item`} className={cn("cursor-pointer font-normal text-sm", getStatusLabelColor(opt))}>{opt}</Label></div> ))} </RadioGroup> </div> </div> {category.status !== 'N/A' && ( <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end"> <div> <Label htmlFor={`${category.id}-pressureValue`}>Pressão</Label> <Input id={`${category.id}-pressureValue`} type="text" value={category.pressureValue || ''} onChange={(e) => handleUpdate('pressureValue', e.target.value, undefined)} placeholder="Ex: 7.5" disabled={category.status === 'N/A'}/> </div> <div> <Label htmlFor={`${category.id}-pressureUnit`}>Unidade</Label> <Select value={category.pressureUnit || ''} onValueChange={(value) => handleUpdate('pressureUnit', value as InspectionCategoryState['pressureUnit'], undefined)} disabled={category.status === 'N/A'}> <SelectTrigger id={`${category.id}-pressureUnit`}><SelectValue placeholder="Selecione Unidade" /></SelectTrigger> <SelectContent>{PRESSURE_UNITS.map(unit => ( <SelectItem key={unit} value={unit}>{unit}</SelectItem> ))}</SelectContent> </Select> </div> </div> )} <Button variant="outline" size="sm" onClick={() => handleUpdate('showObservation', !category.showObservation, undefined)} className="text-muted-foreground hover:text-foreground">{category.showObservation ? <EyeOff className="mr-2 h-5 w-5" /> : <Eye className="mr-2 h-5 w-5" />} {category.showObservation ? 'Esconder' : 'Mostrar'} Obs.</Button> {category.showObservation && ( <Textarea value={category.observation} onChange={(e) => handleUpdate('observation', e.target.value, undefined)} placeholder={`Observações para ${category.title}...`} className="mt-1"/> )} </div> )}
         </AccordionContent>
       </AccordionItem>
     </Accordion>
