@@ -187,7 +187,7 @@ export default function FireCheckPage() {
                 if (fIndex !== floorIndex) return currentFloorData;
 
                 let autoCollapsedCategoryIdHolder: { id: string | null } = { id: null };
-                let newCategoriesForFloor = [...currentFloorData.categories]; // Start with a new array for categories
+                let newCategoriesForFloor = [...currentFloorData.categories]; 
                 let categoryModifiedIndex = -1;
 
                 const originalCategory = currentFloorData.categories.find((cat, idx) => {
@@ -198,9 +198,9 @@ export default function FireCheckPage() {
                     return false;
                 });
 
-                if (!originalCategory) return currentFloorData; // Should not happen if categoryId is valid
+                if (!originalCategory) return currentFloorData; 
 
-                let mutatedCategory = { ...originalCategory }; // New object for the category being mutated
+                let mutatedCategory = { ...originalCategory }; 
                 let actualModificationsMadeToCategory = false;
                 let categoryStructurallyModifiedForAutoCollapse = false;
                 const isExpansionChange = update.field === 'isExpanded';
@@ -230,7 +230,7 @@ export default function FireCheckPage() {
                             const oldSubItemsRef = mutatedCategory.subItems;
                             mutatedCategory.subItems = mutatedCategory.subItems.map(sub => {
                                 if (sub.id !== update.subItemId) return sub;
-                                let newSubState = { ...sub }; // New object for the sub-item being mutated
+                                let newSubState = { ...sub }; 
                                 let subItemChanged = false;
                                 if (update.field === 'subItemStatus' && newSubState.status !== (update.value as StatusOption | undefined)) { newSubState.status = update.value as StatusOption | undefined; subItemChanged = true; }
                                 else if (update.field === 'subItemObservation' && newSubState.observation !== (update.value as string)) { newSubState.observation = update.value as string; subItemChanged = true; }
@@ -246,11 +246,10 @@ export default function FireCheckPage() {
                                 }
                                 return subItemChanged ? newSubState : sub;
                             });
-                            // Ensure subItems array itself is new if content changed
+                            
                             if (actualModificationsMadeToCategory && mutatedCategory.subItems.some((sub, i) => sub !== oldSubItemsRef[i])) {
                                 mutatedCategory.subItems = [...mutatedCategory.subItems];
                             } else if (actualModificationsMadeToCategory && mutatedCategory.subItems === oldSubItemsRef) {
-                                // If a subitem changed but map returned same array ref (e.g., one item changed), force new array
                                 mutatedCategory.subItems = [...mutatedCategory.subItems];
                             }
                         }
@@ -260,7 +259,7 @@ export default function FireCheckPage() {
                             const initialCount = mutatedCategory.subItems.length;
                             const newSubItemsArray = mutatedCategory.subItems.filter(sub => sub.id !== update.subItemId);
                             if (newSubItemsArray.length < initialCount) {
-                                mutatedCategory.subItems = newSubItemsArray; // Assign new filtered array
+                                mutatedCategory.subItems = newSubItemsArray; 
                                 actualModificationsMadeToCategory = true;
                                 if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                             }
@@ -277,7 +276,7 @@ export default function FireCheckPage() {
                             mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
                                 sub.id === update.subItemId ? { ...sub, registeredExtinguishers: [...(sub.registeredExtinguishers || []), newExt] } : sub
                             );
-                            if (mutatedCategory.subItems.some(sub => sub.id === update.subItemId && sub.registeredExtinguishers?.some(e => e.id === newExt.id))) { // Check if effectively added
+                            if (mutatedCategory.subItems.some(sub => sub.id === update.subItemId && sub.registeredExtinguishers?.some(e => e.id === newExt.id))) { 
                                 actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                             }
                         }
@@ -675,41 +674,36 @@ export default function FireCheckPage() {
 
   const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
     setActiveTowersData(prevTowers => {
-      let overallTowersChanged = false; // Flag to track if any tower actually changed
+      let overallTowersChanged = false; 
 
       const newTowers = prevTowers.map((tower, tIdx) => {
         if (tIdx !== towerIndex) {
-          return tower; // Not the target tower, return original
+          return tower; 
         }
 
-        // Target tower found, map its floors
-        let towerContentChanged = false; // Flag to track if this tower's content changed
+        let towerContentChanged = false; 
         const newFloors = tower.floors.map((floor, fIdx) => {
           if (fIdx !== floorIndex) {
-            return floor; // Not the target floor, return original
+            return floor; 
           }
 
-          // Target floor found, filter its categories
           const originalCategories = floor.categories;
           const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
 
           if (filteredCategories.length < originalCategories.length) {
-            // Categories changed for this floor
-            towerContentChanged = true; // Mark that this tower's content changed
-            return { ...floor, categories: filteredCategories }; // New floor object with new categories array
+            towerContentChanged = true; 
+            return { ...floor, categories: filteredCategories }; 
           }
-          return floor; // No change to categories for this floor
+          return floor; 
         });
 
         if (towerContentChanged) {
-          overallTowersChanged = true; // Mark that overall towers array needs to be new
-          return { ...tower, floors: newFloors }; // New tower object with new floors array
+          overallTowersChanged = true; 
+          return { ...tower, floors: newFloors }; 
         }
-        return tower; // No change to floors for this tower
+        return tower; 
       });
 
-      // If any tower's content actually changed, return the new array of towers.
-      // Otherwise, return the original array to prevent unnecessary re-renders.
       if (overallTowersChanged) {
         return newTowers;
       }
@@ -998,7 +992,7 @@ export default function FireCheckPage() {
                               </div>
                               {(floorData.isFloorContentVisible !== false) && (
                                 <>
-                                  {floorData.categories.map((category, categoryIndex) => {
+                                  {floorData.categories.map((category) => {
                                     const overallStatus = getCategoryOverallStatus(category);
                                     return (
                                       <InspectionCategoryItem
@@ -1006,12 +1000,6 @@ export default function FireCheckPage() {
                                         category={category}
                                         overallStatus={overallStatus}
                                         onCategoryItemUpdate={(catId, update) => handleCategoryItemUpdateForFloor(towerIndex, floorIndex, catId, update)}
-                                        floorIndex={floorIndex}
-                                        towerIndex={towerIndex}
-                                        onMoveCategoryItem={(catId, dir) => handleMoveCategoryItem(towerIndex, floorIndex, catId, dir)}
-                                        onRemoveCategory={(catId) => handleRemoveCategoryFromFloor(towerIndex, floorIndex, catId)}
-                                        categoryIndex={categoryIndex}
-                                        totalCategoriesInFloor={floorData.categories.length}
                                         isMobile={isMobile}
                                       />
                                     );

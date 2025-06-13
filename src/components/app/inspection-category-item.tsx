@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown, Save, X, Camera, FileImage } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, Save, X, Camera } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -18,16 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface InspectionCategoryItemProps {
   category: InspectionCategoryState;
-  // onCategoryItemUpdate now implicitly receives towerIndex and floorIndex from its parent closure in page.tsx
   onCategoryItemUpdate: (categoryId: string, update: CategoryUpdatePayload) => void;
   overallStatus: CategoryOverallStatus;
-  // floorIndex and towerIndex are used for onMoveCategoryItem and onRemoveCategory
-  floorIndex: number; 
-  towerIndex: number;
-  onMoveCategoryItem: (towerIndex: number, floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
-  onRemoveCategory: (towerIndex: number, floorIndex: number, categoryId: string) => void;
-  categoryIndex: number;
-  totalCategoriesInFloor: number;
   isMobile: boolean;
 }
 
@@ -244,12 +236,6 @@ const InspectionCategoryItemComponent = ({
   category, 
   onCategoryItemUpdate, 
   overallStatus, 
-  towerIndex, // Added
-  floorIndex,
-  onMoveCategoryItem,
-  onRemoveCategory,
-  categoryIndex,
-  totalCategoriesInFloor,
   isMobile,
 }: InspectionCategoryItemProps) => {
   const [newSubItemName, setNewSubItemName] = useState('');
@@ -285,12 +271,12 @@ const InspectionCategoryItemComponent = ({
       if (field === 'status') payload = { field, value: value as StatusOption | undefined };
       else payload = { field, value } as CategoryUpdatePayload;
     }
-    onCategoryItemUpdate(category.id, payload); // towerIndex and floorIndex are now part of the closure
+    onCategoryItemUpdate(category.id, payload);
   }, [category.id, onCategoryItemUpdate]);
 
   const handleSubItemRegistryUpdate = useCallback(
     (updatePayload: CategoryUpdatePayload) => {
-      onCategoryItemUpdate(category.id, updatePayload); // towerIndex and floorIndex are part of the closure
+      onCategoryItemUpdate(category.id, updatePayload);
     },
     [category.id, onCategoryItemUpdate]
   );
@@ -371,13 +357,7 @@ const InspectionCategoryItemComponent = ({
             </AccordionTrigger>
           )}
           
-          <div className={cn("flex items-center space-x-1 opacity-25 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ml-2", isEditingCategoryTitle && "hidden")}>
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'top'); }} disabled={categoryIndex === 0} className="h-7 w-7 p-0" title="Mover Para o Topo"><ChevronsUp className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'up'); }} disabled={categoryIndex === 0} className="h-7 w-7 p-0" title="Mover Para Cima"><ChevronUp className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'down'); }} disabled={categoryIndex >= totalCategoriesInFloor - 1} className="h-7 w-7 p-0" title="Mover Para Baixo"><ChevronDown className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onMoveCategoryItem(towerIndex, floorIndex, category.id, 'bottom'); }} disabled={categoryIndex >= totalCategoriesInFloor - 1} className="h-7 w-7 p-0" title="Mover Para o Fim"><ChevronsDown className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onRemoveCategory(towerIndex, floorIndex, category.id); }} className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" title="Remover categoria"><Trash2 className="h-4 w-4" /></Button>
-          </div>
+          {/* Buttons for moving and deleting category removed */}
         </div>
         
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
