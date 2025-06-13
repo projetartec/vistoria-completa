@@ -100,6 +100,8 @@ export const INITIAL_INSPECTION_DATA: Omit<InspectionData, 'id'> = {
         observation: '',
         showObservation: false,
         isRegistry: subItem.isRegistry || false,
+        photoDataUri: null, // Added
+        photoDescription: '', // Added
         ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
         ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
       })),

@@ -1,6 +1,7 @@
 
 import * as React from 'react';
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown, Save, X } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, ChevronUp, ChevronDown, Edit2, ChevronsUp, ChevronsDown, Save, X, Camera, FileImage } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -253,6 +254,8 @@ const InspectionCategoryItemComponent = ({
   
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
   const [editingSubItemNameValue, setEditingSubItemNameValue] = useState('');
+  
+  const fileInputRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
 
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
@@ -271,6 +274,9 @@ const InspectionCategoryItemComponent = ({
       if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
       else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
       else if (field === 'subItemShowObservation') payload = { field, subItemId, value: value as boolean };
+      else if (field === 'subItemPhotoDataUri') payload = { field, subItemId, value: value as string | null };
+      else if (field === 'subItemPhotoDescription') payload = { field, subItemId, value: value as string };
+      else if (field === 'removeSubItemPhoto') payload = { field, subItemId };
       else if (field === 'addRegisteredExtinguisher') payload = { field, subItemId, value: value as Omit<RegisteredExtinguisher, 'id'> };
       else if (field === 'removeRegisteredExtinguisher' && itemId) payload = { field, subItemId, extinguisherId: itemId };
       else if (field === 'addRegisteredHose') payload = { field, subItemId, value: value as Omit<RegisteredHose, 'id'> };
@@ -289,6 +295,25 @@ const InspectionCategoryItemComponent = ({
     },
     [floorIndex, category.id, onCategoryItemUpdate]
   );
+
+  const handlePhotoChange = useCallback((event: React.ChangeEvent<HTMLInputElement>, subItemId: string) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        handleUpdate('subItemPhotoDataUri', reader.result as string, subItemId);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset file input value to allow re-uploading the same file if needed
+    if (event.target) {
+      event.target.value = '';
+    }
+  }, [handleUpdate]);
+
+  const handleRemovePhoto = useCallback((subItemId: string) => {
+    handleUpdate('removeSubItemPhoto', undefined, subItemId);
+  }, [handleUpdate]);
 
   const handleAccordionValueChange = useCallback((openItemId: string) => {
     const newIsExpanded = openItemId === category.id;
@@ -395,9 +420,9 @@ const InspectionCategoryItemComponent = ({
             <AccordionTrigger
               className={cn(
                 "flex-1 items-center text-left font-medium transition-all hover:no-underline focus:outline-none py-0 px-0 justify-between",
-                "[&[data-state=open]>svg]:rotate-180" // Default chevron rotation for ui/accordion trigger
+                "[&[data-state=open]>svg]:rotate-180" 
               )}
-              disabled={isEditingCategoryTitle} // Disable trigger when editing title
+              disabled={isEditingCategoryTitle} 
             >
               <div className="flex items-center flex-1 mr-2"> 
                 {overallStatus === 'all-items-selected' ? (
@@ -408,7 +433,7 @@ const InspectionCategoryItemComponent = ({
                 <h3 
                   className="text-base sm:text-lg font-semibold font-headline cursor-pointer hover:text-primary/80 transition-colors"
                   onClick={(e) => { 
-                    e.stopPropagation(); // Stop propagation to prevent accordion toggle
+                    e.stopPropagation(); 
                     handleEditCategoryTitle();
                   }}
                   title="Clique para editar o título"
@@ -416,7 +441,6 @@ const InspectionCategoryItemComponent = ({
                   {category.title}
                 </h3>
               </div>
-              {/* Chevron is now part of AccordionTrigger from @/components/ui/accordion */}
             </AccordionTrigger>
           )}
           
@@ -491,6 +515,9 @@ const InspectionCategoryItemComponent = ({
           )}
 
           {category.type === 'standard' && category.subItems?.map((subItem) => {
+            // Assign a ref for the file input specific to this sub-item
+            const subItemFileInputRef = React.createRef<HTMLInputElement>();
+            
             if (subItem.isRegistry) {
               if (subItem.id === 'extintor_cadastro') {
                 return (
@@ -512,7 +539,7 @@ const InspectionCategoryItemComponent = ({
               return null;
             }
             return (
-              <div key={subItem.id} className="py-2 border-t first:border-t-0">
+              <div key={subItem.id} className="py-3 border-t first:border-t-0 space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:gap-x-3 gap-y-1 mb-1">
                   {editingSubItemId === subItem.id ? (
                     <div className="flex items-center gap-2 flex-grow">
@@ -587,10 +614,44 @@ const InspectionCategoryItemComponent = ({
                       value={subItem.observation}
                       onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)}
                       placeholder="Observações do subitem..."
-                      className="w-full"
+                      className="w-full text-sm"
                     />
                   </div>
                 )}
+                {/* Photo Section */}
+                <div className="mt-2 space-y-2 p-2 border rounded-md bg-muted/20">
+                  {subItem.photoDataUri ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Foto do Subitem:</Label>
+                      <Image src={subItem.photoDataUri} alt={`Foto de ${subItem.name}`} width={150} height={150} className="rounded-md object-contain max-h-[150px] w-auto border" />
+                      <Textarea
+                        value={subItem.photoDescription || ''}
+                        onChange={(e) => handleUpdate('subItemPhotoDescription', e.target.value, subItem.id)}
+                        placeholder="Observação da foto..."
+                        className="w-full text-sm"
+                        rows={2}
+                      />
+                      <Button onClick={() => handleRemovePhoto(subItem.id)} variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 border-destructive/50">
+                        <Trash2 className="mr-1 h-4 w-4" /> Remover Foto
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment" // Prioritizes back camera on mobile
+                        ref={el => fileInputRefs.current[subItem.id] = el}
+                        onChange={(e) => handlePhotoChange(e, subItem.id)}
+                        className="hidden"
+                        id={`photo-input-${subItem.id}`}
+                      />
+                      <Button onClick={() => fileInputRefs.current[subItem.id]?.click()} variant="outline" size="sm">
+                        <Camera className="mr-2 h-4 w-4" /> Adicionar Foto
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -632,13 +693,6 @@ const InspectionCategoryItemComponent = ({
                     </span>
                  ) : (
                     <div className="flex items-center gap-2 w-full">
-                       {/* This empty div is a placeholder when title is being edited, matching structure for non-editing state to avoid layout shifts
-                           or ensure title editing input takes full width if that's handled in the `isEditingCategoryTitle` block above.
-                           The current structure for edit mode is handled outside this conditional path for 'special' type.
-                           If title editing for 'special'/'pressure' types should also be inline, this needs adjustment.
-                           However, the `isEditingCategoryTitle` at the top level of the component seems to handle this.
-                           This specific span for `category.title Status` is only for display mode.
-                       */}
                     </div>
                  )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">
@@ -699,7 +753,6 @@ const InspectionCategoryItemComponent = ({
                     </span>
                  ) : (
                      <div className="flex items-center gap-2 w-full">
-                        {/* Placeholder, similar to 'special' type above */}
                      </div>
                  )}
                  <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0 flex-wrap">

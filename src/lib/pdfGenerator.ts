@@ -61,7 +61,7 @@ const PDF_COMMON_STYLES = `
     margin-bottom: 4px;
     padding-bottom: 2.5px;
     border-bottom: 1.2px solid #2563EB;
-    page-break-after: avoid; /* Evita quebra de página/coluna após o título */
+    page-break-after: avoid; 
   }
   
   .page-break-before { page-break-before: always !important; }
@@ -86,6 +86,14 @@ const PDF_COMMON_STYLES = `
   .pdf-totals-summary .pdf-type-breakdown li { font-size: 7pt; color: #374151; margin-bottom: 0.1px; }
   .pdf-totals-summary .pdf-type-breakdown ul { list-style: circle; margin-left: 6px; padding-left: 0; margin-top: 0.1px; }
   .pdf-totals-summary .pdf-type-breakdown ul li { font-size: 6.5pt; }
+
+  .pdf-photo-report-section { margin-top: 10px; page-break-before: always; }
+  .pdf-photo-items-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 5px; }
+  .pdf-photo-item { border: 1px solid #E5E7EB; border-radius: 4px; padding: 8px; page-break-inside: avoid; background-color: #F9FAFB; display: flex; flex-direction: column; }
+  .pdf-photo-item img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 3px; margin-bottom: 6px; border: 1px solid #DDD; background-color: #FFF; }
+  .pdf-photo-item p { font-size: 6.5pt; margin: 1px 0; color: #374151; line-height: 1.2; }
+  .pdf-photo-item strong { font-weight: 600; color: #111827; }
+  .pdf-photo-item .photo-observation { font-size: 6pt; white-space: pre-wrap; word-wrap: break-word; margin-top:3px; padding: 3px; border-top: 1px dashed #DDD; }
 
 
   .pdf-footer { text-align: center; margin-top: 12px; padding-top: 6px; border-top: 1px solid #E5E7EB; font-size: 6pt; color: #6B7280; }
@@ -144,6 +152,8 @@ const PDF_COMMON_STYLES = `
     .first-page-center-container .pdf-header-main, .first-page-center-container .pdf-client-info { width: 80%; max-width: 600px; margin-left: auto; margin-right: auto; }
     .two-column-layout { column-count: 2; column-gap: 20px; margin-top: 5px; page-break-inside: avoid;}
     .two-column-layout > * { break-inside: avoid-column; page-break-inside: avoid; }
+     .pdf-photo-items-container { grid-template-columns: repeat(2, 1fr); gap: 8px; } /* 2 columns for print */
+     .pdf-photo-item img { max-height: 150px; }
   }
 `;
 
@@ -253,6 +263,14 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   const hoseCombinationTotals: HoseCombinationTotals = {};
   let grandTotalHosesCount = 0;
 
+  const photosForReport: Array<{
+    floorName: string;
+    categoryTitle: string;
+    subItemName: string;
+    photoDataUri: string;
+    photoDescription: string;
+  }> = [];
+
   processedFloorsData.forEach(floor => {
     floor.floorRegisteredExtinguishers.forEach(ext => {
       if (ext.type && ext.quantity > 0) {
@@ -269,6 +287,22 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         hoseCombinationTotals[hoseKey].quantity += hose.quantity;
       }
       grandTotalHosesCount += (hose.quantity || 0);
+    });
+
+    floor.categories.forEach(category => {
+        if (category.type === 'standard' && category.subItems) {
+            category.subItems.forEach(subItem => {
+                if (!subItem.isRegistry && subItem.photoDataUri) {
+                    photosForReport.push({
+                        floorName: floor.floor,
+                        categoryTitle: category.title,
+                        subItemName: subItem.name,
+                        photoDataUri: subItem.photoDataUri,
+                        photoDescription: subItem.photoDescription || ''
+                    });
+                }
+            });
+        }
     });
   });
 
@@ -552,7 +586,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     let hasAnyHoseCombinationTotal = false;
     Object.values(hoseCombinationTotals).forEach(detail => {
       if (detail.quantity > 0) {
-        pdfHtml += `<li>${detail.quantity}x - ${detail.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
+         pdfHtml += `<li>${detail.quantity}x - ${detail.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${detail.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
         hasAnyHoseCombinationTotal = true;
       }
     });
@@ -567,6 +601,27 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
               </div>
             </section>
           </div>`; 
+  }
+
+  // Photo Report Page
+  if (photosForReport.length > 0) {
+    pdfHtml += `
+      <section class="pdf-photo-report-section">
+        <h3 class="pdf-section-title">Registro Fotográfico da Vistoria</h3>
+        <div class="pdf-photo-items-container">`;
+    photosForReport.forEach(photo => {
+      pdfHtml += `
+          <div class="pdf-photo-item">
+            <img src="${photo.photoDataUri}" alt="Foto da Vistoria - ${photo.subItemName.replace(/"/g, "&quot;")}" />
+            <p><strong>Andar:</strong> ${photo.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+            <p><strong>Categoria:</strong> ${photo.categoryTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+            <p><strong>Subitem:</strong> ${photo.subItemName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+            <p class="photo-observation"><strong>Observação:</strong> ${photo.photoDescription ? photo.photoDescription.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'Nenhuma'}</p>
+          </div>`;
+    });
+    pdfHtml += `
+        </div>
+      </section>`;
   }
 
 
@@ -672,7 +727,6 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
         <title>Relatório de Itens Cadastrados - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
         <style>
           ${PDF_COMMON_STYLES}
-          /* Add any specific styles for this new report if needed, or reuse common ones */
         </style>
       </head>
       <body>
@@ -843,7 +897,7 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
         <title>Relatório de Itens N/C - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
         <style>
           ${PDF_COMMON_STYLES}
-          ${PDF_SPECIFIC_STYLES_VISTORIA} /* Reusing some styles */
+          ${PDF_SPECIFIC_STYLES_VISTORIA} 
           .pdf-nc-item-category { font-weight: bold; margin-top: 5px; margin-bottom: 1px; font-size: 8.5pt; color: #111827 !important; page-break-after: avoid;}
           .pdf-nc-item-name { margin-left: 6px; font-size: 8pt; color: #1F2937 !important;}
           .pdf-nc-observation { margin-left: 6px; margin-top: 0.3px; padding: 2.5px 4px; background-color: #FEF2F2 !important; border-left: 1.5px solid #F87171 !important; font-size: 7.5pt; color: #7F1D1D !important; white-space: pre-wrap;}
@@ -911,7 +965,6 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
         floorHasNCItems = true;
         categoryHasNCItems = true;
         ncItemsFoundOverall = true;
-        // For special/pressure, the category title itself is the item
         if (category.type === 'pressure') {
           categoryNCItemsHtml += `<div class="pdf-nc-pressure-details">Pressão: ${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</div>`;
         }
@@ -963,4 +1016,3 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
-

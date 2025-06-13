@@ -147,21 +147,17 @@ export default function FireCheckPage() {
           client => client.name.trim().toLowerCase() === value.trim().toLowerCase()
         );
         if (matchedClient) {
-          newClientInfoState.clientCode = matchedClient.code || ''; // Use predefinido, ou vazio se nulo
+          newClientInfoState.clientCode = matchedClient.code || ''; 
         }
-        // Se não encontrou predefinido E o código está vazio (ou era de um predefinido anterior), 
-        // permite que o usuário digite um novo código ou mantenha o que já estava.
-        // A geração do número da vistoria abaixo cuidará de usar o código correto.
       }
 
       if (field === 'clientLocation' || field === 'clientCode') {
-         // Recalcular número da vistoria se local ou código mudou, ou se número não existe
         if (!newClientInfoState.inspectionNumber || 
             (field === 'clientLocation' && prevClientInfo.clientLocation !== newClientInfoState.clientLocation) ||
             (field === 'clientCode' && prevClientInfo.clientCode !== newClientInfoState.clientCode) ) {
              newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
                 newClientInfoState.clientCode,
-                newClientInfoState.clientLocation // Usar o novo clientLocation
+                newClientInfoState.clientLocation 
              );
         }
 
@@ -250,6 +246,9 @@ export default function FireCheckPage() {
             case 'subItemObservation':
             case 'subItemShowObservation':
             case 'renameSubItemName':
+            case 'subItemPhotoDataUri':
+            case 'subItemPhotoDescription':
+            case 'removeSubItemPhoto':
               if (cat.subItems && update.subItemId) {
                 updatedCatData.subItems = cat.subItems.map(sub => {
                   if (sub.id !== update.subItemId) return sub;
@@ -268,6 +267,17 @@ export default function FireCheckPage() {
                     changed = true; 
                   } else if (update.field === 'renameSubItemName' && newSubItemState.name !== update.newName) {
                     newSubItemState.name = update.newName;
+                    changed = true;
+                  } else if (update.field === 'subItemPhotoDataUri' && newSubItemState.photoDataUri !== (update.value as string | null)) {
+                    newSubItemState.photoDataUri = update.value as string | null;
+                    if (!update.value) newSubItemState.photoDescription = ''; // Clear description if photo is removed
+                    changed = true;
+                  } else if (update.field === 'subItemPhotoDescription' && newSubItemState.photoDescription !== (update.value as string)) {
+                    newSubItemState.photoDescription = update.value as string;
+                    changed = true;
+                  } else if (update.field === 'removeSubItemPhoto') {
+                    newSubItemState.photoDataUri = null;
+                    newSubItemState.photoDescription = '';
                     changed = true;
                   }
                   
@@ -346,6 +356,8 @@ export default function FireCheckPage() {
                   observation: '',
                   showObservation: false,
                   isRegistry: false,
+                  photoDataUri: null,
+                  photoDescription: '',
                 };
                 updatedCatData.subItems = [...(updatedCatData.subItems || []), newSubItem];
                 categoryStructurallyChanged = true;
@@ -458,6 +470,8 @@ export default function FireCheckPage() {
               copiedSubItem.status = undefined;
               copiedSubItem.observation = '';
               copiedSubItem.showObservation = false;
+              copiedSubItem.photoDataUri = null; // Reset photo for new floor
+              copiedSubItem.photoDescription = ''; // Reset photo description
               
               if (subItem.isRegistry) { 
                 if (subItem.id === 'extintor_cadastro') {
@@ -485,6 +499,8 @@ export default function FireCheckPage() {
               observation: '',
               showObservation: false,
               isRegistry: subItem.isRegistry || false,
+              photoDataUri: null, 
+              photoDescription: '',
               ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
               ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),
             })),
@@ -617,6 +633,8 @@ export default function FireCheckPage() {
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
                 ? sub.id 
                 : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
+            photoDataUri: sub.photoDataUri || null, // Sanitize photo
+            photoDescription: sub.photoDescription || '', // Sanitize photo description
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
@@ -686,6 +704,8 @@ export default function FireCheckPage() {
             id: sub.id.startsWith('custom-') || sub.isRegistry 
                 ? `${sub.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substring(2,9)}-copy` 
                 : sub.id,
+            photoDataUri: sub.photoDataUri || null, // Duplicate photo
+            photoDescription: sub.photoDescription || '', // Duplicate photo description
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-extcopy`
@@ -982,6 +1002,8 @@ export default function FireCheckPage() {
               id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
                   ? sub.id 
                   : sub.id.startsWith('custom-') ? sub.id : `imported-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
+              photoDataUri: sub.photoDataUri || null, // Sanitize imported photo
+              photoDescription: sub.photoDescription || '', // Sanitize imported photo desc
               registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
                 ...ext,
                 id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
