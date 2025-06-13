@@ -182,18 +182,18 @@ export default function FireCheckPage() {
         return prevTowers.map((currentTower, tIndex) => {
             if (tIndex !== towerIndex) return currentTower;
 
+            let floorOverallStateChanged = false; 
             const updatedFloors = currentTower.floors.map((currentFloorData, fIndex) => {
                 if (fIndex !== floorIndex) return currentFloorData;
                 
-                let floorOverallStateChanged = false; 
                 let autoCollapsedCategoryIdHolder: { id: string | null } = { id: null };
 
                 const newCategoriesForFloor = currentFloorData.categories.map(originalCategory => {
                     if (originalCategory.id !== categoryId) return originalCategory;
 
-                    let mutatedCategory = { ...originalCategory }; // Start with a new object instance
+                    let mutatedCategory = { ...originalCategory }; 
                     let actualModificationsMadeToCategory = false;
-                    let categoryStructurallyModifiedForAutoCollapse = false; // For auto-collapse logic
+                    let categoryStructurallyModifiedForAutoCollapse = false; 
 
                     const isExpansionChange = update.field === 'isExpanded';
 
@@ -238,16 +238,17 @@ export default function FireCheckPage() {
                                     }
                                     return subItemChanged ? newSubState : sub;
                                 });
-                                // If map created new sub-item objects, the subItems array ref might not change
-                                // if length is same. Explicitly check if any sub-item object changed.
                                 if (!actualModificationsMadeToCategory && mutatedCategory.subItems.some((sub, i) => sub !== oldSubItemsRef[i])) {
                                    actualModificationsMadeToCategory = true;
                                    if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                } else if (actualModificationsMadeToCategory && mutatedCategory.subItems === oldSubItemsRef) {
+                                   // if a subitem changed but map returned same array ref, force new array
+                                   mutatedCategory.subItems = [...mutatedCategory.subItems];
                                 }
                             }
                             break;
                         case 'removeSubItem':
-                            if (mutatedCategory.subItems && update.subItemId) {
+                             if (mutatedCategory.subItems && update.subItemId) {
                                 const initialCount = mutatedCategory.subItems.length;
                                 mutatedCategory.subItems = mutatedCategory.subItems.filter(sub => sub.id !== update.subItemId);
                                 if (mutatedCategory.subItems.length < initialCount) {
@@ -256,7 +257,7 @@ export default function FireCheckPage() {
                                 }
                             }
                             break;
-                        default: // Handles category-level fields
+                        default: 
                             if (update.field === 'observation' && mutatedCategory.observation !== update.value) { mutatedCategory.observation = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
                             else if (update.field === 'showObservation' && mutatedCategory.showObservation !== update.value) { mutatedCategory.showObservation = update.value as boolean; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
                             else if (update.field === 'pressureValue' && mutatedCategory.pressureValue !== update.value) { mutatedCategory.pressureValue = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
@@ -303,7 +304,6 @@ export default function FireCheckPage() {
                             break;
                     }
                     
-                    // Auto-collapse logic based on structural changes (not just expansion clicks)
                     if (!isExpansionChange && categoryStructurallyModifiedForAutoCollapse) {
                         let shouldAutoCollapse = false;
                         if (mutatedCategory.type === 'standard' && mutatedCategory.subItems) {
@@ -316,7 +316,7 @@ export default function FireCheckPage() {
                         if (shouldAutoCollapse && mutatedCategory.isExpanded) { 
                             mutatedCategory.isExpanded = false; 
                             autoCollapsedCategoryIdHolder.id = originalCategory.id; 
-                            actualModificationsMadeToCategory = true; // isExpanded changed
+                            actualModificationsMadeToCategory = true; 
                         }
                     }
 
@@ -335,7 +335,7 @@ export default function FireCheckPage() {
                         if (!nextCat.isExpanded) {
                             finalCategoriesForFloor = finalCategoriesForFloor.map((cat, idx) => {
                                 if (idx === collapsedIdx + 1) {
-                                    floorOverallStateChanged = true; // Marking change for the floor
+                                    floorOverallStateChanged = true; 
                                     return { ...cat, isExpanded: true };
                                 }
                                 return cat;
@@ -344,10 +344,6 @@ export default function FireCheckPage() {
                     }
                 }
                 
-                // If floorOverallStateChanged is true, it means some category (or auto-expansion) caused a change.
-                // We need to return a new floor object with the potentially new categories array.
-                // The check `newCategoriesForFloor !== currentFloorData.categories` is also a good indicator
-                // if map returned any new category object instances.
                 if (floorOverallStateChanged || newCategoriesForFloor.some((cat, i) => cat !== currentFloorData.categories[i])) {
                     return { ...currentFloorData, categories: finalCategoriesForFloor };
                 }
@@ -680,39 +676,44 @@ export default function FireCheckPage() {
     }));
   }, []);
 
-  const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryId: string) => {
-    setActiveTowersData(prevTowers =>
-        prevTowers.map((currentTower, tIdx) => {
-            if (tIdx !== towerIndex) return currentTower;
-
-            const newFloors = currentTower.floors.map((currentFloor, fIdx) => {
-                if (fIdx !== floorIndex) return currentFloor;
-
-                const newCategories = currentFloor.categories.filter(cat => cat.id !== categoryId);
-                
-                if (newCategories.length < currentFloor.categories.length) {
-                    return { ...currentFloor, categories: newCategories };
-                }
-                return currentFloor;
-            });
-
-            // Check if any floor object instance or the floors array itself changed
-            let floorsActuallyChanged = newFloors.length !== currentTower.floors.length;
-            if (!floorsActuallyChanged) {
-                for (let i = 0; i < newFloors.length; i++) {
-                    if (newFloors[i] !== currentTower.floors[i]) {
-                        floorsActuallyChanged = true;
-                        break;
-                    }
-                }
-            }
-
-            if (floorsActuallyChanged) {
-                return { ...currentTower, floors: newFloors };
-            }
-            return currentTower;
-        })
-    );
+  const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
+    setActiveTowersData(prevTowers => {
+      let overallTowersChanged = false;
+  
+      const newTowers = prevTowers.map((tower, tIdx) => {
+        if (tIdx !== towerIndex) {
+          return tower; // Not the target tower
+        }
+  
+        let towerContentChanged = false;
+        const newFloors = tower.floors.map((floor, fIdx) => {
+          if (fIdx !== floorIndex) {
+            return floor; // Not the target floor
+          }
+  
+          const originalCategories = floor.categories;
+          const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
+  
+          if (filteredCategories.length < originalCategories.length) {
+            // A category was actually removed from this floor
+            towerContentChanged = true; // Mark that this floor (and thus its tower) has changed
+            return { ...floor, categories: filteredCategories }; // Return new floor object
+          }
+          return floor; // No change in categories for this floor
+        });
+  
+        if (towerContentChanged) {
+          overallTowersChanged = true; // Mark that at least one tower has changed
+          return { ...tower, floors: newFloors }; // Return new tower object
+        }
+        return tower; // No change in this tower's floors
+      });
+  
+      if (overallTowersChanged) {
+        return newTowers; // Return the new array of towers
+      }
+      return prevTowers; // No changes anywhere, return original state to prevent unnecessary re-renders
+    });
   }, []);
 
 
@@ -768,8 +769,7 @@ export default function FireCheckPage() {
 
     let firstInspectionToLoadToFormWithPhotos: FullInspectionData | null = null;
     const allInspectionsFromFiles: FullInspectionData[] = [];
-    let finalImportedCount = 0;
-    let finalUpdatedCount = 0;
+    
 
     const readFilePromise = (file: File): Promise<FullInspectionData[]> => {
       return new Promise((resolve, reject) => {
@@ -784,14 +784,14 @@ export default function FireCheckPage() {
               if (inspection && typeof inspection.id === 'string' && inspection.clientInfo && Array.isArray(inspection.towers) && typeof inspection.timestamp === 'number') {
                 validInspectionsFromFile.push(inspection);
               } else {
-                console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada.`);
+                console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada:`, inspection);
               }
             });
             resolve(validInspectionsFromFile);
           } catch (error) {
             console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
             toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}.`, variant: "destructive"});
-            reject(error);
+            reject(error); 
           }
         };
         reader.onerror = (err) => {
@@ -815,6 +815,9 @@ export default function FireCheckPage() {
         });
       }
     });
+    
+    let finalImportedCount = 0;
+    let finalUpdatedCount = 0;
 
     if (allInspectionsFromFiles.length > 0) {
       setSavedInspections(currentSavedInspections => {
@@ -849,7 +852,7 @@ export default function FireCheckPage() {
             currentImported++;
           }
         });
-        finalImportedCount = currentImported;
+        finalImportedCount = currentImported; 
         finalUpdatedCount = currentUpdated;
         return newOrUpdatedInspectionsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
@@ -857,42 +860,48 @@ export default function FireCheckPage() {
 
     if (firstInspectionToLoadToFormWithPhotos) {
         handleLoadInspection(firstInspectionToLoadToFormWithPhotos.id); 
-        setClientInfo(prev => ({
-            ...prev, 
-            ...(firstInspectionToLoadToFormWithPhotos!.clientInfo || {}) 
-        }));
-        setUploadedLogoDataUrl(firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || null);
-        setActiveTowersData(prevActiveTowers => { 
-            return prevActiveTowers.map(activeTower => {
-                const importedTower = firstInspectionToLoadToFormWithPhotos!.towers.find(it => it.id === activeTower.id || it.towerName === activeTower.towerName); 
-                if (!importedTower) return activeTower;
-                return {
-                    ...activeTower,
-                    floors: activeTower.floors.map(activeFloor => {
-                        const importedFloor = importedTower.floors.find(ifl => ifl.id === activeFloor.id || ifl.floor === activeFloor.floor);
-                        if (!importedFloor) return activeFloor;
-                        return {
-                            ...activeFloor,
-                            categories: activeFloor.categories.map(activeCat => {
-                                const importedCat = importedFloor.categories.find(icf => icf.id === activeCat.id);
-                                if (!importedCat || !importedCat.subItems) return activeCat;
-                                return {
-                                    ...activeCat,
-                                    subItems: activeCat.subItems?.map(activeSub => {
-                                        const importedSub = importedCat.subItems!.find(isb => isb.id === activeSub.id);
-                                        return {
-                                            ...activeSub,
-                                            photoDataUri: importedSub?.photoDataUri || activeSub.photoDataUri,
-                                            photoDescription: importedSub?.photoDescription || activeSub.photoDescription,
-                                        }
-                                    })
-                                }
-                            })
-                        }
-                    })
-                }
-            })
-        });
+        
+        const inspectionForForm = allInspectionsFromFiles.find(i => i.id === firstInspectionToLoadToFormWithPhotos!.id);
+
+        if (inspectionForForm) {
+            setClientInfo(prev => ({
+                ...prev, 
+                ...(inspectionForForm.clientInfo || {}) 
+            }));
+            setUploadedLogoDataUrl(inspectionForForm.uploadedLogoDataUrl || null);
+
+            setActiveTowersData(prevActiveTowers => { 
+                return prevActiveTowers.map(activeTower => {
+                    const importedTower = inspectionForForm.towers.find(it => it.id === activeTower.id || (it.towerName === activeTower.towerName && activeTower.towerName !== '')); 
+                    if (!importedTower) return activeTower;
+                    return {
+                        ...activeTower,
+                        floors: activeTower.floors.map(activeFloor => {
+                            const importedFloor = importedTower.floors.find(ifl => ifl.id === activeFloor.id || (ifl.floor === activeFloor.floor && activeFloor.floor !== ''));
+                            if (!importedFloor) return activeFloor;
+                            return {
+                                ...activeFloor,
+                                categories: activeFloor.categories.map(activeCat => {
+                                    const importedCat = importedFloor.categories.find(icf => icf.id === activeCat.id);
+                                    if (!importedCat || !importedCat.subItems) return activeCat;
+                                    return {
+                                        ...activeCat,
+                                        subItems: activeCat.subItems?.map(activeSub => {
+                                            const importedSub = importedCat.subItems!.find(isb => isb.id === activeSub.id);
+                                            return {
+                                                ...activeSub,
+                                                photoDataUri: importedSub?.photoDataUri || activeSub.photoDataUri || null,
+                                                photoDescription: importedSub?.photoDescription || activeSub.photoDescription || '',
+                                            }
+                                        }) || []
+                                    }
+                                })
+                            }
+                        })
+                    }
+                })
+            });
+        }
     }
 
     let summaryMessage = "";
@@ -901,7 +910,15 @@ export default function FireCheckPage() {
     else if (finalUpdatedCount > 0) summaryMessage = `${finalUpdatedCount} vistoria(s) atualizada(s).`;
 
     if (firstInspectionToLoadToFormWithPhotos) {
-        summaryMessage += ` A primeira foi carregada no formulário${firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || (firstInspectionToLoadToFormWithPhotos.towers || []).some(t => t.floors.some(f => f.categories.some(c => c.subItems?.some(s => s.photoDataUri)))) ? ' com logo/fotos' : ''}.`;
+        const hasPhotosOrLogo = firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || 
+                               (firstInspectionToLoadToFormWithPhotos.towers || []).some(t => 
+                                 (t.floors || []).some(f => 
+                                   (f.categories || []).some(c => 
+                                     (c.subItems || []).some(s => s.photoDataUri)
+                                   )
+                                 )
+                               );
+        summaryMessage += ` A primeira foi carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}.`;
     } else if (allInspectionsFromFiles.length > 0 && !summaryMessage) {
         summaryMessage = "Vistorias processadas. Verifique a lista de salvas.";
     }
@@ -1071,5 +1088,7 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
 
     
