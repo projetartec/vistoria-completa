@@ -88,7 +88,7 @@ export default function FireCheckPage() {
     clientLocation: '',
     clientCode: '',
     inspectionNumber: '',
-    inspectionDate: '', // Initialize as empty, useEffect will set it
+    inspectionDate: '',
     inspectedBy: '',
   });
 
@@ -114,13 +114,12 @@ export default function FireCheckPage() {
           });
         });
       }
-      // Set initial date only if it's not already set (e.g. by loading from storage)
       if (!clientInfo.inspectionDate) {
         setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
       }
     }
-    setIsClientInitialized(true); // Mark as initialized after setup
-  }, []); // Empty dependency array ensures this runs once on mount and after client-side hydration
+    setIsClientInitialized(true); 
+  }, []); 
 
 
   const handleLogoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,155 +179,187 @@ export default function FireCheckPage() {
 
   const handleCategoryItemUpdateForFloor = useCallback((towerIndex: number, floorIndex: number, categoryId: string, update: CategoryUpdatePayload) => {
     setActiveTowersData(prevTowers => {
-      return prevTowers.map((currentTower, tIndex) => {
-        if (tIndex !== towerIndex) return currentTower; // Not the target tower
+        return prevTowers.map((currentTower, tIndex) => {
+            if (tIndex !== towerIndex) return currentTower;
 
-        const updatedFloors = currentTower.floors.map((currentFloorData, fIndex) => {
-          if (fIndex !== floorIndex) return currentFloorData; // Not the target floor
-          
-          let floorOverallStateChanged = false; 
-          let autoCollapsedCategoryIdHolder: { id: string | null } = { id: null };
+            const updatedFloors = currentTower.floors.map((currentFloorData, fIndex) => {
+                if (fIndex !== floorIndex) return currentFloorData;
+                
+                let floorOverallStateChanged = false; 
+                let autoCollapsedCategoryIdHolder: { id: string | null } = { id: null };
 
-          const newCategoriesForFloor = currentFloorData.categories.map(originalCategory => {
-            if (originalCategory.id !== categoryId) return originalCategory; // Not the target category for this update
+                const newCategoriesForFloor = currentFloorData.categories.map(originalCategory => {
+                    if (originalCategory.id !== categoryId) return originalCategory;
 
-            let workingCategoryCopy = { ...originalCategory }; // Shallow copy the target category
-            let categoryStructurallyModified = false;
-            const isExpansionChange = update.field === 'isExpanded';
+                    let mutatedCategory = { ...originalCategory }; // Start with a new object instance
+                    let actualModificationsMadeToCategory = false;
+                    let categoryStructurallyModifiedForAutoCollapse = false; // For auto-collapse logic
 
-            switch (update.field) {
-              case 'isExpanded':
-                if (workingCategoryCopy.isExpanded !== update.value) { 
-                  workingCategoryCopy.isExpanded = update.value; 
-                  categoryStructurallyModified = true; 
-                }
-                break;
-              case 'status':
-                if (workingCategoryCopy.status !== update.value) { 
-                  workingCategoryCopy.status = update.value; 
-                  categoryStructurallyModified = true; 
-                }
-                break;
-              case 'subItemStatus':
-              case 'subItemObservation':
-              case 'subItemShowObservation':
-              case 'renameSubItemName':
-              case 'subItemPhotoDataUri':
-              case 'subItemPhotoDescription':
-              case 'removeSubItemPhoto':
-                if (workingCategoryCopy.subItems && update.subItemId) {
-                  workingCategoryCopy.subItems = workingCategoryCopy.subItems.map(sub => {
-                    if (sub.id !== update.subItemId) return sub;
-                    let subItemChanged = false; const newSubState = { ...sub };
-                    if (update.field === 'subItemStatus' && newSubState.status !== (update.value as StatusOption | undefined)) { newSubState.status = update.value as StatusOption | undefined; subItemChanged = true; }
-                    else if (update.field === 'subItemObservation' && newSubState.observation !== (update.value as string)) { newSubState.observation = update.value as string; subItemChanged = true; }
-                    else if (update.field === 'subItemShowObservation' && newSubState.showObservation !== (update.value as boolean)) { newSubState.showObservation = update.value as boolean; subItemChanged = true; }
-                    else if (update.field === 'renameSubItemName' && newSubState.name !== update.newName) { newSubState.name = update.newName; subItemChanged = true; }
-                    else if (update.field === 'subItemPhotoDataUri' && newSubState.photoDataUri !== (update.value as string | null)) { newSubState.photoDataUri = update.value as string | null; if (!update.value) newSubState.photoDescription = ''; subItemChanged = true; }
-                    else if (update.field === 'subItemPhotoDescription' && newSubState.photoDescription !== (update.value as string)) { newSubState.photoDescription = update.value as string; subItemChanged = true; }
-                    else if (update.field === 'removeSubItemPhoto') { newSubState.photoDataUri = null; newSubState.photoDescription = ''; subItemChanged = true; }
-                    if (subItemChanged) categoryStructurallyModified = true; return subItemChanged ? newSubState : sub;
-                  });
-                }
-                break;
-              case 'removeSubItem':
-                if (workingCategoryCopy.subItems && update.subItemId) {
-                  const initialCount = workingCategoryCopy.subItems.length;
-                  workingCategoryCopy.subItems = workingCategoryCopy.subItems.filter(sub => sub.id !== update.subItemId);
-                  if (workingCategoryCopy.subItems.length < initialCount) {
-                    categoryStructurallyModified = true;
-                  }
-                }
-                break;
-              default: // Handles category-level fields
-                if (update.field === 'observation' && workingCategoryCopy.observation !== update.value) { workingCategoryCopy.observation = update.value; categoryStructurallyModified = true; }
-                else if (update.field === 'showObservation' && workingCategoryCopy.showObservation !== update.value) { workingCategoryCopy.showObservation = update.value; categoryStructurallyModified = true; }
-                else if (update.field === 'pressureValue' && workingCategoryCopy.pressureValue !== update.value) { workingCategoryCopy.pressureValue = update.value; categoryStructurallyModified = true; }
-                else if (update.field === 'pressureUnit' && workingCategoryCopy.pressureUnit !== update.value) { workingCategoryCopy.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; categoryStructurallyModified = true; }
-                else if (update.field === 'renameCategoryTitle' && workingCategoryCopy.title !== update.newTitle) { workingCategoryCopy.title = update.newTitle; categoryStructurallyModified = true; }
-                else if (update.field === 'addRegisteredExtinguisher' && workingCategoryCopy.subItems && update.subItemId && update.value) {
-                  const newExt: RegisteredExtinguisher = { ...update.value, id: `ext-${generateUniqueId()}` };
-                  workingCategoryCopy.subItems = (workingCategoryCopy.subItems || []).map(sub => 
-                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: [...(sub.registeredExtinguishers || []), newExt] } : sub
-                  );
-                  categoryStructurallyModified = true;
-                }
-                else if (update.field === 'removeRegisteredExtinguisher' && workingCategoryCopy.subItems && update.subItemId && update.extinguisherId) {
-                  workingCategoryCopy.subItems = (workingCategoryCopy.subItems || []).map(sub => 
-                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: (sub.registeredExtinguishers || []).filter(ext => ext.id !== update.extinguisherId) } : sub
-                  );
-                  categoryStructurallyModified = true;
-                }
-                else if (update.field === 'addRegisteredHose' && workingCategoryCopy.subItems && update.subItemId && update.value) {
-                  const newHose: RegisteredHose = { ...update.value, id: `hose-${generateUniqueId()}` };
-                  workingCategoryCopy.subItems = (workingCategoryCopy.subItems || []).map(sub =>
-                    sub.id === update.subItemId ? { ...sub, registeredHoses: [...(sub.registeredHoses || []), newHose] } : sub
-                  );
-                  categoryStructurallyModified = true;
-                }
-                else if (update.field === 'removeRegisteredHose' && workingCategoryCopy.subItems && update.subItemId && update.hoseId) {
-                  workingCategoryCopy.subItems = (workingCategoryCopy.subItems || []).map(sub =>
-                    sub.id === update.subItemId ? { ...sub, registeredHoses: (sub.registeredHoses || []).filter(h => h.id !== update.hoseId) } : sub
-                  );
-                  categoryStructurallyModified = true;
-                }
-                else if (update.field === 'markAllSubItemsNA' && workingCategoryCopy.subItems && workingCategoryCopy.type === 'standard') {
-                  workingCategoryCopy.subItems = (workingCategoryCopy.subItems || []).map(sub => 
-                    !sub.isRegistry ? { ...sub, status: 'N/A' as StatusOption } : sub
-                  );
-                  categoryStructurallyModified = true;
-                }
-                else if (update.field === 'addSubItem' && workingCategoryCopy.type === 'standard' && typeof update.value === 'string' && update.value.trim() !== '') {
-                  const newId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-                  const newSub: SubItemState = { id: newId, name: update.value.trim(), status: undefined, observation: '', showObservation: false, isRegistry: false, photoDataUri: null, photoDescription: '' };
-                  workingCategoryCopy.subItems = [...(workingCategoryCopy.subItems || []), newSub];
-                  categoryStructurallyModified = true;
-                }
-                break;
-            }
-            
-            if (!isExpansionChange && categoryStructurallyModified) {
-              let shouldAutoCollapse = false;
-              if (workingCategoryCopy.type === 'standard' && workingCategoryCopy.subItems) {
-                const relevantSubItems = workingCategoryCopy.subItems.filter(sub => !sub.isRegistry);
-                if (relevantSubItems.length > 0 && relevantSubItems.every(sub => sub.status !== undefined)) { shouldAutoCollapse = true; }
-                else if (relevantSubItems.length === 0 && originalCategory.subItems?.filter(s=>!s.isRegistry).length ?? 0 > 0) {shouldAutoCollapse = true;} // All items removed
-              } else if (workingCategoryCopy.type === 'special' || workingCategoryCopy.type === 'pressure') {
-                  if (workingCategoryCopy.status !== undefined) shouldAutoCollapse = true;
-              }
-              if (shouldAutoCollapse && workingCategoryCopy.isExpanded) { 
-                workingCategoryCopy.isExpanded = false; 
-                autoCollapsedCategoryIdHolder.id = originalCategory.id; 
-              }
-            }
-            if (categoryStructurallyModified) floorOverallStateChanged = true;
-            return categoryStructurallyModified ? workingCategoryCopy : originalCategory;
-          });
+                    const isExpansionChange = update.field === 'isExpanded';
 
-          let finalCategoriesForFloor = newCategoriesForFloor;
-          if (autoCollapsedCategoryIdHolder.id) {
-            const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
-            if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
-              const nextCat = finalCategoriesForFloor[collapsedIdx + 1];
-              if (!nextCat.isExpanded) { // Only auto-expand if currently collapsed
-                finalCategoriesForFloor = finalCategoriesForFloor.map((cat, idx) => 
-                  idx === collapsedIdx + 1 ? { ...cat, isExpanded: true } : cat
-                );
-                floorOverallStateChanged = true; // Mark floor as changed due to auto-expansion
-              }
-            }
-          }
-          
-          // If any category object instance changed, or if auto-expansion modified another category, floorOverallStateChanged will be true
-          return floorOverallStateChanged ? { ...currentFloorData, categories: finalCategoriesForFloor } : currentFloorData;
+                    switch (update.field) {
+                        case 'isExpanded':
+                            if (mutatedCategory.isExpanded !== update.value) { 
+                                mutatedCategory.isExpanded = update.value as boolean; 
+                                actualModificationsMadeToCategory = true;
+                            }
+                            break;
+                        case 'status':
+                            if (mutatedCategory.status !== update.value) { 
+                                mutatedCategory.status = update.value as StatusOption | undefined; 
+                                actualModificationsMadeToCategory = true;
+                                if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                            break;
+                        case 'subItemStatus':
+                        case 'subItemObservation':
+                        case 'subItemShowObservation':
+                        case 'renameSubItemName':
+                        case 'subItemPhotoDataUri':
+                        case 'subItemPhotoDescription':
+                        case 'removeSubItemPhoto':
+                            if (mutatedCategory.subItems && update.subItemId) {
+                                const oldSubItemsRef = mutatedCategory.subItems;
+                                mutatedCategory.subItems = mutatedCategory.subItems.map(sub => {
+                                    if (sub.id !== update.subItemId) return sub;
+                                    let newSubState = { ...sub };
+                                    let subItemChanged = false;
+                                    if (update.field === 'subItemStatus' && newSubState.status !== (update.value as StatusOption | undefined)) { newSubState.status = update.value as StatusOption | undefined; subItemChanged = true; }
+                                    else if (update.field === 'subItemObservation' && newSubState.observation !== (update.value as string)) { newSubState.observation = update.value as string; subItemChanged = true; }
+                                    else if (update.field === 'subItemShowObservation' && newSubState.showObservation !== (update.value as boolean)) { newSubState.showObservation = update.value as boolean; subItemChanged = true; }
+                                    else if (update.field === 'renameSubItemName' && newSubState.name !== update.newName) { newSubState.name = update.newName; subItemChanged = true; }
+                                    else if (update.field === 'subItemPhotoDataUri' && newSubState.photoDataUri !== (update.value as string | null)) { newSubState.photoDataUri = update.value as string | null; if (!update.value) newSubState.photoDescription = ''; subItemChanged = true; }
+                                    else if (update.field === 'subItemPhotoDescription' && newSubState.photoDescription !== (update.value as string)) { newSubState.photoDescription = update.value as string; subItemChanged = true; }
+                                    else if (update.field === 'removeSubItemPhoto') { newSubState.photoDataUri = null; newSubState.photoDescription = ''; subItemChanged = true; }
+                                    
+                                    if (subItemChanged) {
+                                        actualModificationsMadeToCategory = true;
+                                        if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                    }
+                                    return subItemChanged ? newSubState : sub;
+                                });
+                                // If map created new sub-item objects, the subItems array ref might not change
+                                // if length is same. Explicitly check if any sub-item object changed.
+                                if (!actualModificationsMadeToCategory && mutatedCategory.subItems.some((sub, i) => sub !== oldSubItemsRef[i])) {
+                                   actualModificationsMadeToCategory = true;
+                                   if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                }
+                            }
+                            break;
+                        case 'removeSubItem':
+                            if (mutatedCategory.subItems && update.subItemId) {
+                                const initialCount = mutatedCategory.subItems.length;
+                                mutatedCategory.subItems = mutatedCategory.subItems.filter(sub => sub.id !== update.subItemId);
+                                if (mutatedCategory.subItems.length < initialCount) {
+                                    actualModificationsMadeToCategory = true;
+                                    if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                }
+                            }
+                            break;
+                        default: // Handles category-level fields
+                            if (update.field === 'observation' && mutatedCategory.observation !== update.value) { mutatedCategory.observation = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
+                            else if (update.field === 'showObservation' && mutatedCategory.showObservation !== update.value) { mutatedCategory.showObservation = update.value as boolean; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
+                            else if (update.field === 'pressureValue' && mutatedCategory.pressureValue !== update.value) { mutatedCategory.pressureValue = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
+                            else if (update.field === 'pressureUnit' && mutatedCategory.pressureUnit !== update.value) { mutatedCategory.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
+                            else if (update.field === 'renameCategoryTitle' && mutatedCategory.title !== update.newTitle) { mutatedCategory.title = update.newTitle as string; actualModificationsMadeToCategory = true; }
+                            else if (update.field === 'addRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.value) {
+                                const newExt: RegisteredExtinguisher = { ...(update.value as Omit<RegisteredExtinguisher, 'id'>), id: `ext-${generateUniqueId()}` };
+                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => 
+                                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: [...(sub.registeredExtinguishers || []), newExt] } : sub
+                                );
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                            else if (update.field === 'removeRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.extinguisherId) {
+                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => 
+                                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: (sub.registeredExtinguishers || []).filter(ext => ext.id !== update.extinguisherId) } : sub
+                                );
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                            else if (update.field === 'addRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.value) {
+                                const newHose: RegisteredHose = { ...(update.value as Omit<RegisteredHose, 'id'>), id: `hose-${generateUniqueId()}` };
+                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
+                                    sub.id === update.subItemId ? { ...sub, registeredHoses: [...(sub.registeredHoses || []), newHose] } : sub
+                                );
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                            else if (update.field === 'removeRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.hoseId) {
+                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
+                                    sub.id === update.subItemId ? { ...sub, registeredHoses: (sub.registeredHoses || []).filter(h => h.id !== update.hoseId) } : sub
+                                );
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                            else if (update.field === 'markAllSubItemsNA' && mutatedCategory.subItems && mutatedCategory.type === 'standard') {
+                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => 
+                                    !sub.isRegistry ? { ...sub, status: 'N/A' as StatusOption } : sub
+                                );
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                            else if (update.field === 'addSubItem' && mutatedCategory.type === 'standard' && typeof update.value === 'string' && (update.value as string).trim() !== '') {
+                                const newId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+                                const newSub: SubItemState = { id: newId, name: (update.value as string).trim(), status: undefined, observation: '', showObservation: false, isRegistry: false, photoDataUri: null, photoDescription: '' };
+                                mutatedCategory.subItems = [...(mutatedCategory.subItems || []), newSub];
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                            break;
+                    }
+                    
+                    // Auto-collapse logic based on structural changes (not just expansion clicks)
+                    if (!isExpansionChange && categoryStructurallyModifiedForAutoCollapse) {
+                        let shouldAutoCollapse = false;
+                        if (mutatedCategory.type === 'standard' && mutatedCategory.subItems) {
+                            const relevantSubItems = mutatedCategory.subItems.filter(sub => !sub.isRegistry);
+                            if (relevantSubItems.length > 0 && relevantSubItems.every(sub => sub.status !== undefined)) { shouldAutoCollapse = true; }
+                            else if (relevantSubItems.length === 0 && originalCategory.subItems?.filter(s=>!s.isRegistry).length ?? 0 > 0) {shouldAutoCollapse = true;}
+                        } else if (mutatedCategory.type === 'special' || mutatedCategory.type === 'pressure') {
+                            if (mutatedCategory.status !== undefined) shouldAutoCollapse = true;
+                        }
+                        if (shouldAutoCollapse && mutatedCategory.isExpanded) { 
+                            mutatedCategory.isExpanded = false; 
+                            autoCollapsedCategoryIdHolder.id = originalCategory.id; 
+                            actualModificationsMadeToCategory = true; // isExpanded changed
+                        }
+                    }
+
+                    if (actualModificationsMadeToCategory) {
+                        floorOverallStateChanged = true;
+                        return mutatedCategory;
+                    }
+                    return originalCategory;
+                });
+
+                let finalCategoriesForFloor = newCategoriesForFloor;
+                if (autoCollapsedCategoryIdHolder.id) {
+                    const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
+                    if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
+                        const nextCat = finalCategoriesForFloor[collapsedIdx + 1];
+                        if (!nextCat.isExpanded) {
+                            finalCategoriesForFloor = finalCategoriesForFloor.map((cat, idx) => {
+                                if (idx === collapsedIdx + 1) {
+                                    floorOverallStateChanged = true; // Marking change for the floor
+                                    return { ...cat, isExpanded: true };
+                                }
+                                return cat;
+                            });
+                        }
+                    }
+                }
+                
+                // If floorOverallStateChanged is true, it means some category (or auto-expansion) caused a change.
+                // We need to return a new floor object with the potentially new categories array.
+                // The check `newCategoriesForFloor !== currentFloorData.categories` is also a good indicator
+                // if map returned any new category object instances.
+                if (floorOverallStateChanged || newCategoriesForFloor.some((cat, i) => cat !== currentFloorData.categories[i])) {
+                    return { ...currentFloorData, categories: finalCategoriesForFloor };
+                }
+                return currentFloorData;
+            });
+
+            const floorsReallyChanged = updatedFloors.some((newFloor, idx) => newFloor !== currentTower.floors[idx]);
+            return floorsReallyChanged ? { ...currentTower, floors: updatedFloors } : currentTower;
         });
-
-        // Check if any floor object instance actually changed
-        const floorsReallyChanged = updatedFloors.some((newFloor, idx) => newFloor !== currentTower.floors[idx]);
-        return floorsReallyChanged ? { ...currentTower, floors: updatedFloors } : currentTower;
-      });
     });
   }, []);
+
 
   const resetInspectionForm = useCallback(() => {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
@@ -339,7 +370,7 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
     setIsChecklistVisible(false);
-    setUploadedLogoDataUrl(null); // Reset logo as well
+    setUploadedLogoDataUrl(null); 
   }, []);
 
   const handleAddNewTower = useCallback(() => {
@@ -359,7 +390,6 @@ export default function FireCheckPage() {
       prevTowers.map((tower, index) => {
         if (index === towerIndex) {
           let newFloorCategories: InspectionCategoryState[];
-          // Try to copy structure from last floor of THIS tower, or default if no floors yet in this tower
           const sourceFloorForCategories = tower.floors.length > 0 ? tower.floors[tower.floors.length - 1] : null;
 
           if (sourceFloorForCategories) {
@@ -368,12 +398,11 @@ export default function FireCheckPage() {
                 isExpanded: false, status: undefined, observation: '', showObservation: false, pressureValue: '', pressureUnit: '',
                 subItems: cat.subItems ? JSON.parse(JSON.stringify(cat.subItems)).map((sub: SubItemState) => ({
                     ...sub, status: undefined, observation: '', showObservation: false, photoDataUri: null, photoDescription: '',
-                    // Keep registered items if copied from a floor that had them, but reset them
                     registeredExtinguishers: sub.isRegistry && sub.id === 'extintor_cadastro' ? [] : undefined,
                     registeredHoses: sub.isRegistry && sub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined,
                 })) : undefined,
             }));
-          } else { // Fallback to INITIAL_FLOOR_DATA if no source floor in current tower
+          } else { 
             newFloorCategories = JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false}));
           }
 
@@ -428,7 +457,7 @@ export default function FireCheckPage() {
 
     const towersToSaveInStorage = (processedTowers.length > 0 && activeTowersData.some(t => t.towerName.trim() !== "" || t.floors.some(f => f.floor.trim() !== "")))
       ? processedTowers
-      : activeTowersData.map(tower => ({ // Fallback to save all if no named towers/floors but data exists
+      : activeTowersData.map(tower => ({ 
         ...tower,
         floors: tower.floors.map(floor => ({
             ...floor,
@@ -460,10 +489,9 @@ export default function FireCheckPage() {
         newSavedList.push(fullInspectionToSaveForLocalStorage);
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      // Only toast if inspectionNumber is valid (not a temp-id)
       if (fullInspectionToSaveForLocalStorage.id && !fullInspectionToSaveForLocalStorage.id.startsWith('temp-id-')) {
         toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva no navegador (sem fotos).` });
-      } else if (towersToSaveInStorage.length > 0) { // Toast for temp-id only if there's actual tower data
+      } else if (towersToSaveInStorage.length > 0) { 
          toast({ title: "Vistoria Salva Localmente", description: `Vistoria (ID temporário) salva no navegador (sem fotos). Preencha o Local para gerar Nº Vistoria.` });
       }
       return sortedList;
@@ -473,47 +501,48 @@ export default function FireCheckPage() {
   const handleLoadInspection = (fullInspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
-      const loadedClientInfo = inspectionToLoad.clientInfo || {};
-      setClientInfo({
-        clientLocation: loadedClientInfo.clientLocation || '',
-        clientCode: loadedClientInfo.clientCode || '',
-        inspectionNumber: loadedClientInfo.inspectionNumber || '',
-        inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
-        inspectedBy: loadedClientInfo.inspectedBy || '',
-      });
-      setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
+        const loadedClientInfo = inspectionToLoad.clientInfo || {};
+        setClientInfo({
+            clientLocation: loadedClientInfo.clientLocation || '',
+            clientCode: loadedClientInfo.clientCode || '',
+            inspectionNumber: loadedClientInfo.inspectionNumber || '',
+            inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
+            inspectedBy: loadedClientInfo.inspectedBy || '',
+        });
+        setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-      const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
-        ...tower,
-        id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
-        isTowerContentVisible: false, // Start collapsed
-        floors: (tower.floors || []).map(floor => ({
-          ...floor,
-          id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
-          isFloorContentVisible: false, // Start collapsed
-          categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ // Fallback for categories if missing
-              id: cfg.id, title: cfg.title, type: cfg.type, isExpanded: false,
-              ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({ id: sCfg.id, name: sCfg.name, isRegistry: sCfg.isRegistry || false, photoDataUri: null, photoDescription: '', ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }), ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }) })) || [] }),
-              ...(cfg.type === 'special' && { status: undefined, observation: '', showObservation: false }),
-              ...(cfg.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '', observation: '', showObservation: false }),
-          }))).map((cat: InspectionCategoryState) => ({
-            ...cat, isExpanded: false,
-            subItems: (cat.subItems || []).map(sub => ({
-              ...sub,
-              id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`, // Attempt to preserve custom IDs if they look valid
-              photoDataUri: null, photoDescription: '', // Photos not stored in localStorage
-              registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
-              registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` }))
+        const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
+            ...tower,
+            id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
+            isTowerContentVisible: false, 
+            floors: (tower.floors || []).map(floor => ({
+            ...floor,
+            id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
+            isFloorContentVisible: false, 
+            categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ 
+                id: cfg.id, title: cfg.title, type: cfg.type, isExpanded: false,
+                ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({ id: sCfg.id, name: sCfg.name, isRegistry: sCfg.isRegistry || false, photoDataUri: null, photoDescription: '', ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }), ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }) })) || [] }),
+                ...(cfg.type === 'special' && { status: undefined, observation: '', showObservation: false }),
+                ...(cfg.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '', observation: '', showObservation: false }),
+            }))).map((cat: InspectionCategoryState) => ({
+                ...cat, isExpanded: false,
+                subItems: (cat.subItems || []).map(sub => ({
+                ...sub,
+                id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`, 
+                photoDataUri: null, photoDescription: '', 
+                registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
+                registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` }))
+                }))
             }))
-          }))
-        }))
-      }));
+            }))
+        }));
 
-      setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
-      setIsSavedInspectionsVisible(false); setIsChecklistVisible(false); // Auto-close lists
-      toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada. Fotos não são incluídas do armazenamento local.`});
+        setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
+        setIsSavedInspectionsVisible(false); setIsChecklistVisible(true); 
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada. Fotos não são incluídas do armazenamento local.`});
     }
   };
+
 
   const handleDeleteInspection = useCallback((fullInspectionId: string) => {
     setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
@@ -537,7 +566,7 @@ export default function FireCheckPage() {
         ...(originalInspection.clientInfo || {}),
         inspectionNumber: newInspectionNumber,
         inspectionDate: typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '',
-        inspectedBy: clientInfo.inspectedBy || '', // Use current inspector or leave blank
+        inspectedBy: clientInfo.inspectedBy || '', 
       };
       duplicatedInspection.timestamp = Date.now();
       duplicatedInspection.towers = (duplicatedInspection.towers || []).map(tower => ({
@@ -548,7 +577,7 @@ export default function FireCheckPage() {
             ...cat, isExpanded: false,
             subItems: (cat.subItems || []).map(sub => ({
               ...sub,
-              id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id, // Generate new IDs for custom/registry subitems
+              id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id, 
               photoDataUri: null, photoDescription: '',
               registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: `${generateUniqueId()}-extcopy`})),
               registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: `${generateUniqueId()}-hosecopy` }))
@@ -639,13 +668,13 @@ export default function FireCheckPage() {
       return { ...tower, floors: tower.floors.map((floor, fIdx) => {
         if (fIdx !== floorIndex) return floor;
         const categories = [...floor.categories]; const itemIndex = categories.findIndex(cat => cat.id === categoryId);
-        if (itemIndex === -1) return floor; // Should not happen
+        if (itemIndex === -1) return floor; 
         const itemToMove = categories[itemIndex];
         if (direction === 'up' && itemIndex > 0) { categories.splice(itemIndex, 1); categories.splice(itemIndex - 1, 0, itemToMove); }
         else if (direction === 'down' && itemIndex < categories.length - 1) { categories.splice(itemIndex, 1); categories.splice(itemIndex + 1, 0, itemToMove); }
         else if (direction === 'top' && itemIndex > 0) { categories.splice(itemIndex, 1); categories.unshift(itemToMove); }
         else if (direction === 'bottom' && itemIndex < categories.length - 1) { categories.splice(itemIndex, 1); categories.push(itemToMove); }
-        else return floor; // No change if already at edge or invalid direction
+        else return floor; 
         return { ...floor, categories };
       })};
     }));
@@ -653,36 +682,36 @@ export default function FireCheckPage() {
 
   const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryId: string) => {
     setActiveTowersData(prevTowers =>
-      prevTowers.map((tower, tIdx) => {
-        if (tIdx !== towerIndex) return tower; // Not the target tower, return original
+        prevTowers.map((currentTower, tIdx) => {
+            if (tIdx !== towerIndex) return currentTower;
 
-        const newFloors = tower.floors.map((floor, fIdx) => {
-          if (fIdx !== floorIndex) return floor; // Not the target floor, return original
+            const newFloors = currentTower.floors.map((currentFloor, fIdx) => {
+                if (fIdx !== floorIndex) return currentFloor;
 
-          const newCategories = floor.categories.filter(cat => cat.id !== categoryId);
+                const newCategories = currentFloor.categories.filter(cat => cat.id !== categoryId);
+                
+                if (newCategories.length < currentFloor.categories.length) {
+                    return { ...currentFloor, categories: newCategories };
+                }
+                return currentFloor;
+            });
 
-          if (newCategories.length < floor.categories.length) {
-            return { ...floor, categories: newCategories }; // Return new floor object
-          }
-          return floor; // No change to this floor's categories
-        });
-
-        // Check if the floors array itself or any floor object within it has changed
-        let floorsActuallyChanged = newFloors.length !== tower.floors.length;
-        if (!floorsActuallyChanged) {
-          for (let i = 0; i < newFloors.length; i++) {
-            if (newFloors[i] !== tower.floors[i]) { // Reference check for floor objects
-              floorsActuallyChanged = true;
-              break;
+            // Check if any floor object instance or the floors array itself changed
+            let floorsActuallyChanged = newFloors.length !== currentTower.floors.length;
+            if (!floorsActuallyChanged) {
+                for (let i = 0; i < newFloors.length; i++) {
+                    if (newFloors[i] !== currentTower.floors[i]) {
+                        floorsActuallyChanged = true;
+                        break;
+                    }
+                }
             }
-          }
-        }
 
-        if (floorsActuallyChanged) {
-          return { ...tower, floors: newFloors }; // Return new tower object
-        }
-        return tower; // No change to this tower
-      })
+            if (floorsActuallyChanged) {
+                return { ...currentTower, floors: newFloors };
+            }
+            return currentTower;
+        })
     );
   }, []);
 
@@ -694,7 +723,6 @@ export default function FireCheckPage() {
         floors: tower.floors
           .map(floor => ({
             ...floor,
-            // Photos are included in this export
           })),
       }));
 
@@ -740,6 +768,8 @@ export default function FireCheckPage() {
 
     let firstInspectionToLoadToFormWithPhotos: FullInspectionData | null = null;
     const allInspectionsFromFiles: FullInspectionData[] = [];
+    let finalImportedCount = 0;
+    let finalUpdatedCount = 0;
 
     const readFilePromise = (file: File): Promise<FullInspectionData[]> => {
       return new Promise((resolve, reject) => {
@@ -751,24 +781,23 @@ export default function FireCheckPage() {
             const inspectionsToProcess: FullInspectionData[] = Array.isArray(importedData) ? importedData : [importedData];
             const validInspectionsFromFile: FullInspectionData[] = [];
             inspectionsToProcess.forEach(inspection => {
-              // Basic validation: check for essential fields
               if (inspection && typeof inspection.id === 'string' && inspection.clientInfo && Array.isArray(inspection.towers) && typeof inspection.timestamp === 'number') {
                 validInspectionsFromFile.push(inspection);
               } else {
-                console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Faltando id, clientInfo, towers ou timestamp.`);
+                console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada.`);
               }
             });
             resolve(validInspectionsFromFile);
           } catch (error) {
             console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
-            toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}. Verifique o formato do arquivo.`, variant: "destructive"});
-            reject(error); // Reject the promise for this file
+            toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}.`, variant: "destructive"});
+            reject(error);
           }
         };
         reader.onerror = (err) => {
           console.error(`Erro ao ler o arquivo ${file.name}:`, err);
           toast({ title: "Erro de Leitura", description: `Não foi possível ler ${file.name}.`, variant: "destructive"});
-          reject(err); // Reject the promise for this file
+          reject(err);
         };
         reader.readAsText(file);
       });
@@ -781,23 +810,19 @@ export default function FireCheckPage() {
         result.value.forEach((inspection, inspectionIndexWithinFile) => {
           allInspectionsFromFiles.push(inspection);
           if (fileIndex === 0 && inspectionIndexWithinFile === 0 && !firstInspectionToLoadToFormWithPhotos) {
-            firstInspectionToLoadToFormWithPhotos = inspection; // Keep the one with photos to load into form
+            firstInspectionToLoadToFormWithPhotos = inspection; 
           }
         });
-      } else if (result.status === 'rejected') {
-        // Error already toasted in readFilePromise
       }
     });
 
-    let importedCount = 0;
-    let updatedCount = 0;
-
     if (allInspectionsFromFiles.length > 0) {
       setSavedInspections(currentSavedInspections => {
-        let newOrUpdatedInspections = [...currentSavedInspections];
+        let newOrUpdatedInspectionsList = [...currentSavedInspections];
+        let currentImported = 0;
+        let currentUpdated = 0;
         
         allInspectionsFromFiles.forEach(inspectionToImport => {
-          // Prepare a version for localStorage (without photos)
           const inspectionForLocalStorage: FullInspectionData = {
             ...inspectionToImport,
             towers: (inspectionToImport.towers || []).map(tower => ({
@@ -815,30 +840,31 @@ export default function FireCheckPage() {
             })),
           };
 
-          const existingIndex = newOrUpdatedInspections.findIndex(insp => insp.id === inspectionForLocalStorage.id && insp.id);
+          const existingIndex = newOrUpdatedInspectionsList.findIndex(insp => insp.id === inspectionForLocalStorage.id && insp.id);
           if (existingIndex > -1) {
-            newOrUpdatedInspections[existingIndex] = inspectionForLocalStorage;
-            updatedCount++;
+            newOrUpdatedInspectionsList[existingIndex] = inspectionForLocalStorage;
+            currentUpdated++;
           } else {
-            newOrUpdatedInspections.push(inspectionForLocalStorage);
-            importedCount++;
+            newOrUpdatedInspectionsList.push(inspectionForLocalStorage);
+            currentImported++;
           }
         });
-        return newOrUpdatedInspections.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        finalImportedCount = currentImported;
+        finalUpdatedCount = currentUpdated;
+        return newOrUpdatedInspectionsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
     }
 
     if (firstInspectionToLoadToFormWithPhotos) {
-        handleLoadInspection(firstInspectionToLoadToFormWithPhotos.id); // Use existing load logic, it will handle sanitization
-        // Override with photo data if present from the imported file
+        handleLoadInspection(firstInspectionToLoadToFormWithPhotos.id); 
         setClientInfo(prev => ({
-            ...prev, // Keep potentially sanitized client info from handleLoadInspection
-            ...(firstInspectionToLoadToFormWithPhotos!.clientInfo || {}) // But prefer imported clientInfo
+            ...prev, 
+            ...(firstInspectionToLoadToFormWithPhotos!.clientInfo || {}) 
         }));
         setUploadedLogoDataUrl(firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || null);
-        setActiveTowersData(prevActiveTowers => { // Need to merge photo data back if loaded via handleLoadInspection
+        setActiveTowersData(prevActiveTowers => { 
             return prevActiveTowers.map(activeTower => {
-                const importedTower = firstInspectionToLoadToFormWithPhotos!.towers.find(it => it.id === activeTower.id || it.towerName === activeTower.towerName); // Match by ID or name
+                const importedTower = firstInspectionToLoadToFormWithPhotos!.towers.find(it => it.id === activeTower.id || it.towerName === activeTower.towerName); 
                 if (!importedTower) return activeTower;
                 return {
                     ...activeTower,
@@ -870,9 +896,9 @@ export default function FireCheckPage() {
     }
 
     let summaryMessage = "";
-    if (importedCount > 0 && updatedCount > 0) summaryMessage = `${importedCount} nova(s) e ${updatedCount} atualizada(s).`;
-    else if (importedCount > 0) summaryMessage = `${importedCount} nova(s) importada(s).`;
-    else if (updatedCount > 0) summaryMessage = `${updatedCount} vistoria(s) atualizada(s).`;
+    if (finalImportedCount > 0 && finalUpdatedCount > 0) summaryMessage = `${finalImportedCount} nova(s) e ${finalUpdatedCount} atualizada(s).`;
+    else if (finalImportedCount > 0) summaryMessage = `${finalImportedCount} nova(s) importada(s).`;
+    else if (finalUpdatedCount > 0) summaryMessage = `${finalUpdatedCount} vistoria(s) atualizada(s).`;
 
     if (firstInspectionToLoadToFormWithPhotos) {
         summaryMessage += ` A primeira foi carregada no formulário${firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || (firstInspectionToLoadToFormWithPhotos.towers || []).some(t => t.floors.some(f => f.categories.some(c => c.subItems?.some(s => s.photoDataUri)))) ? ' com logo/fotos' : ''}.`;
@@ -880,12 +906,10 @@ export default function FireCheckPage() {
         summaryMessage = "Vistorias processadas. Verifique a lista de salvas.";
     }
 
-
     if (summaryMessage) toast({ title: "Importação Concluída", description: summaryMessage });
     else if (files.length > 0 && allInspectionsFromFiles.length === 0) toast({ title: "Importação Concluída", description: "Nenhuma vistoria válida encontrada nos arquivos.", variant: "default" });
 
-
-    if (event.target) event.target.value = ''; // Clear the input
+    if (event.target) event.target.value = ''; 
   }, [toast, setSavedInspections, handleLoadInspection]);
 
 
@@ -985,7 +1009,7 @@ export default function FireCheckPage() {
                                     const overallStatus = getCategoryOverallStatus(category);
                                     return (
                                       <InspectionCategoryItem
-                                        key={`${floorData.id}-${category.id}`} // Ensure unique key
+                                        key={`${floorData.id}-${category.id}`} 
                                         category={category}
                                         overallStatus={overallStatus}
                                         onCategoryItemUpdate={(catId, update) => handleCategoryItemUpdateForFloor(towerIndex, floorIndex, catId, update)}
@@ -1047,3 +1071,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
