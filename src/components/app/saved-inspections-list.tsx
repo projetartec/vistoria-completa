@@ -9,7 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Edit3, Trash2, Search, Hash, Copy, Edit2, Download } from 'lucide-react'; // Added Download icon
-import type { FullInspectionData } from '@/lib/types';
+import type { FullInspectionData, TowerData } from '@/lib/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -20,7 +20,8 @@ interface SavedInspectionsListProps {
   onDeleteMultipleInspections: (fullInspectionIds: string[]) => void;
   onDuplicateInspection: (fullInspectionId: string) => void;
   onUpdateClientLocation: (inspectionId: string, newClientLocation: string) => void;
-  onDownloadSelected: (inspectionIds: string[]) => void; // New prop
+  onDownloadSelected: (inspectionIds: string[]) => void;
+  onDownloadSingleInspection: (inspectionId: string) => void; // Added this prop
 }
 
 export function SavedInspectionsList({
@@ -30,10 +31,11 @@ export function SavedInspectionsList({
   onDeleteMultipleInspections,
   onDuplicateInspection,
   onUpdateClientLocation,
-  onDownloadSelected, // New prop
+  onDownloadSelected,
+  onDownloadSingleInspection, // Added this prop
 }: SavedInspectionsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedInspections, setSelectedInspections] = useState<string[]>([]); // Renamed for clarity
+  const [selectedInspections, setSelectedInspections] = useState<string[]>([]);
   const [editingClientLocationForInspection, setEditingClientLocationForInspection] = useState<FullInspectionData | null>(null);
   const [newClientLocationInput, setNewClientLocationInput] = useState('');
 
@@ -55,7 +57,6 @@ export function SavedInspectionsList({
 
   const handleDeleteSelectedClick = () => {
     if (selectedInspections.length === 0) {
-      // This case should ideally be prevented by disabling the button
       return;
     }
     if (typeof window !== 'undefined' && window.confirm(`Tem certeza que deseja excluir ${selectedInspections.length} vistoria(s) selecionada(s)? Esta ação é irreversível.`)) {
@@ -66,7 +67,6 @@ export function SavedInspectionsList({
 
   const handleDownloadSelectedClick = () => {
     if (selectedInspections.length === 0) {
-      // This case should ideally be prevented by disabling the button
       return;
     }
     onDownloadSelected(selectedInspections);
@@ -89,6 +89,10 @@ export function SavedInspectionsList({
     closeEditClientLocationDialog();
   }, [editingClientLocationForInspection, newClientLocationInput, onUpdateClientLocation, closeEditClientLocationDialog]);
 
+  const calculateTotalFloors = (towers: TowerData[] | undefined): number => {
+    if (!towers) return 0;
+    return towers.reduce((sum, tower) => sum + (tower.floors?.length || 0), 0);
+  };
 
   return (
     <>
@@ -99,7 +103,7 @@ export function SavedInspectionsList({
             {selectedInspections.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 <Button onClick={handleDownloadSelectedClick} variant="outline" size="sm" className="border-blue-500 text-blue-500 hover:bg-blue-500/10">
-                  <Download className="mr-2 h-4 w-4" /> Baixar Selecionadas ({selectedInspections.length})
+                  <Download className="mr-2 h-4 w-4" /> Baixar JSON ({selectedInspections.length})
                 </Button>
                 <Button onClick={handleDeleteSelectedClick} variant="destructive" size="sm">
                   <Trash2 className="mr-2 h-4 w-4" /> Excluir Selecionadas ({selectedInspections.length})
@@ -123,64 +127,71 @@ export function SavedInspectionsList({
             <p className="text-muted-foreground text-center py-4">Nenhuma vistoria salva encontrada.</p>
           ) : (
             <Accordion type="multiple" className="w-full space-y-2">
-              {filteredInspections.map((inspection) => (
-                <AccordionItem value={inspection.id} key={inspection.id} className="border bg-card rounded-md shadow-sm">
-                  <div className="flex items-center px-4 py-1 hover:bg-accent/10 rounded-t-md">
-                    <Checkbox
-                      id={`select-inspection-${inspection.id}`}
-                      checked={selectedInspections.includes(inspection.id)}
-                      onCheckedChange={() => handleToggleSelection(inspection.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label={`Selecionar vistoria ${inspection.id}`}
-                      className="mr-3 h-5 w-5 shrink-0"
-                    />
-                    <AccordionTrigger className="flex-1 py-2 hover:no-underline">
-                      <div className="flex justify-between items-center w-full">
-                        <div className="text-left">
-                          <p className="font-medium text-primary flex items-center">
-                            <Hash className="h-4 w-4 mr-1 text-muted-foreground" />
-                            {inspection.id || 'N/A'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{inspection.clientInfo.clientLocation || 'Local não informado'}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Andares: {inspection.floors.length}
-                            {inspection.clientInfo.inspectionDate && ` | Data Vistoria: ${format(new Date(inspection.clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })}`}
-                          </p>
-                          {inspection.timestamp && (
-                            <p className="text-xs text-muted-foreground">
-                              Salvo em: {format(new Date(inspection.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+              {filteredInspections.map((inspection) => {
+                const totalFloors = calculateTotalFloors(inspection.towers);
+                return (
+                  <AccordionItem value={inspection.id} key={inspection.id} className="border bg-card rounded-md shadow-sm">
+                    <div className="flex items-center px-4 py-1 hover:bg-accent/10 rounded-t-md">
+                      <Checkbox
+                        id={`select-inspection-${inspection.id}`}
+                        checked={selectedInspections.includes(inspection.id)}
+                        onCheckedChange={() => handleToggleSelection(inspection.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Selecionar vistoria ${inspection.id}`}
+                        className="mr-3 h-5 w-5 shrink-0"
+                      />
+                      <AccordionTrigger className="flex-1 py-2 hover:no-underline">
+                        <div className="flex justify-between items-center w-full">
+                          <div className="text-left">
+                            <p className="font-medium text-primary flex items-center">
+                              <Hash className="h-4 w-4 mr-1 text-muted-foreground" />
+                              {inspection.id || 'N/A'}
                             </p>
-                          )}
+                            <p className="text-sm text-muted-foreground">{inspection.clientInfo.clientLocation || 'Local não informado'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Torres: {inspection.towers?.length || 0} | Andares (Total): {totalFloors}
+                              {inspection.clientInfo.inspectionDate && ` | Data: ${format(new Date(inspection.clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })}`}
+                            </p>
+                            {inspection.timestamp && (
+                              <p className="text-xs text-muted-foreground">
+                                Salvo em: {format(new Date(inspection.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </AccordionTrigger>
-                  </div>
-                  <AccordionContent className="px-4 pb-4 pt-2 space-y-3 border-t">
-                    <CardDescription>
-                      Código Cliente: {inspection.clientInfo.clientCode || 'N/A'} <br />
-                      Total de Andares: {inspection.floors.length}
-                    </CardDescription>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <Button onClick={() => onLoadInspection(inspection.id)} size="sm" variant="outline">
-                        <Edit3 className="mr-2 h-4 w-4" /> Carregar
-                      </Button>
-                       <Button onClick={() => openEditClientLocationDialog(inspection)} size="sm" variant="outline">
-                        <Edit2 className="mr-2 h-4 w-4" /> Editar Cliente
-                      </Button>
-                      <Button onClick={() => onDuplicateInspection(inspection.id)} size="sm" variant="secondary">
-                        <Copy className="mr-2 h-4 w-4" /> Duplicar
-                      </Button>
-                      <Button variant="destructive" onClick={() => {
-                        if (window.confirm(`Tem certeza que deseja excluir a vistoria Nº ${inspection.id}? Esta ação é irreversível.`)) {
-                            onDeleteInspection(inspection.id);
-                        }
-                      }} size="sm">
-                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                      </Button>
+                      </AccordionTrigger>
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+                    <AccordionContent className="px-4 pb-4 pt-2 space-y-3 border-t">
+                      <CardDescription>
+                        Código Cliente: {inspection.clientInfo.clientCode || 'N/A'} <br />
+                        Total de Torres: {inspection.towers?.length || 0}<br />
+                        Total de Andares (Geral): {totalFloors}
+                      </CardDescription>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Button onClick={() => onLoadInspection(inspection.id)} size="sm" variant="outline">
+                          <Edit3 className="mr-2 h-4 w-4" /> Carregar
+                        </Button>
+                         <Button onClick={() => openEditClientLocationDialog(inspection)} size="sm" variant="outline">
+                          <Edit2 className="mr-2 h-4 w-4" /> Editar Cliente
+                        </Button>
+                        <Button onClick={() => onDuplicateInspection(inspection.id)} size="sm" variant="secondary">
+                          <Copy className="mr-2 h-4 w-4" /> Duplicar
+                        </Button>
+                        <Button onClick={() => onDownloadSingleInspection(inspection.id)} size="sm" variant="outline" className="border-teal-500 text-teal-500 hover:bg-teal-500/10">
+                          <Download className="mr-2 h-4 w-4" /> Baixar JSON
+                        </Button>
+                        <Button variant="destructive" onClick={() => {
+                          if (window.confirm(`Tem certeza que deseja excluir a vistoria Nº ${inspection.id}? Esta ação é irreversível.`)) {
+                              onDeleteInspection(inspection.id);
+                          }
+                        }} size="sm">
+                          <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                        </Button>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           )}
         </CardContent>
