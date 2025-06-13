@@ -433,45 +433,11 @@ export default function FireCheckPage() {
   const handleSaveInspection = useCallback(() => {
     const currentClientInfo = clientInfo;
 
-    const processedTowers = activeTowersData
-      .filter(tower => tower.towerName && tower.towerName.trim() !== "")
-      .map(tower => ({
-        ...tower,
-        floors: tower.floors
-          .filter(floor => floor.floor && floor.floor.trim() !== "")
-          .map(floor => ({
-            ...floor,
-            categories: floor.categories.map(category => ({
-              ...category,
-              subItems: category.subItems ? category.subItems.map(subItem => {
-                const { photoDataUri, photoDescription, ...restOfSubItem } = subItem;
-                return restOfSubItem;
-              }) : undefined,
-            })),
-          })),
-      }));
-
-    const towersToSaveInStorage = (processedTowers.length > 0 && activeTowersData.some(t => t.towerName.trim() !== "" || t.floors.some(f => f.floor.trim() !== "")))
-      ? processedTowers
-      : activeTowersData.map(tower => ({ 
-        ...tower,
-        floors: tower.floors.map(floor => ({
-            ...floor,
-            categories: floor.categories.map(category => ({
-                ...category,
-                subItems: category.subItems ? category.subItems.map(subItem => {
-                    const { photoDataUri, photoDescription, ...restOfSubItem } = subItem;
-                    return restOfSubItem;
-                }) : undefined,
-            })),
-        })),
-      }));
-
-
+    // We will save activeTowersData directly, which now includes photos and observations by default.
     const fullInspectionToSaveForLocalStorage: FullInspectionData = {
       id: currentClientInfo.inspectionNumber || `temp-id-${Date.now()}`,
       clientInfo: { ...currentClientInfo },
-      towers: towersToSaveInStorage,
+      towers: activeTowersData, // Save activeTowersData directly with photos and observations
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl
     };
@@ -485,10 +451,13 @@ export default function FireCheckPage() {
         newSavedList.push(fullInspectionToSaveForLocalStorage);
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      
+      const hasNamedTowersOrFloors = activeTowersData.some(t => (t.towerName && t.towerName.trim() !== "") || t.floors.some(f => f.floor && f.floor.trim() !== ""));
+
       if (fullInspectionToSaveForLocalStorage.id && !fullInspectionToSaveForLocalStorage.id.startsWith('temp-id-')) {
-        toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva no navegador (sem fotos).` });
-      } else if (towersToSaveInStorage.length > 0) { 
-         toast({ title: "Vistoria Salva Localmente", description: `Vistoria (ID temporário) salva no navegador (sem fotos). Preencha o Local para gerar Nº Vistoria.` });
+        toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva (incluindo fotos e observações).` });
+      } else if (hasNamedTowersOrFloors) { 
+         toast({ title: "Vistoria Salva Localmente", description: `Vistoria (ID temporário) salva (incluindo fotos e observações). Preencha o Local para gerar Nº Vistoria.` });
       }
       return sortedList;
     });
@@ -507,6 +476,7 @@ export default function FireCheckPage() {
         });
         setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
+        // When loading, preserve photoDataUri and photoDescription from the sub items if they exist
         const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
             ...tower,
             id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
@@ -517,15 +487,21 @@ export default function FireCheckPage() {
             isFloorContentVisible: false, 
             categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ 
                 id: cfg.id, title: cfg.title, type: cfg.type, isExpanded: false,
-                ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({ id: sCfg.id, name: sCfg.name, isRegistry: sCfg.isRegistry || false, photoDataUri: null, photoDescription: '', ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }), ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }) })) || [] }),
+                ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({ 
+                    id: sCfg.id, name: sCfg.name, 
+                    isRegistry: sCfg.isRegistry || false, 
+                    photoDataUri: null, photoDescription: '', // Keep default null/empty for newly created template
+                    ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }), 
+                    ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }) 
+                })) || [] }),
                 ...(cfg.type === 'special' && { status: undefined, observation: '', showObservation: false }),
                 ...(cfg.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '', observation: '', showObservation: false }),
             }))).map((cat: InspectionCategoryState) => ({
                 ...cat, isExpanded: false,
-                subItems: (cat.subItems || []).map(sub => ({
-                ...sub,
+                subItems: (cat.subItems || []).map(sub => ({ 
+                ...sub, // This will carry over photoDataUri and photoDescription if they exist on 'sub'
                 id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`, 
-                photoDataUri: null, photoDescription: '', 
+                // No longer explicitly setting photoDataUri: null or photoDescription: '' here
                 registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
                 registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` }))
                 }))
@@ -535,7 +511,7 @@ export default function FireCheckPage() {
 
         setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
         setIsSavedInspectionsVisible(false); setIsChecklistVisible(true); 
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada. Fotos não são incluídas do armazenamento local.`});
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada (incluindo fotos e observações salvas).`});
     }
   };
 
@@ -565,6 +541,7 @@ export default function FireCheckPage() {
         inspectedBy: clientInfo.inspectedBy || '', 
       };
       duplicatedInspection.timestamp = Date.now();
+      // Preserve photos and observations when duplicating
       duplicatedInspection.towers = (duplicatedInspection.towers || []).map(tower => ({
         ...tower, id: generateUniqueId(), isTowerContentVisible: false,
         floors: (tower.floors || []).map(floor => ({
@@ -572,9 +549,9 @@ export default function FireCheckPage() {
           categories: (floor.categories || []).map(cat => ({
             ...cat, isExpanded: false,
             subItems: (cat.subItems || []).map(sub => ({
-              ...sub,
+              ...sub, // This carries over photoDataUri and photoDescription
               id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id, 
-              photoDataUri: null, photoDescription: '',
+              // No longer setting photoDataUri: null or photoDescription: ''
               registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: `${generateUniqueId()}-extcopy`})),
               registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: `${generateUniqueId()}-hosecopy` }))
             }))
@@ -582,7 +559,7 @@ export default function FireCheckPage() {
         }))
       }));
       setSavedInspections(prev => [duplicatedInspection, ...prev].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
-      toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada (fotos não incluídas).`});
+      toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada (incluindo fotos e observações da original).`});
     }
   }, [savedInspections, setSavedInspections, toast, clientInfo.inspectedBy]);
 
@@ -682,69 +659,60 @@ export default function FireCheckPage() {
   
       const newTowers = prevTowers.map((tower, tIdx) => {
         if (tIdx !== towerIndex) {
-          return tower; // Not the target tower
+          return tower; 
         }
   
         let towerContentChanged = false;
         const newFloors = tower.floors.map((floor, fIdx) => {
           if (fIdx !== floorIndex) {
-            return floor; // Not the target floor
+            return floor; 
           }
   
           const originalCategories = floor.categories;
           const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
   
           if (filteredCategories.length < originalCategories.length) {
-            // A category was actually removed from this floor
-            towerContentChanged = true; // Mark that this floor (and thus its tower) has changed
-            return { ...floor, categories: filteredCategories }; // Return new floor object
+            towerContentChanged = true; 
+            return { ...floor, categories: filteredCategories }; 
           }
-          return floor; // No change in categories for this floor
+          return floor; 
         });
   
         if (towerContentChanged) {
-          overallTowersChanged = true; // Mark that at least one tower has changed
-          return { ...tower, floors: newFloors }; // Return new tower object
+          overallTowersChanged = true; 
+          return { ...tower, floors: newFloors }; 
         }
-        return tower; // No change in this tower's floors
+        return tower; 
       });
   
       if (overallTowersChanged) {
-        return newTowers; // Return the new array of towers
+        return newTowers; 
       }
-      return prevTowers; // No changes anywhere, return original state to prevent unnecessary re-renders
+      return prevTowers; 
     });
   }, []);
 
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
-    const processedTowersForExport = activeTowersData
-      .map(tower => ({
-        ...tower,
-        floors: tower.floors
-          .map(floor => ({
-            ...floor,
-          })),
-      }));
-
+    // Export activeTowersData directly, which includes photos and observations
     const inspectionToExport: FullInspectionData = {
       id: clientInfo.inspectionNumber || `export-id-${Date.now()}`,
       clientInfo: { ...clientInfo },
-      towers: processedTowersForExport,
+      towers: activeTowersData,
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl,
     };
     const clientInfoForFilename = { inspectionNumber: inspectionToExport.id, clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria' };
     const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
     const fileName = initiateFileDownload(inspectionToExport, baseFileName);
-    toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (incluindo fotos da vistoria ativa).` });
+    toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (incluindo fotos e observações da vistoria ativa).` });
   }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast]);
 
   const handleDownloadSelectedInspections = useCallback((inspectionIds: string[]) => {
     const inspectionsToDownload = savedInspections.filter(insp => inspectionIds.includes(insp.id));
     if (inspectionsToDownload.length > 0) {
       const fileName = initiateFileDownload(inspectionsToDownload, 'vistorias_selecionadas');
-      toast({ title: "Download Iniciado", description: `${inspectionsToDownload.length} vistoria(s) salvas em ${fileName}.`});
+      toast({ title: "Download Iniciado", description: `${inspectionsToDownload.length} vistoria(s) salvas em ${fileName} (incluindo fotos/observações salvas).`});
     } else {
       toast({ title: "Nenhuma Vistoria Selecionada", description: "Selecione vistorias para baixar.", variant: "default"});
     }
@@ -759,7 +727,7 @@ export default function FireCheckPage() {
       };
       const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
       const fileName = initiateFileDownload(inspectionToDownload, baseFileName);
-      toast({ title: "Download Iniciado", description: `Vistoria ${fileName} salva.`});
+      toast({ title: "Download Iniciado", description: `Vistoria ${fileName} salva (incluindo fotos/observações salvas).`});
     }
   }, [savedInspections, toast]);
 
@@ -826,22 +794,9 @@ export default function FireCheckPage() {
         let currentUpdated = 0;
         
         allInspectionsFromFiles.forEach(inspectionToImport => {
-          const inspectionForLocalStorage: FullInspectionData = {
-            ...inspectionToImport,
-            towers: (inspectionToImport.towers || []).map(tower => ({
-              ...tower,
-              floors: (tower.floors || []).map(floor => ({
-                ...floor,
-                categories: (floor.categories || []).map(category => ({
-                  ...category,
-                  subItems: category.subItems ? category.subItems.map(subItem => {
-                    const { photoDataUri, photoDescription, ...rest } = subItem;
-                    return rest;
-                  }) : undefined,
-                })),
-              })),
-            })),
-          };
+          // When importing, keep photos and observations if they exist in the JSON
+          // No need to strip them for inspectionForLocalStorage
+          const inspectionForLocalStorage: FullInspectionData = { ...inspectionToImport };
 
           const existingIndex = newOrUpdatedInspectionsList.findIndex(insp => insp.id === inspectionForLocalStorage.id && insp.id);
           if (existingIndex > -1) {
@@ -859,48 +814,52 @@ export default function FireCheckPage() {
     }
 
     if (firstInspectionToLoadToFormWithPhotos) {
+        // Pass the ID of the inspection that might have photos to handleLoadInspection
         handleLoadInspection(firstInspectionToLoadToFormWithPhotos.id); 
         
-        const inspectionForForm = allInspectionsFromFiles.find(i => i.id === firstInspectionToLoadToFormWithPhotos!.id);
+        // Additionally, ensure the active form reflects the photos from the specific imported file,
+        // as handleLoadInspection loads from the potentially stripped localStorage version
+        const inspectionForFormWithPhotos = allInspectionsFromFiles.find(i => i.id === firstInspectionToLoadToFormWithPhotos!.id);
 
-        if (inspectionForForm) {
+        if (inspectionForFormWithPhotos) {
             setClientInfo(prev => ({
                 ...prev, 
-                ...(inspectionForForm.clientInfo || {}) 
+                ...(inspectionForFormWithPhotos.clientInfo || {}) 
             }));
-            setUploadedLogoDataUrl(inspectionForForm.uploadedLogoDataUrl || null);
+            setUploadedLogoDataUrl(inspectionForFormWithPhotos.uploadedLogoDataUrl || null);
 
-            setActiveTowersData(prevActiveTowers => { 
-                return prevActiveTowers.map(activeTower => {
-                    const importedTower = inspectionForForm.towers.find(it => it.id === activeTower.id || (it.towerName === activeTower.towerName && activeTower.towerName !== '')); 
-                    if (!importedTower) return activeTower;
-                    return {
-                        ...activeTower,
-                        floors: activeTower.floors.map(activeFloor => {
-                            const importedFloor = importedTower.floors.find(ifl => ifl.id === activeFloor.id || (ifl.floor === activeFloor.floor && activeFloor.floor !== ''));
-                            if (!importedFloor) return activeFloor;
-                            return {
-                                ...activeFloor,
-                                categories: activeFloor.categories.map(activeCat => {
-                                    const importedCat = importedFloor.categories.find(icf => icf.id === activeCat.id);
-                                    if (!importedCat || !importedCat.subItems) return activeCat;
-                                    return {
-                                        ...activeCat,
-                                        subItems: activeCat.subItems?.map(activeSub => {
-                                            const importedSub = importedCat.subItems!.find(isb => isb.id === activeSub.id);
-                                            return {
-                                                ...activeSub,
-                                                photoDataUri: importedSub?.photoDataUri || activeSub.photoDataUri || null,
-                                                photoDescription: importedSub?.photoDescription || activeSub.photoDescription || '',
-                                            }
-                                        }) || []
-                                    }
-                                })
-                            }
-                        })
-                    }
-                })
-            });
+            // This part ensures that activeTowersData gets the photo data from the imported file,
+            // not just from what handleLoadInspection might have (which uses savedInspections state)
+             setActiveTowersData( (inspectionForFormWithPhotos.towers || []).map(tower => ({
+                ...tower,
+                id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
+                isTowerContentVisible: false, 
+                floors: (tower.floors || []).map(floor => ({
+                ...floor,
+                id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
+                isFloorContentVisible: false, 
+                categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ 
+                    id: cfg.id, title: cfg.title, type: cfg.type, isExpanded: false,
+                    ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({ 
+                        id: sCfg.id, name: sCfg.name, 
+                        isRegistry: sCfg.isRegistry || false, 
+                        photoDataUri: null, photoDescription: '', 
+                        ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }), 
+                        ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }) 
+                    })) || [] }),
+                    ...(cfg.type === 'special' && { status: undefined, observation: '', showObservation: false }),
+                    ...(cfg.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '', observation: '', showObservation: false }),
+                }))).map((cat: InspectionCategoryState) => ({
+                    ...cat, isExpanded: false,
+                    subItems: (cat.subItems || []).map(sub => ({ 
+                    ...sub, 
+                    id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`, 
+                    registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
+                    registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` }))
+                    }))
+                }))
+                }))
+            })) );
         }
     }
 
@@ -1088,7 +1047,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
-
-    
