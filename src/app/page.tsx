@@ -556,25 +556,13 @@ export default function FireCheckPage() {
       return;
     }
 
-    // Create a lightweight version for localStorage to avoid quota issues
-    const lightweightFloors = namedFloors.map(floor => ({
-      ...floor,
-      categories: floor.categories.map(category => ({
-        ...category,
-        subItems: category.subItems ? category.subItems.map(subItem => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { photoDataUri, photoDescription, ...restOfSubItem } = subItem;
-          return restOfSubItem;
-        }) : [],
-      })),
-    }));
-
+    // Now directly use namedFloors, which includes photo data
     const fullInspectionToSaveForLocalStorage: FullInspectionData = {
       id: clientInfo.inspectionNumber, 
       clientInfo: { ...clientInfo }, 
-      floors: lightweightFloors, // Use lightweight floors for localStorage
+      floors: namedFloors, 
       timestamp: Date.now(),
-      uploadedLogoDataUrl: uploadedLogoDataUrl // Logo is small, should be fine
+      uploadedLogoDataUrl: uploadedLogoDataUrl
     };
 
 
@@ -588,7 +576,7 @@ export default function FireCheckPage() {
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       if (!isAutoSave) { 
-        toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva no navegador (sem fotos na lista).` });
+        toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva no navegador.` });
       }
       return sortedList;
     });
@@ -628,8 +616,6 @@ export default function FireCheckPage() {
       }); 
       setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-      // When loading, photos will be missing from activeFloorsData because they were not stored in localStorage.
-      // The structure will be correct, just photoDataUri and photoDescription will be null/empty.
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
         ...floor,
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
@@ -644,8 +630,8 @@ export default function FireCheckPage() {
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
                 ? sub.id 
                 : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
-            photoDataUri: null, // Explicitly set to null as it's not in localStorage
-            photoDescription: '', // Explicitly set to empty
+            photoDataUri: sub.photoDataUri || null, // Load photo if present
+            photoDescription: sub.photoDescription || '', // Load photo desc if present
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
@@ -665,7 +651,7 @@ export default function FireCheckPage() {
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
       setIsChecklistVisible(false); 
-      toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada (fotos não são persistidas na lista salva).`});
+      toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada.`});
     }
   };
 
@@ -694,7 +680,6 @@ export default function FireCheckPage() {
   const handleDuplicateInspection = useCallback((originalInspectionId: string) => {
     const originalInspection = savedInspections.find(insp => insp.id === originalInspectionId);
     if (originalInspection) {
-      // Duplicate the lightweight version (without photos)
       const duplicatedInspection = JSON.parse(JSON.stringify(originalInspection)) as FullInspectionData;
       
       const newInspectionNumber = `${originalInspection.clientInfo.inspectionNumber}_CÓPIA_${Date.now().toString().slice(-5)}`;
@@ -704,7 +689,7 @@ export default function FireCheckPage() {
       duplicatedInspection.clientInfo.inspectedBy = ''; 
       duplicatedInspection.timestamp = Date.now();
 
-      // Ensure duplicated floors also have empty photo fields initially
+      // Ensure duplicated floors also have their photo fields correctly copied or reset if needed
       duplicatedInspection.floors = duplicatedInspection.floors.map(floor => ({
         ...floor,
         id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-floorcopy`,
@@ -717,8 +702,8 @@ export default function FireCheckPage() {
             id: sub.id.startsWith('custom-') || sub.isRegistry 
                 ? `${sub.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substring(2,9)}-copy` 
                 : sub.id,
-            photoDataUri: null, // Start fresh, no photo
-            photoDescription: '', // Start fresh
+            photoDataUri: sub.photoDataUri || null, // Copy photo if exists
+            photoDescription: sub.photoDescription || '', // Copy photo desc if exists
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-extcopy`
@@ -734,7 +719,7 @@ export default function FireCheckPage() {
       setSavedInspections(prevSaved => {
         return [duplicatedInspection, ...prevSaved].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
-      toast({ title: "Vistoria Duplicada", description: `Vistoria Nº ${newInspectionNumber} criada (sem fotos).`});
+      toast({ title: "Vistoria Duplicada", description: `Vistoria Nº ${newInspectionNumber} criada.`});
     }
   }, [savedInspections, setSavedInspections, toast]);
 
@@ -1250,3 +1235,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
