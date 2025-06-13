@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
-import { PREDEFINED_CLIENTS } from '@/constants/client.data'; // Importar clientes predefinidos
+// PREDEFINED_CLIENTS is no longer used for auto-filling clientCode in this version
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator'; 
@@ -50,16 +50,14 @@ const getCategoryOverallStatus = (category: InspectionCategoryState): CategoryOv
 };
 
 const calculateNextInspectionNumber = (
-  clientCode: string,
   clientLocation: string
 ): string => {
-  const trimmedClientCode = clientCode.trim();
   const trimmedClientLocation = clientLocation.trim();
 
-  if (!trimmedClientCode || !trimmedClientLocation) {
+  if (!trimmedClientLocation) {
     return '';
   }
-
+  // Simplified: Generate a random number, clientLocation is just a trigger
   const randomNumber = Math.floor(100000 + Math.random() * 900000);
   return randomNumber.toString();
 };
@@ -89,7 +87,7 @@ export default function FireCheckPage() {
 
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
-    clientCode: '',
+    clientCode: '', // Will remain mostly empty or managed internally
     inspectionNumber: '',
     inspectionDate: new Date().toISOString().split('T')[0],
     inspectedBy: '',
@@ -101,6 +99,7 @@ export default function FireCheckPage() {
   const initialSavedFullInspections = useMemo(() => [], []);
   const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v2', initialSavedFullInspections);
 
+  // savedLocations is not directly used by ClientDataForm for dropdowns anymore, but kept for potential future use (e.g., suggestions)
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
 
 
@@ -143,24 +142,16 @@ export default function FireCheckPage() {
       const newClientInfoState = { ...prevClientInfo, [field]: value };
       
       if (field === 'clientLocation') {
-        const matchedClient = PREDEFINED_CLIENTS.find(
-          client => client.name.trim().toLowerCase() === value.trim().toLowerCase()
-        );
-        if (matchedClient) {
-          newClientInfoState.clientCode = matchedClient.code || ''; 
-        }
-      }
+        // Remove PREDEFINED_CLIENTS logic for clientCode
+        // newClientInfoState.clientCode = ''; // Or handle as needed, but not from form
 
-      if (field === 'clientLocation' || field === 'clientCode') {
-        if (!newClientInfoState.inspectionNumber || 
-            (field === 'clientLocation' && prevClientInfo.clientLocation !== newClientInfoState.clientLocation) ||
-            (field === 'clientCode' && prevClientInfo.clientCode !== newClientInfoState.clientCode) ) {
+        if (!newClientInfoState.inspectionNumber || prevClientInfo.clientLocation !== newClientInfoState.clientLocation) {
              newClientInfoState.inspectionNumber = calculateNextInspectionNumber(
-                newClientInfoState.clientCode,
-                newClientInfoState.clientLocation 
+                newClientInfoState.clientLocation // Only pass clientLocation
              );
         }
 
+        // Logic to save unique typed locations (can be kept for suggestions or removed if not needed)
         if (value && field === 'clientLocation') {
             setSavedLocations(prevLocs => {
                 const lowerCaseValue = value.trim().toLowerCase();
@@ -172,6 +163,7 @@ export default function FireCheckPage() {
             });
         }
       }
+      // If other fields like inspectionDate change, inspectionNumber is not re-calculated unless clientLocation also changes.
       return newClientInfoState;
     });
   }, [setSavedLocations]);
@@ -434,7 +426,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = new Date().toISOString().split('T')[0];
     const defaultClientInfo: ClientInfo = {
       clientLocation: '',
-      clientCode: '',
+      clientCode: '', // Remains, but not directly editable in form
       inspectionNumber: '', 
       inspectionDate: defaultInspectionDate,
       inspectedBy: '',
@@ -470,8 +462,8 @@ export default function FireCheckPage() {
               copiedSubItem.status = undefined;
               copiedSubItem.observation = '';
               copiedSubItem.showObservation = false;
-              copiedSubItem.photoDataUri = null; // Reset photo for new floor
-              copiedSubItem.photoDescription = ''; // Reset photo description
+              copiedSubItem.photoDataUri = null; 
+              copiedSubItem.photoDescription = ''; 
               
               if (subItem.isRegistry) { 
                 if (subItem.id === 'extintor_cadastro') {
@@ -541,9 +533,10 @@ export default function FireCheckPage() {
 
 
   const handleSaveInspection = useCallback((isAutoSave = false) => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber || !clientInfo.inspectionDate) {
+    // ClientCode is no longer a primary check for saving, but location and number are.
+    if (!clientInfo.clientLocation || !clientInfo.inspectionNumber || !clientInfo.inspectionDate) {
       if (!isAutoSave) {
-        toast({ title: "Dados Incompletos", description: "CÓDIGO DO CLIENTE, LOCAL, NÚMERO e DATA DA VISTORIA são obrigatórios.", variant: "destructive" });
+        toast({ title: "Dados Incompletos", description: "LOCAL, NÚMERO e DATA DA VISTORIA são obrigatórios.", variant: "destructive" });
       }
       return;
     }
@@ -556,7 +549,7 @@ export default function FireCheckPage() {
       return;
     }
 
-    // Create a "lightweight" version for localStorage by removing photo data
+    // Logic to strip photos before saving to localStorage (re-enabled to prevent quota errors)
     const lightweightFloors = namedFloors.map(floor => ({
       ...floor,
       categories: floor.categories.map(category => ({
@@ -628,8 +621,6 @@ export default function FireCheckPage() {
       }); 
       setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-      // When loading from localStorage, photos are not present in `inspectionToLoad.floors`
-      // So we initialize photoDataUri and photoDescription to null/empty
       const sanitizedFloors = inspectionToLoad.floors.map(floor => ({
         ...floor,
         id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
@@ -644,8 +635,8 @@ export default function FireCheckPage() {
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
                 ? sub.id 
                 : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
-            photoDataUri: null, // Initialize as null when loading from saved list
-            photoDescription: '', // Initialize as empty
+            photoDataUri: null, // Photos are not in saved list
+            photoDescription: '', // Photos are not in saved list
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
@@ -694,7 +685,6 @@ export default function FireCheckPage() {
   const handleDuplicateInspection = useCallback((originalInspectionId: string) => {
     const originalInspection = savedInspections.find(insp => insp.id === originalInspectionId);
     if (originalInspection) {
-      // Duplicating from the potentially "lightweight" version in savedInspections
       const duplicatedInspection = JSON.parse(JSON.stringify(originalInspection)) as FullInspectionData;
       
       const newInspectionNumber = `${originalInspection.clientInfo.inspectionNumber}_CÓPIA_${Date.now().toString().slice(-5)}`;
@@ -704,7 +694,6 @@ export default function FireCheckPage() {
       duplicatedInspection.clientInfo.inspectedBy = ''; 
       duplicatedInspection.timestamp = Date.now();
 
-      // Ensure duplicated floors also initialize photo fields correctly (as empty)
       duplicatedInspection.floors = duplicatedInspection.floors.map(floor => ({
         ...floor,
         id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}-floorcopy`,
@@ -718,7 +707,7 @@ export default function FireCheckPage() {
                 ? `${sub.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substring(2,9)}-copy` 
                 : sub.id,
             photoDataUri: null, // Duplicated inspection starts without photos
-            photoDescription: '', // Duplicated inspection starts without photo descriptions
+            photoDescription: '', 
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
               id: `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-extcopy`
@@ -774,7 +763,7 @@ export default function FireCheckPage() {
 
 
   const handleGeneratePdf = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+    if (!clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
        toast({ title: "Dados Incompletos para PDF", description: "Preencha os dados do cliente para gerar o PDF.", variant: "destructive" });
       return;
     }
@@ -783,12 +772,11 @@ export default function FireCheckPage() {
        toast({ title: "Sem Andares Nomeados para PDF", description: "Nomeie pelo menos um andar para incluir no PDF.", variant: "destructive" });
       return;
     }
-    // activeFloorsData will contain photos if they were just taken for the current inspection
     generateInspectionPdf(clientInfo, floorsToPrint, uploadedLogoDataUrl);
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
 
   const handleGenerateRegisteredItemsReport = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+    if (!clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
        toast({ title: "Dados Incompletos para Relatório", description: "Preencha os dados do cliente para gerar o relatório.", variant: "destructive" });
       return;
     }
@@ -801,7 +789,7 @@ export default function FireCheckPage() {
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
 
   const handleGenerateNCItemsReport = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+    if (!clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
        toast({ title: "Dados Incompletos para Relatório N/C", description: "Preencha os dados do cliente para gerar o relatório.", variant: "destructive" });
       return;
     }
@@ -814,7 +802,7 @@ export default function FireCheckPage() {
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
 
   const handleGeneratePhotoReportPdf = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+    if (!clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
        toast({ title: "Dados Incompletos para Relatório de Fotos", description: "Preencha os dados do cliente para gerar o relatório.", variant: "destructive" });
       return;
     }
@@ -972,7 +960,7 @@ export default function FireCheckPage() {
   }, []);
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
-    if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionNumber || !clientInfo.inspectionDate) {
+    if (!clientInfo.clientLocation || !clientInfo.inspectionNumber || !clientInfo.inspectionDate) {
       toast({ title: "Dados Incompletos", description: "Preencha os dados do cliente para exportar.", variant: "destructive" });
       return;
     }
@@ -982,11 +970,10 @@ export default function FireCheckPage() {
       return;
     }
 
-    // Export activeFloorsData which WILL contain photos if present for the current inspection
     const inspectionToExport: FullInspectionData = {
       id: clientInfo.inspectionNumber,
       clientInfo: { ...clientInfo },
-      floors: namedFloorsFromActiveData, // activeFloorsData contains the photos
+      floors: namedFloorsFromActiveData, 
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl,
     };
@@ -1016,7 +1003,6 @@ export default function FireCheckPage() {
         setClientInfo(importedData.clientInfo);
         setUploadedLogoDataUrl(importedData.uploadedLogoDataUrl || null);
         
-        // Imported JSON might contain photos, so we load them as is into activeFloorsData
         const sanitizedFloors = importedData.floors.map(floor => ({
           ...floor,
           id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
@@ -1031,8 +1017,8 @@ export default function FireCheckPage() {
               id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
                   ? sub.id 
                   : sub.id.startsWith('custom-') ? sub.id : `imported-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
-              photoDataUri: sub.photoDataUri || null, // Load photo if present in JSON
-              photoDescription: sub.photoDescription || '', // Load photo desc if present
+              photoDataUri: sub.photoDataUri || null, 
+              photoDescription: sub.photoDescription || '', 
               registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
                 ...ext,
                 id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
@@ -1089,7 +1075,8 @@ export default function FireCheckPage() {
         <ClientDataForm
           clientInfoData={clientInfo}
           onClientInfoChange={handleClientInfoChange}
-          savedLocations={savedLocations}
+          // savedLocations is no longer directly used for a Select, but kept for now
+          savedLocations={savedLocations} 
         />
 
         <div className="my-6 p-4 bg-card shadow-lg rounded-lg">
@@ -1250,7 +1237,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
-
-      

@@ -3,30 +3,30 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Select component is no longer used for clientLocation
 import type { ClientInfo } from '@/lib/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { PREDEFINED_CLIENTS } from '@/constants/client.data';
+// PREDEFINED_CLIENTS is not used here for a Select anymore
+// import { PREDEFINED_CLIENTS } from '@/constants/client.data'; 
 
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
   onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
-  savedLocations: string[]; // This prop remains for now, though not directly used in the Select options
+  savedLocations: string[]; // Kept for potential future use with suggestions, not for Select
 }
 
 export function ClientDataForm({ 
   clientInfoData, 
   onClientInfoChange,
-  savedLocations, // Kept for potential future use or if other parts of the system rely on it
+  // savedLocations prop is kept but not directly used in this version of the form
 }: ClientDataFormProps) {
   const [isContentVisible, setIsContentVisible] = useState(false);
 
-  const allLocationSuggestions = React.useMemo(() => {
-    // Now only uses predefined clients for the Select options
-    const predefinedNames = PREDEFINED_CLIENTS.map(client => client.name);
-    return predefinedNames.sort((a, b) => a.localeCompare(b));
-  }, []); // PREDEFINED_CLIENTS is constant, so empty dependency array is fine
+  // allLocationSuggestions is no longer used for a Select component
+  // const allLocationSuggestions = React.useMemo(() => {
+  //   const predefinedNames = PREDEFINED_CLIENTS.map(client => client.name);
+  //   return predefinedNames.sort((a, b) => a.localeCompare(b));
+  // }, []);
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -54,24 +54,20 @@ export function ClientDataForm({
       {isContentVisible && (
         <CardContent id="client-data-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="clientLocationSelect">LOCAL (Nome do Cliente)</Label>
-              <Select
+            {/* Changed from Select to Input */}
+            <div className="md:col-span-2">
+              <Label htmlFor="clientLocationInput">LOCAL (Nome do Cliente)</Label>
+              <Input
+                id="clientLocationInput"
+                type="text"
                 value={clientInfoData.clientLocation}
-                onValueChange={(value) => onClientInfoChange('clientLocation', value)}
-              >
-                <SelectTrigger id="clientLocationSelect">
-                  <SelectValue placeholder="Selecione um local pré-cadastrado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allLocationSuggestions.map((loc) => (
-                    <SelectItem key={loc} value={loc}>
-                      {loc}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => onClientInfoChange('clientLocation', e.target.value)}
+                placeholder="Digite o nome do cliente/local"
+              />
             </div>
+
+            {/* Código do Cliente field removed from UI */}
+            {/* 
             <div>
               <Label htmlFor="clientCode">CÓDIGO DO CLIENTE</Label>
               <Input
@@ -88,6 +84,7 @@ export function ClientDataForm({
                 pattern="\d*" 
               />
             </div>
+            */}
             
             <div className="md:col-span-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -98,7 +95,7 @@ export function ClientDataForm({
                     value={clientInfoData.inspectionNumber}
                     readOnly
                     className="bg-muted cursor-not-allowed"
-                    placeholder="Preencha Cliente/Local"
+                    placeholder="Será gerado ao digitar o Local"
                   />
                 </div>
                 <div>
