@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Save, PlusSquare, ListChecks, CopyPlus, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText } from 'lucide-react';
+import { Save, PlusSquare, ListChecks, CopyPlus, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText, Image as ImageIcon } from 'lucide-react';
 
 interface ActionButtonsPanelProps {
   onSave: () => void;
@@ -23,6 +23,7 @@ interface ActionButtonsPanelProps {
   onGenerateRegisteredItemsReport: () => void;
   onGenerateNCItemsReport: () => void;
   onGeneratePdf: () => void;
+  onGeneratePhotoReportPdf: () => void; // New prop
 }
 
 export function ActionButtonsPanel({
@@ -37,6 +38,7 @@ export function ActionButtonsPanel({
   onGenerateRegisteredItemsReport,
   onGenerateNCItemsReport,
   onGeneratePdf,
+  onGeneratePhotoReportPdf, // New prop
 }: ActionButtonsPanelProps) {
   const [isActionsContentVisible, setIsActionsContentVisible] = useState(false);
 
@@ -132,6 +134,11 @@ export function ActionButtonsPanel({
                 <AlertTriangle className="mr-2 h-4 w-4" />
                 <span>Itens N/C</span>
               </DropdownMenuItem>
+               <DropdownMenuItem onClick={onGeneratePhotoReportPdf}>
+                <ImageIcon className="mr-2 h-4 w-4" />
+                <span>Somente Fotos</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onGeneratePdf}>
                 <FileText className="mr-2 h-4 w-4" />
                 <span>Relatório Completo</span>

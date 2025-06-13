@@ -88,6 +88,7 @@ const PDF_COMMON_STYLES = `
   .pdf-totals-summary .pdf-type-breakdown ul li { font-size: 6.5pt; }
 
   .pdf-photo-report-section { margin-top: 10px; page-break-before: always; }
+  .pdf-photo-report-section-standalone { margin-top: 10px; } /* For standalone photo report */
   .pdf-photo-items-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 5px; }
   .pdf-photo-item { border: 1px solid #E5E7EB; border-radius: 4px; padding: 8px; page-break-inside: avoid; background-color: #F9FAFB; display: flex; flex-direction: column; }
   .pdf-photo-item img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 3px; margin-bottom: 6px; border: 1px solid #DDD; background-color: #FFF; }
@@ -1012,6 +1013,139 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
         alert("Ocorreu um erro ao tentar imprimir o PDF. Verifique o console do navegador para mais detalhes.");
       }
     }, 750);
+  } else {
+    alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
+  }
+}
+
+
+export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
+  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
+    alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o relatório de fotos.");
+    return;
+  }
+  const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
+  if (relevantFloorsData.length === 0) {
+    alert("Nenhum andar com nome preenchido para incluir no relatório de fotos.");
+    return;
+  }
+
+  const defaultLogoUrl = '/brazil-extintores-logo.png';
+  const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
+  const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
+
+  const photosForReport: Array<{
+    floorName: string;
+    categoryTitle: string;
+    subItemName: string;
+    photoDataUri: string;
+    photoDescription: string;
+  }> = [];
+
+  relevantFloorsData.forEach(floor => {
+    floor.categories.forEach(category => {
+        if (category.type === 'standard' && category.subItems) {
+            category.subItems.forEach(subItem => {
+                if (!subItem.isRegistry && subItem.photoDataUri) {
+                    photosForReport.push({
+                        floorName: floor.floor,
+                        categoryTitle: category.title,
+                        subItemName: subItem.name,
+                        photoDataUri: subItem.photoDataUri,
+                        photoDescription: subItem.photoDescription || ''
+                    });
+                }
+            });
+        }
+    });
+  });
+
+  if (photosForReport.length === 0) {
+    alert("Nenhuma foto encontrada na vistoria para gerar o relatório de fotos.");
+    return;
+  }
+
+  let pdfHtml = `
+    <html>
+      <head>
+        <title>Relatório Fotográfico - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+        <style>
+          ${PDF_COMMON_STYLES}
+        </style>
+      </head>
+      <body>
+        <div class="pdf-container">
+          <header class="pdf-header-main">
+            <div class="pdf-header-content-wrapper">
+              <div class="pdf-logo-container">
+                <img src="${isDataUrl ? logoToUse : (typeof window !== 'undefined' ? window.location.origin + logoToUse : logoToUse) }" alt="Brazil Extintores Logo" />
+              </div>
+              <div class="pdf-company-info-container">
+                <div class="company-name">BRAZIL EXTINTORES - SP</div>
+                <div class="company-details">
+                  <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
+                  <p>OSORIO MACHADO DE PAIVA, 915</p>
+                  <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
+                  <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
+                  <p>Registro Inmetro N°: 001459/2018</p>
+                  <p>e-mail: comercial@brazilexintores.com.br</p>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <section class="pdf-client-info">
+            <h2 class="pdf-main-title">Relatório Fotográfico da Vistoria</h2>
+            <p class="pdf-subtitle">DADOS DO CLIENTE</p>
+            <div class="pdf-client-info-grid">
+              <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
+              <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
+              <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
+            </div>
+          </section>
+
+          <section class="pdf-photo-report-section-standalone">
+            <h3 class="pdf-section-title">Registro Fotográfico</h3>
+            <div class="pdf-photo-items-container">`;
+    photosForReport.forEach(photo => {
+      pdfHtml += `
+              <div class="pdf-photo-item">
+                <img src="${photo.photoDataUri}" alt="Foto da Vistoria - ${photo.subItemName.replace(/"/g, "&quot;")}" />
+                <p><strong>Andar:</strong> ${photo.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                <p><strong>Categoria:</strong> ${photo.categoryTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                <p><strong>Subitem:</strong> ${photo.subItemName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                <p class="photo-observation"><strong>Observação:</strong> ${photo.photoDescription ? photo.photoDescription.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'Nenhuma'}</p>
+              </div>`;
+    });
+    pdfHtml += `
+            </div>
+          </section>
+
+          <footer class="pdf-footer">
+            FireCheck Brazil &copy; ${new Date().getFullYear()} - BRAZIL EXTINTORES
+          </footer>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(pdfHtml);
+    printWindow.document.close();
+    setTimeout(() => {
+      try {
+         printWindow.focus(); 
+         printWindow.print();
+      } catch (e) {
+        console.error("Error during print:", e);
+        alert("Ocorreu um erro ao tentar imprimir o PDF de fotos. Verifique o console do navegador para mais detalhes.");
+      }
+    }, 750); 
   } else {
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
