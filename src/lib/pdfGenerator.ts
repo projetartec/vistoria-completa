@@ -179,13 +179,13 @@ const PDF_SPECIFIC_STYLES_VISTORIA = `
 
 
 export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
-  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
-    alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o PDF.");
-    return;
-  }
+  // Removed check: if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber)
+  
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-  if (relevantFloorsData.length === 0) {
-    alert("Nenhum andar com nome preenchido para incluir no PDF.");
+  if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
+    // If no named floors, but there is data in unnamed floors, use all floorsData
+  } else if (relevantFloorsData.length === 0) {
+    alert("Nenhum andar com nome preenchido ou itens de vistoria para incluir no PDF.");
     return;
   }
 
@@ -193,7 +193,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
   const isDataUrl = uploadedLogoDataUrl && uploadedLogoDataUrl.startsWith('data:image');
 
-  const processedFloorsData = relevantFloorsData.map(floor => {
+  const processedFloorsData = (relevantFloorsData.length > 0 ? relevantFloorsData : floorsData).map(floor => {
     let floorHasPressureSPK = false;
     let floorPressureSPKValue = '';
     let floorPressureSPKUnit = '';
@@ -295,7 +295,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
             category.subItems.forEach(subItem => {
                 if (!subItem.isRegistry && subItem.photoDataUri) {
                     photosForReport.push({
-                        floorName: floor.floor,
+                        floorName: floor.floor || 'Andar Não Especificado',
                         categoryTitle: category.title,
                         subItemName: subItem.name,
                         photoDataUri: subItem.photoDataUri,
@@ -311,7 +311,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
   let pdfHtml = `
     <html>
       <head>
-        <title>Relatório Vistoria Técnica - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+        <title>Relatório Vistoria Técnica - ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</title>
         <style>
           ${PDF_COMMON_STYLES}
           ${PDF_SPECIFIC_STYLES_VISTORIA}
@@ -343,11 +343,11 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
               <h2 class="pdf-main-title">Relatório de Vistoria Técnica</h2>
               <p class="pdf-subtitle">DADOS DO CLIENTE</p>
               <div class="pdf-client-info-grid">
-                <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
                 <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
-                <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-                <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-                ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
+                <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation ? clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+                <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode ? clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+                ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '<div><strong>Vistoriado por:</strong> N/A</div>'}
                 <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
               </div>
             </section>
@@ -466,7 +466,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     });
     if (floorHasNCItemsForReport) {
         pdfHtml += `<div class="pdf-floor-section page-break-avoid">
-                        <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                        <h3 class="pdf-floor-title">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
                         ${floorNCItemsContent}
                     </div>`;
     }
@@ -491,7 +491,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
     processedFloorsData.forEach((floor) => {
       if (floor.floorHasPressureSPK || floor.floorHasPressureHidrante) {
         pdfHtml += `<div class="pdf-floor-section">
-                      <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                      <h3 class="pdf-floor-title">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
                       <div class="pdf-category-card">
                         <div class="pdf-category-content">`;
         if (floor.floorHasPressureSPK) {
@@ -530,7 +530,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
         processedFloorsData.forEach((floor) => {
             if (floor.floorRegisteredExtinguishers.length > 0 || floor.floorRegisteredHoses.length > 0) {
             pdfHtml += `<div class="pdf-floor-section">
-                            <h3 class="pdf-floor-title">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                            <h3 class="pdf-floor-title">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
                             <div class="pdf-registered-items-section">`;
             
             if (floor.floorRegisteredExtinguishers.length > 0) {
@@ -655,15 +655,16 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 }
 
 export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
-  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
-    alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o relatório.");
-    return;
-  }
+  // Removed check: if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber)
+
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-  if (relevantFloorsData.length === 0) {
-    alert("Nenhum andar com nome preenchido para incluir no relatório.");
+  if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
+    // Use all floorsData if no named floors but data exists
+  } else if (relevantFloorsData.length === 0) {
+    alert("Nenhum andar com nome preenchido ou itens cadastrados para incluir no relatório.");
     return;
   }
+
 
   const defaultLogoUrl = '/brazil-extintores-logo.png';
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
@@ -682,7 +683,7 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
   let grandTotalHosesCount = 0;
   const hoseCombinationTotals: { [key: string]: { quantity: number; length: HoseLengthOption; diameter: HoseDiameterOption; type: HoseTypeOption } } = {};
 
-  const processedFloorsForReport = relevantFloorsData.map(floor => {
+  const processedFloorsForReport = (relevantFloorsData.length > 0 ? relevantFloorsData : floorsData).map(floor => {
     const floorExtinguishers: RegisteredExtinguisher[] = [];
     const floorHoses: RegisteredHose[] = [];
 
@@ -716,7 +717,7 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
       }
     });
     return {
-      floorName: floor.floor,
+      floorName: floor.floor || 'Andar Não Especificado',
       extinguishers: floorExtinguishers,
       hoses: floorHoses,
     };
@@ -725,7 +726,7 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
   let pdfHtml = `
     <html>
       <head>
-        <title>Relatório de Itens Cadastrados - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+        <title>Relatório de Itens Cadastrados - ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</title>
         <style>
           ${PDF_COMMON_STYLES}
         </style>
@@ -756,11 +757,11 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
               <h2 class="pdf-main-title">Relatório de Itens Cadastrados</h2>
               <p class="pdf-subtitle">DADOS DA VISTORIA</p>
               <div class="pdf-client-info-grid">
-                <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
                 <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
-                <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-                <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-                ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
+                <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation ? clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+                <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode ? clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+                ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '<div><strong>Vistoriado por:</strong> N/A</div>'}
                 <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
               </div>
             </section>
@@ -876,13 +877,13 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
 }
 
 export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
-  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
-    alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o relatório N/C.");
-    return;
-  }
+  // Removed check: if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber)
+  
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-  if (relevantFloorsData.length === 0) {
-    alert("Nenhum andar com nome preenchido para incluir no relatório N/C.");
+   if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
+    // Use all floorsData if no named floors but data exists
+  } else if (relevantFloorsData.length === 0) {
+    alert("Nenhum andar com nome preenchido ou itens para incluir no relatório N/C.");
     return;
   }
 
@@ -895,7 +896,7 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
   let pdfHtml = `
     <html>
       <head>
-        <title>Relatório de Itens N/C - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+        <title>Relatório de Itens N/C - ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</title>
         <style>
           ${PDF_COMMON_STYLES}
           ${PDF_SPECIFIC_STYLES_VISTORIA} 
@@ -930,11 +931,11 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
             <h2 class="pdf-main-title">Relatório de Itens Não Conformes (N/C)</h2>
             <p class="pdf-subtitle">DADOS DA VISTORIA</p>
             <div class="pdf-client-info-grid">
-              <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
               <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
-              <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-              <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-              ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
+              <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation ? clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+              <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode ? clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+              ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '<div><strong>Vistoriado por:</strong> N/A</div>'}
               <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
             </div>
           </section>
@@ -942,7 +943,7 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
           <section class="pdf-nc-items-section page-break-avoid">
             <h3 class="pdf-section-title">Detalhes dos Itens Marcados como "Não Conforme"</h3>`;
 
-  relevantFloorsData.forEach(floor => {
+  (relevantFloorsData.length > 0 ? relevantFloorsData : floorsData).forEach(floor => {
     let floorHasNCItems = false;
     let floorNCItemsHtml = '';
 
@@ -981,7 +982,7 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
 
     if (floorHasNCItems) {
       pdfHtml += `<div class="pdf-floor-section page-break-avoid" style="margin-bottom: 6px;">
-                    <h3 class="pdf-floor-title" style="font-size: 10.5pt; margin-bottom: 3px;">${floor.floor.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+                    <h3 class="pdf-floor-title" style="font-size: 10.5pt; margin-bottom: 3px;">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
                     ${floorNCItemsHtml}
                   </div>`;
     }
@@ -1020,13 +1021,13 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
 
 
 export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
-  if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) {
-    alert("CÓDIGO DO CLIENTE, LOCAL, NÚMERO DA VISTORIA e DATA DA VISTORIA são obrigatórios para gerar o relatório de fotos.");
-    return;
-  }
+  // Removed check: if (!clientInfo.clientCode || !clientInfo.clientLocation || !clientInfo.inspectionDate || !clientInfo.inspectionNumber) 
+
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-  if (relevantFloorsData.length === 0) {
-    alert("Nenhum andar com nome preenchido para incluir no relatório de fotos.");
+  if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
+    // Use all floorsData if no named floors but data exists
+  } else if (relevantFloorsData.length === 0) {
+    alert("Nenhum andar com nome preenchido ou fotos para incluir no relatório.");
     return;
   }
 
@@ -1042,13 +1043,13 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: Inspe
     photoDescription: string;
   }> = [];
 
-  relevantFloorsData.forEach(floor => {
+  (relevantFloorsData.length > 0 ? relevantFloorsData : floorsData).forEach(floor => {
     floor.categories.forEach(category => {
         if (category.type === 'standard' && category.subItems) {
             category.subItems.forEach(subItem => {
                 if (!subItem.isRegistry && subItem.photoDataUri) {
                     photosForReport.push({
-                        floorName: floor.floor,
+                        floorName: floor.floor || 'Andar Não Especificado',
                         categoryTitle: category.title,
                         subItemName: subItem.name,
                         photoDataUri: subItem.photoDataUri,
@@ -1068,7 +1069,7 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: Inspe
   let pdfHtml = `
     <html>
       <head>
-        <title>Relatório Fotográfico - ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+        <title>Relatório Fotográfico - ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</title>
         <style>
           ${PDF_COMMON_STYLES}
         </style>
@@ -1098,11 +1099,11 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: Inspe
             <h2 class="pdf-main-title">Relatório Fotográfico da Vistoria</h2>
             <p class="pdf-subtitle">DADOS DO CLIENTE</p>
             <div class="pdf-client-info-grid">
-              <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+              <div><strong>Número da Vistoria:</strong> ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
               <div><strong>Data da Vistoria:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
-              <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-              <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-              ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : ''}
+              <div style="grid-column: 1 / -1;"><strong>Local (Cliente):</strong> ${clientInfo.clientLocation ? clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+              <div><strong>Código do Cliente:</strong> ${clientInfo.clientCode ? clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</div>
+              ${clientInfo.inspectedBy ? `<div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '<div><strong>Vistoriado por:</strong> N/A</div>'}
               <div><strong>Relatório gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
             </div>
           </section>
@@ -1150,3 +1151,4 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: Inspe
     alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
