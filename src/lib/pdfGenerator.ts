@@ -195,15 +195,6 @@ const PDF_SPECIFIC_STYLES_VISTORIA = `
 export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
   
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-  if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
-    // If no named floors, but there is data in unnamed floors, use all floorsData
-  } else if (relevantFloorsData.length === 0) {
-    // No named floors and no general data, so nothing to print.
-    // Alert was removed based on previous request to allow PDF generation without client data,
-    // but if there's literally NO floor data, it makes sense to inform the user.
-    // However, for consistency with "allow generating without data", this specific alert might be too restrictive.
-    // For now, let it proceed; it will result in an almost empty PDF if floorsData is truly empty.
-  }
 
   const defaultLogoUrl = '/brazil-extintores-logo.png';
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
@@ -754,13 +745,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, floorsData: Inspec
 export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
 
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-  if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
-    // Use all floorsData if no named floors but data exists
-  } else if (relevantFloorsData.length === 0) {
-    // alert("Nenhum andar com nome preenchido ou itens cadastrados para incluir no relatório.");
-    // return;
-  }
-
 
   const defaultLogoUrl = '/brazil-extintores-logo.png';
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
@@ -975,12 +959,6 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, floorsData: I
 export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
   
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-   if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
-    // Use all floorsData if no named floors but data exists
-  } else if (relevantFloorsData.length === 0) {
-    // alert("Nenhum andar com nome preenchido ou itens para incluir no relatório N/C.");
-    // return;
-  }
 
   const defaultLogoUrl = '/brazil-extintores-logo.png';
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
@@ -994,11 +972,55 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
         <title>Relatório de Itens N/C - ${clientInfo.inspectionNumber ? clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/A'}</title>
         <style>
           ${PDF_COMMON_STYLES}
-          ${PDF_SPECIFIC_STYLES_VISTORIA} 
-          .pdf-nc-item-category { font-weight: bold; margin-top: 5px; margin-bottom: 1px; font-size: 8.5pt; color: #111827 !important; page-break-after: avoid;}
-          .pdf-nc-item-name { margin-left: 6px; font-size: 8pt; color: #1F2937 !important;}
-          .pdf-nc-observation { margin-left: 6px; margin-top: 0.3px; padding: 2.5px 4px; background-color: #FEF2F2 !important; border-left: 1.5px solid #F87171 !important; font-size: 7.5pt; color: #7F1D1D !important; white-space: pre-wrap;}
-          .pdf-nc-pressure-details { margin-left: 6px; font-size: 7.5pt;}
+          /* PDF_SPECIFIC_STYLES_VISTORIA is not needed here for N/C specific report layout */
+          .pdf-nc-item-category { 
+            font-weight: bold; 
+            margin-top: 6px; /* Increased top margin for better separation */
+            margin-bottom: 2px; /* Increased bottom margin */
+            font-size: 9pt; /* Slightly larger font */
+            color: #111827 !important; 
+            page-break-after: avoid;
+            padding-left: 2px; /* Indent category title slightly */
+          }
+          .pdf-nc-item-name { 
+            margin-left: 10px; /* Increased left margin for sub-items */
+            font-size: 8pt; 
+            color: #1F2937 !important;
+            margin-bottom: 1px; /* Space below item name */
+          }
+          .pdf-nc-observation { 
+            margin-left: 10px; /* Match item name indent */
+            margin-top: 0.5px; 
+            margin-bottom: 3px; /* Space after observation */
+            padding: 3px 5px; /* Increased padding */
+            background-color: #FEF2F2 !important; 
+            border-left: 2px solid #F87171 !important; /* Thicker border */
+            font-size: 7.5pt; 
+            color: #7F1D1D !important; 
+            white-space: pre-wrap;
+            word-wrap: break-word; /* Ensure long words break */
+          }
+          .pdf-nc-pressure-details { 
+            margin-left: 10px; /* Match item name indent */
+            font-size: 8pt; /* Match item name font size */
+            margin-bottom: 1px;
+          }
+          .pdf-nc-items-section {
+             column-count: 2; /* Apply two-column layout */
+             column-gap: 20px;
+             margin-top: 5px;
+          }
+          .pdf-nc-items-section .pdf-floor-section {
+             break-inside: avoid-column; /* Prevent floors from breaking across columns */
+             page-break-inside: avoid; /* Prevent floors from breaking across pages if possible */
+             margin-bottom: 10px; /* Space between floor sections */
+          }
+           .pdf-floor-title {
+             font-size: 10.5pt !important; /* Ensure consistent floor title size */
+             margin-bottom: 4px !important; /* Space after floor title */
+             column-span: all; /* Make floor title span both columns */
+             -webkit-column-span: all;
+           }
         </style>
       </head>
       <body>
@@ -1035,56 +1057,64 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
             </div>
           </section>
 
-          <section class="pdf-nc-items-section page-break-avoid">
-            <h3 class="pdf-section-title">Detalhes dos Itens Marcados como "Não Conforme"</h3>`;
+          <section class="pdf-nc-items-section">
+            <h3 class="pdf-section-title" style="column-span:all; -webkit-column-span:all;">Detalhes dos Itens Marcados como "Não Conforme"</h3>`;
 
   (relevantFloorsData.length > 0 ? relevantFloorsData : floorsData).forEach(floor => {
     let floorHasNCItems = false;
     let floorNCItemsHtml = '';
 
-    floor.categories.forEach(category => {
+    // Iterate through INSPECTION_CONFIG to maintain order
+    INSPECTION_CONFIG.forEach(configCategory => {
+      const category = floor.categories.find(cat => cat.id === configCategory.id);
+      if (!category) return;
+
       let categoryHasNCItems = false;
-      let categoryNCItemsHtml = '';
+      let categoryNCItemsHtmlContent = '';
 
       if (category.type === 'standard' && category.subItems) {
-        category.subItems.forEach(subItem => {
-          if (!subItem.isRegistry && subItem.status === 'N/C') {
-            floorHasNCItems = true;
-            categoryHasNCItems = true;
-            ncItemsFoundOverall = true;
-            categoryNCItemsHtml += `<div class="pdf-nc-item-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
-            if (subItem.showObservation && subItem.observation) {
-              categoryNCItemsHtml += `<div class="pdf-nc-observation">${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+        // Iterate through subItems from INSPECTION_CONFIG to maintain order
+        configCategory.subItems?.forEach(configSubItem => {
+            if (configSubItem.isRegistry) return; // Skip registry items
+
+            const subItem = category.subItems?.find(si => si.id === configSubItem.id);
+            if (subItem && subItem.status === 'N/C') {
+                floorHasNCItems = true;
+                categoryHasNCItems = true;
+                ncItemsFoundOverall = true;
+                categoryNCItemsHtmlContent += `<div class="pdf-nc-item-name">${subItem.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+                if (subItem.showObservation && subItem.observation) {
+                categoryNCItemsHtmlContent += `<div class="pdf-nc-observation">${subItem.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+                }
             }
-          }
         });
       } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
         floorHasNCItems = true;
         categoryHasNCItems = true;
         ncItemsFoundOverall = true;
         if (category.type === 'pressure') {
-          categoryNCItemsHtml += `<div class="pdf-nc-pressure-details">Pressão: ${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</div>`;
+          categoryNCItemsHtmlContent += `<div class="pdf-nc-pressure-details">Pressão: ${category.pressureValue ? category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'N/P'} ${category.pressureUnit || ''}</div>`;
         }
         if (category.showObservation && category.observation) {
-          categoryNCItemsHtml += `<div class="pdf-nc-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+          categoryNCItemsHtmlContent += `<div class="pdf-nc-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
         }
       }
 
       if (categoryHasNCItems) {
-        floorNCItemsHtml += `<div class="pdf-nc-item-category">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${categoryNCItemsHtml}`;
+        floorNCItemsHtml += `<div class="pdf-nc-item-category">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${categoryNCItemsHtmlContent}`;
       }
     });
 
     if (floorHasNCItems) {
-      pdfHtml += `<div class="pdf-floor-section page-break-avoid" style="margin-bottom: 6px;">
-                    <h3 class="pdf-floor-title" style="font-size: 10.5pt; margin-bottom: 3px;">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
+      pdfHtml += `<div class="pdf-floor-section">
+                    <h3 class="pdf-floor-title">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>
                     ${floorNCItemsHtml}
                   </div>`;
     }
   });
 
   if (!ncItemsFoundOverall) {
-    pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhum item "Não Conforme" (N/C) encontrado nesta vistoria.</p>`;
+    pdfHtml += `<p class="pdf-no-items" style="text-align: center; padding: 12px; column-span:all; -webkit-column-span:all;">Nenhum item "Não Conforme" (N/C) encontrado nesta vistoria.</p>`;
   }
 
   pdfHtml += `  </section>
@@ -1118,12 +1148,6 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, floorsData: Inspectio
 export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: InspectionData[], uploadedLogoDataUrl?: string | null): void {
 
   const relevantFloorsData = floorsData.filter(floor => floor && floor.floor && floor.floor.trim() !== "");
-  if (relevantFloorsData.length === 0 && floorsData.length > 0 && floorsData.some(f => f.categories.length > 0)) {
-    // Use all floorsData if no named floors but data exists
-  } else if (relevantFloorsData.length === 0) {
-    // alert("Nenhum andar com nome preenchido ou fotos para incluir no relatório.");
-    // return;
-  }
 
   const defaultLogoUrl = '/brazil-extintores-logo.png';
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
@@ -1154,11 +1178,6 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: Inspe
         }
     });
   });
-
-  if (photosForReport.length === 0) {
-    // alert("Nenhuma foto encontrada na vistoria para gerar o relatório de fotos.");
-    // return; // Allow empty photo report to be generated if user insists
-  }
 
   let pdfHtml = `
     <html>
@@ -1249,3 +1268,4 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, floorsData: Inspe
     // alert("Não foi possível abrir a janela de impressão. Verifique se o seu navegador está bloqueando pop-ups.");
   }
 }
+
