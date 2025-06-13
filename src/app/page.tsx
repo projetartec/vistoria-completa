@@ -118,8 +118,8 @@ export default function FireCheckPage() {
         setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
       }
     }
-    setIsClientInitialized(true); 
-  }, []); 
+    setIsClientInitialized(true);
+  }, []);
 
 
   const handleLogoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,169 +182,195 @@ export default function FireCheckPage() {
         return prevTowers.map((currentTower, tIndex) => {
             if (tIndex !== towerIndex) return currentTower;
 
-            let floorOverallStateChanged = false; 
+            let floorOverallStateChanged = false;
             const updatedFloors = currentTower.floors.map((currentFloorData, fIndex) => {
                 if (fIndex !== floorIndex) return currentFloorData;
-                
+
                 let autoCollapsedCategoryIdHolder: { id: string | null } = { id: null };
+                let newCategoriesForFloor = [...currentFloorData.categories]; // Start with a new array for categories
+                let categoryModifiedIndex = -1;
 
-                const newCategoriesForFloor = currentFloorData.categories.map(originalCategory => {
-                    if (originalCategory.id !== categoryId) return originalCategory;
+                const originalCategory = currentFloorData.categories.find((cat, idx) => {
+                    if (cat.id === categoryId) {
+                        categoryModifiedIndex = idx;
+                        return true;
+                    }
+                    return false;
+                });
 
-                    let mutatedCategory = { ...originalCategory }; 
-                    let actualModificationsMadeToCategory = false;
-                    let categoryStructurallyModifiedForAutoCollapse = false; 
+                if (!originalCategory) return currentFloorData; // Should not happen if categoryId is valid
 
-                    const isExpansionChange = update.field === 'isExpanded';
+                let mutatedCategory = { ...originalCategory }; // New object for the category being mutated
+                let actualModificationsMadeToCategory = false;
+                let categoryStructurallyModifiedForAutoCollapse = false;
+                const isExpansionChange = update.field === 'isExpanded';
 
-                    switch (update.field) {
-                        case 'isExpanded':
-                            if (mutatedCategory.isExpanded !== update.value) { 
-                                mutatedCategory.isExpanded = update.value as boolean; 
-                                actualModificationsMadeToCategory = true;
-                            }
-                            break;
-                        case 'status':
-                            if (mutatedCategory.status !== update.value) { 
-                                mutatedCategory.status = update.value as StatusOption | undefined; 
-                                actualModificationsMadeToCategory = true;
-                                if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                            }
-                            break;
-                        case 'subItemStatus':
-                        case 'subItemObservation':
-                        case 'subItemShowObservation':
-                        case 'renameSubItemName':
-                        case 'subItemPhotoDataUri':
-                        case 'subItemPhotoDescription':
-                        case 'removeSubItemPhoto':
-                            if (mutatedCategory.subItems && update.subItemId) {
-                                const oldSubItemsRef = mutatedCategory.subItems;
-                                mutatedCategory.subItems = mutatedCategory.subItems.map(sub => {
-                                    if (sub.id !== update.subItemId) return sub;
-                                    let newSubState = { ...sub };
-                                    let subItemChanged = false;
-                                    if (update.field === 'subItemStatus' && newSubState.status !== (update.value as StatusOption | undefined)) { newSubState.status = update.value as StatusOption | undefined; subItemChanged = true; }
-                                    else if (update.field === 'subItemObservation' && newSubState.observation !== (update.value as string)) { newSubState.observation = update.value as string; subItemChanged = true; }
-                                    else if (update.field === 'subItemShowObservation' && newSubState.showObservation !== (update.value as boolean)) { newSubState.showObservation = update.value as boolean; subItemChanged = true; }
-                                    else if (update.field === 'renameSubItemName' && newSubState.name !== update.newName) { newSubState.name = update.newName; subItemChanged = true; }
-                                    else if (update.field === 'subItemPhotoDataUri' && newSubState.photoDataUri !== (update.value as string | null)) { newSubState.photoDataUri = update.value as string | null; if (!update.value) newSubState.photoDescription = ''; subItemChanged = true; }
-                                    else if (update.field === 'subItemPhotoDescription' && newSubState.photoDescription !== (update.value as string)) { newSubState.photoDescription = update.value as string; subItemChanged = true; }
-                                    else if (update.field === 'removeSubItemPhoto') { newSubState.photoDataUri = null; newSubState.photoDescription = ''; subItemChanged = true; }
-                                    
-                                    if (subItemChanged) {
-                                        actualModificationsMadeToCategory = true;
-                                        if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                                    }
-                                    return subItemChanged ? newSubState : sub;
-                                });
-                                if (!actualModificationsMadeToCategory && mutatedCategory.subItems.some((sub, i) => sub !== oldSubItemsRef[i])) {
-                                   actualModificationsMadeToCategory = true;
-                                   if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                                } else if (actualModificationsMadeToCategory && mutatedCategory.subItems === oldSubItemsRef) {
-                                   // if a subitem changed but map returned same array ref, force new array
-                                   mutatedCategory.subItems = [...mutatedCategory.subItems];
-                                }
-                            }
-                            break;
-                        case 'removeSubItem':
-                             if (mutatedCategory.subItems && update.subItemId) {
-                                const initialCount = mutatedCategory.subItems.length;
-                                mutatedCategory.subItems = mutatedCategory.subItems.filter(sub => sub.id !== update.subItemId);
-                                if (mutatedCategory.subItems.length < initialCount) {
+                switch (update.field) {
+                    case 'isExpanded':
+                        if (mutatedCategory.isExpanded !== update.value) {
+                            mutatedCategory.isExpanded = update.value as boolean;
+                            actualModificationsMadeToCategory = true;
+                        }
+                        break;
+                    case 'status':
+                        if (mutatedCategory.status !== update.value) {
+                            mutatedCategory.status = update.value as StatusOption | undefined;
+                            actualModificationsMadeToCategory = true;
+                            if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                        }
+                        break;
+                    case 'subItemStatus':
+                    case 'subItemObservation':
+                    case 'subItemShowObservation':
+                    case 'renameSubItemName':
+                    case 'subItemPhotoDataUri':
+                    case 'subItemPhotoDescription':
+                    case 'removeSubItemPhoto':
+                        if (mutatedCategory.subItems && update.subItemId) {
+                            const oldSubItemsRef = mutatedCategory.subItems;
+                            mutatedCategory.subItems = mutatedCategory.subItems.map(sub => {
+                                if (sub.id !== update.subItemId) return sub;
+                                let newSubState = { ...sub }; // New object for the sub-item being mutated
+                                let subItemChanged = false;
+                                if (update.field === 'subItemStatus' && newSubState.status !== (update.value as StatusOption | undefined)) { newSubState.status = update.value as StatusOption | undefined; subItemChanged = true; }
+                                else if (update.field === 'subItemObservation' && newSubState.observation !== (update.value as string)) { newSubState.observation = update.value as string; subItemChanged = true; }
+                                else if (update.field === 'subItemShowObservation' && newSubState.showObservation !== (update.value as boolean)) { newSubState.showObservation = update.value as boolean; subItemChanged = true; }
+                                else if (update.field === 'renameSubItemName' && newSubState.name !== update.newName) { newSubState.name = update.newName; subItemChanged = true; }
+                                else if (update.field === 'subItemPhotoDataUri' && newSubState.photoDataUri !== (update.value as string | null)) { newSubState.photoDataUri = update.value as string | null; if (!update.value) newSubState.photoDescription = ''; subItemChanged = true; }
+                                else if (update.field === 'subItemPhotoDescription' && newSubState.photoDescription !== (update.value as string)) { newSubState.photoDescription = update.value as string; subItemChanged = true; }
+                                else if (update.field === 'removeSubItemPhoto') { newSubState.photoDataUri = null; newSubState.photoDescription = ''; subItemChanged = true; }
+
+                                if (subItemChanged) {
                                     actualModificationsMadeToCategory = true;
                                     if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                                 }
+                                return subItemChanged ? newSubState : sub;
+                            });
+                            // Ensure subItems array itself is new if content changed
+                            if (actualModificationsMadeToCategory && mutatedCategory.subItems.some((sub, i) => sub !== oldSubItemsRef[i])) {
+                                mutatedCategory.subItems = [...mutatedCategory.subItems];
+                            } else if (actualModificationsMadeToCategory && mutatedCategory.subItems === oldSubItemsRef) {
+                                // If a subitem changed but map returned same array ref (e.g., one item changed), force new array
+                                mutatedCategory.subItems = [...mutatedCategory.subItems];
                             }
-                            break;
-                        default: 
-                            if (update.field === 'observation' && mutatedCategory.observation !== update.value) { mutatedCategory.observation = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
-                            else if (update.field === 'showObservation' && mutatedCategory.showObservation !== update.value) { mutatedCategory.showObservation = update.value as boolean; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
-                            else if (update.field === 'pressureValue' && mutatedCategory.pressureValue !== update.value) { mutatedCategory.pressureValue = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
-                            else if (update.field === 'pressureUnit' && mutatedCategory.pressureUnit !== update.value) { mutatedCategory.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
-                            else if (update.field === 'renameCategoryTitle' && mutatedCategory.title !== update.newTitle) { mutatedCategory.title = update.newTitle as string; actualModificationsMadeToCategory = true; }
-                            else if (update.field === 'addRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.value) {
-                                const newExt: RegisteredExtinguisher = { ...(update.value as Omit<RegisteredExtinguisher, 'id'>), id: `ext-${generateUniqueId()}` };
-                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => 
-                                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: [...(sub.registeredExtinguishers || []), newExt] } : sub
-                                );
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                            }
-                            else if (update.field === 'removeRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.extinguisherId) {
-                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => 
-                                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: (sub.registeredExtinguishers || []).filter(ext => ext.id !== update.extinguisherId) } : sub
-                                );
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                            }
-                            else if (update.field === 'addRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.value) {
-                                const newHose: RegisteredHose = { ...(update.value as Omit<RegisteredHose, 'id'>), id: `hose-${generateUniqueId()}` };
-                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
-                                    sub.id === update.subItemId ? { ...sub, registeredHoses: [...(sub.registeredHoses || []), newHose] } : sub
-                                );
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                            }
-                            else if (update.field === 'removeRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.hoseId) {
-                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
-                                    sub.id === update.subItemId ? { ...sub, registeredHoses: (sub.registeredHoses || []).filter(h => h.id !== update.hoseId) } : sub
-                                );
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                            }
-                            else if (update.field === 'markAllSubItemsNA' && mutatedCategory.subItems && mutatedCategory.type === 'standard') {
-                                mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => 
-                                    !sub.isRegistry ? { ...sub, status: 'N/A' as StatusOption } : sub
-                                );
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                            }
-                            else if (update.field === 'addSubItem' && mutatedCategory.type === 'standard' && typeof update.value === 'string' && (update.value as string).trim() !== '') {
-                                const newId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-                                const newSub: SubItemState = { id: newId, name: (update.value as string).trim(), status: undefined, observation: '', showObservation: false, isRegistry: false, photoDataUri: null, photoDescription: '' };
-                                mutatedCategory.subItems = [...(mutatedCategory.subItems || []), newSub];
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
-                            }
-                            break;
-                    }
-                    
-                    if (!isExpansionChange && categoryStructurallyModifiedForAutoCollapse) {
-                        let shouldAutoCollapse = false;
-                        if (mutatedCategory.type === 'standard' && mutatedCategory.subItems) {
-                            const relevantSubItems = mutatedCategory.subItems.filter(sub => !sub.isRegistry);
-                            if (relevantSubItems.length > 0 && relevantSubItems.every(sub => sub.status !== undefined)) { shouldAutoCollapse = true; }
-                            else if (relevantSubItems.length === 0 && originalCategory.subItems?.filter(s=>!s.isRegistry).length ?? 0 > 0) {shouldAutoCollapse = true;}
-                        } else if (mutatedCategory.type === 'special' || mutatedCategory.type === 'pressure') {
-                            if (mutatedCategory.status !== undefined) shouldAutoCollapse = true;
                         }
-                        if (shouldAutoCollapse && mutatedCategory.isExpanded) { 
-                            mutatedCategory.isExpanded = false; 
-                            autoCollapsedCategoryIdHolder.id = originalCategory.id; 
-                            actualModificationsMadeToCategory = true; 
+                        break;
+                    case 'removeSubItem':
+                         if (mutatedCategory.subItems && update.subItemId) {
+                            const initialCount = mutatedCategory.subItems.length;
+                            const newSubItemsArray = mutatedCategory.subItems.filter(sub => sub.id !== update.subItemId);
+                            if (newSubItemsArray.length < initialCount) {
+                                mutatedCategory.subItems = newSubItemsArray; // Assign new filtered array
+                                actualModificationsMadeToCategory = true;
+                                if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
                         }
-                    }
+                        break;
+                    default:
+                        if (update.field === 'observation' && mutatedCategory.observation !== update.value) { mutatedCategory.observation = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
+                        else if (update.field === 'showObservation' && mutatedCategory.showObservation !== update.value) { mutatedCategory.showObservation = update.value as boolean; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
+                        else if (update.field === 'pressureValue' && mutatedCategory.pressureValue !== update.value) { mutatedCategory.pressureValue = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
+                        else if (update.field === 'pressureUnit' && mutatedCategory.pressureUnit !== update.value) { mutatedCategory.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
+                        else if (update.field === 'renameCategoryTitle' && mutatedCategory.title !== update.newTitle) { mutatedCategory.title = update.newTitle as string; actualModificationsMadeToCategory = true; }
+                        else if (update.field === 'addRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.value) {
+                            const newExt: RegisteredExtinguisher = { ...(update.value as Omit<RegisteredExtinguisher, 'id'>), id: `ext-${generateUniqueId()}` };
+                            mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
+                                sub.id === update.subItemId ? { ...sub, registeredExtinguishers: [...(sub.registeredExtinguishers || []), newExt] } : sub
+                            );
+                            if (mutatedCategory.subItems.some(sub => sub.id === update.subItemId && sub.registeredExtinguishers?.some(e => e.id === newExt.id))) { // Check if effectively added
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                        }
+                        else if (update.field === 'removeRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.extinguisherId) {
+                            const oldExtCount = mutatedCategory.subItems.find(s => s.id === update.subItemId)?.registeredExtinguishers?.length || 0;
+                            mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
+                                sub.id === update.subItemId ? { ...sub, registeredExtinguishers: (sub.registeredExtinguishers || []).filter(ext => ext.id !== update.extinguisherId) } : sub
+                            );
+                            const newExtCount = mutatedCategory.subItems.find(s => s.id === update.subItemId)?.registeredExtinguishers?.length || 0;
+                            if (newExtCount < oldExtCount) {
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                        }
+                        else if (update.field === 'addRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.value) {
+                            const newHose: RegisteredHose = { ...(update.value as Omit<RegisteredHose, 'id'>), id: `hose-${generateUniqueId()}` };
+                            mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
+                                sub.id === update.subItemId ? { ...sub, registeredHoses: [...(sub.registeredHoses || []), newHose] } : sub
+                            );
+                             if (mutatedCategory.subItems.some(sub => sub.id === update.subItemId && sub.registeredHoses?.some(h => h.id === newHose.id))) {
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                        }
+                        else if (update.field === 'removeRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.hoseId) {
+                             const oldHoseCount = mutatedCategory.subItems.find(s => s.id === update.subItemId)?.registeredHoses?.length || 0;
+                            mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
+                                sub.id === update.subItemId ? { ...sub, registeredHoses: (sub.registeredHoses || []).filter(h => h.id !== update.hoseId) } : sub
+                            );
+                            const newHoseCount = mutatedCategory.subItems.find(s => s.id === update.subItemId)?.registeredHoses?.length || 0;
+                             if (newHoseCount < oldHoseCount) {
+                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            }
+                        }
+                        else if (update.field === 'markAllSubItemsNA' && mutatedCategory.subItems && mutatedCategory.type === 'standard') {
+                            let markedAny = false;
+                            mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => {
+                                if (!sub.isRegistry && sub.status !== 'N/A') { markedAny = true; return { ...sub, status: 'N/A' as StatusOption }; }
+                                return sub;
+                            });
+                            if (markedAny) { actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
+                        }
+                        else if (update.field === 'addSubItem' && mutatedCategory.type === 'standard' && typeof update.value === 'string' && (update.value as string).trim() !== '') {
+                            const newId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+                            const newSub: SubItemState = { id: newId, name: (update.value as string).trim(), status: undefined, observation: '', showObservation: false, isRegistry: false, photoDataUri: null, photoDescription: '' };
+                            mutatedCategory.subItems = [...(mutatedCategory.subItems || []), newSub];
+                            actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                        }
+                        break;
+                }
 
-                    if (actualModificationsMadeToCategory) {
-                        floorOverallStateChanged = true;
-                        return mutatedCategory;
+                if (!isExpansionChange && categoryStructurallyModifiedForAutoCollapse) {
+                    let shouldAutoCollapse = false;
+                    if (mutatedCategory.type === 'standard' && mutatedCategory.subItems) {
+                        const relevantSubItems = mutatedCategory.subItems.filter(sub => !sub.isRegistry);
+                        if (relevantSubItems.length > 0 && relevantSubItems.every(sub => sub.status !== undefined)) { shouldAutoCollapse = true; }
+                        else if (relevantSubItems.length === 0 && originalCategory.subItems?.filter(s=>!s.isRegistry).length ?? 0 > 0) {shouldAutoCollapse = true;}
+                    } else if (mutatedCategory.type === 'special' || mutatedCategory.type === 'pressure') {
+                        if (mutatedCategory.status !== undefined) shouldAutoCollapse = true;
                     }
-                    return originalCategory;
-                });
+                    if (shouldAutoCollapse && mutatedCategory.isExpanded) {
+                        mutatedCategory.isExpanded = false;
+                        autoCollapsedCategoryIdHolder.id = originalCategory.id;
+                        actualModificationsMadeToCategory = true;
+                    }
+                }
 
                 let finalCategoriesForFloor = newCategoriesForFloor;
+                if (actualModificationsMadeToCategory && categoryModifiedIndex !== -1) {
+                    floorOverallStateChanged = true;
+                    finalCategoriesForFloor = [
+                        ...newCategoriesForFloor.slice(0, categoryModifiedIndex),
+                        mutatedCategory,
+                        ...newCategoriesForFloor.slice(categoryModifiedIndex + 1)
+                    ];
+                }
+
+
                 if (autoCollapsedCategoryIdHolder.id) {
                     const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
                     if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
                         const nextCat = finalCategoriesForFloor[collapsedIdx + 1];
                         if (!nextCat.isExpanded) {
-                            finalCategoriesForFloor = finalCategoriesForFloor.map((cat, idx) => {
-                                if (idx === collapsedIdx + 1) {
-                                    floorOverallStateChanged = true; 
-                                    return { ...cat, isExpanded: true };
-                                }
-                                return cat;
-                            });
+                            const updatedNextCat = { ...nextCat, isExpanded: true };
+                            finalCategoriesForFloor = [
+                                ...finalCategoriesForFloor.slice(0, collapsedIdx + 1),
+                                updatedNextCat,
+                                ...finalCategoriesForFloor.slice(collapsedIdx + 2)
+                            ];
+                            floorOverallStateChanged = true;
                         }
                     }
                 }
-                
-                if (floorOverallStateChanged || newCategoriesForFloor.some((cat, i) => cat !== currentFloorData.categories[i])) {
+
+                if (floorOverallStateChanged) {
                     return { ...currentFloorData, categories: finalCategoriesForFloor };
                 }
                 return currentFloorData;
@@ -366,7 +392,7 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
     setIsChecklistVisible(false);
-    setUploadedLogoDataUrl(null); 
+    setUploadedLogoDataUrl(null);
   }, []);
 
   const handleAddNewTower = useCallback(() => {
@@ -398,7 +424,7 @@ export default function FireCheckPage() {
                     registeredHoses: sub.isRegistry && sub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined,
                 })) : undefined,
             }));
-          } else { 
+          } else {
             newFloorCategories = JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false}));
           }
 
@@ -432,12 +458,10 @@ export default function FireCheckPage() {
 
   const handleSaveInspection = useCallback(() => {
     const currentClientInfo = clientInfo;
-
-    // We will save activeTowersData directly, which now includes photos and observations by default.
     const fullInspectionToSaveForLocalStorage: FullInspectionData = {
       id: currentClientInfo.inspectionNumber || `temp-id-${Date.now()}`,
       clientInfo: { ...currentClientInfo },
-      towers: activeTowersData, // Save activeTowersData directly with photos and observations
+      towers: activeTowersData,
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl
     };
@@ -451,12 +475,12 @@ export default function FireCheckPage() {
         newSavedList.push(fullInspectionToSaveForLocalStorage);
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      
+
       const hasNamedTowersOrFloors = activeTowersData.some(t => (t.towerName && t.towerName.trim() !== "") || t.floors.some(f => f.floor && f.floor.trim() !== ""));
 
       if (fullInspectionToSaveForLocalStorage.id && !fullInspectionToSaveForLocalStorage.id.startsWith('temp-id-')) {
         toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva (incluindo fotos e observações).` });
-      } else if (hasNamedTowersOrFloors) { 
+      } else if (hasNamedTowersOrFloors) {
          toast({ title: "Vistoria Salva Localmente", description: `Vistoria (ID temporário) salva (incluindo fotos e observações). Preencha o Local para gerar Nº Vistoria.` });
       }
       return sortedList;
@@ -476,32 +500,30 @@ export default function FireCheckPage() {
         });
         setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-        // When loading, preserve photoDataUri and photoDescription from the sub items if they exist
         const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
             ...tower,
             id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
-            isTowerContentVisible: false, 
+            isTowerContentVisible: false,
             floors: (tower.floors || []).map(floor => ({
             ...floor,
             id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
-            isFloorContentVisible: false, 
-            categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ 
+            isFloorContentVisible: false,
+            categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({
                 id: cfg.id, title: cfg.title, type: cfg.type, isExpanded: false,
-                ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({ 
-                    id: sCfg.id, name: sCfg.name, 
-                    isRegistry: sCfg.isRegistry || false, 
-                    photoDataUri: null, photoDescription: '', // Keep default null/empty for newly created template
-                    ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }), 
-                    ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }) 
+                ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({
+                    id: sCfg.id, name: sCfg.name,
+                    isRegistry: sCfg.isRegistry || false,
+                    photoDataUri: null, photoDescription: '',
+                    ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
+                    ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] })
                 })) || [] }),
                 ...(cfg.type === 'special' && { status: undefined, observation: '', showObservation: false }),
                 ...(cfg.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '', observation: '', showObservation: false }),
             }))).map((cat: InspectionCategoryState) => ({
                 ...cat, isExpanded: false,
-                subItems: (cat.subItems || []).map(sub => ({ 
-                ...sub, // This will carry over photoDataUri and photoDescription if they exist on 'sub'
-                id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`, 
-                // No longer explicitly setting photoDataUri: null or photoDescription: '' here
+                subItems: (cat.subItems || []).map(sub => ({
+                ...sub,
+                id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`,
                 registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
                 registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` }))
                 }))
@@ -510,7 +532,7 @@ export default function FireCheckPage() {
         }));
 
         setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
-        setIsSavedInspectionsVisible(false); setIsChecklistVisible(true); 
+        setIsSavedInspectionsVisible(false); setIsChecklistVisible(true);
         toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada (incluindo fotos e observações salvas).`});
     }
   };
@@ -538,10 +560,9 @@ export default function FireCheckPage() {
         ...(originalInspection.clientInfo || {}),
         inspectionNumber: newInspectionNumber,
         inspectionDate: typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '',
-        inspectedBy: clientInfo.inspectedBy || '', 
+        inspectedBy: clientInfo.inspectedBy || '',
       };
       duplicatedInspection.timestamp = Date.now();
-      // Preserve photos and observations when duplicating
       duplicatedInspection.towers = (duplicatedInspection.towers || []).map(tower => ({
         ...tower, id: generateUniqueId(), isTowerContentVisible: false,
         floors: (tower.floors || []).map(floor => ({
@@ -549,9 +570,8 @@ export default function FireCheckPage() {
           categories: (floor.categories || []).map(cat => ({
             ...cat, isExpanded: false,
             subItems: (cat.subItems || []).map(sub => ({
-              ...sub, // This carries over photoDataUri and photoDescription
-              id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id, 
-              // No longer setting photoDataUri: null or photoDescription: ''
+              ...sub,
+              id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id,
               registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: `${generateUniqueId()}-extcopy`})),
               registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: `${generateUniqueId()}-hosecopy` }))
             }))
@@ -641,13 +661,13 @@ export default function FireCheckPage() {
       return { ...tower, floors: tower.floors.map((floor, fIdx) => {
         if (fIdx !== floorIndex) return floor;
         const categories = [...floor.categories]; const itemIndex = categories.findIndex(cat => cat.id === categoryId);
-        if (itemIndex === -1) return floor; 
+        if (itemIndex === -1) return floor;
         const itemToMove = categories[itemIndex];
         if (direction === 'up' && itemIndex > 0) { categories.splice(itemIndex, 1); categories.splice(itemIndex - 1, 0, itemToMove); }
         else if (direction === 'down' && itemIndex < categories.length - 1) { categories.splice(itemIndex, 1); categories.splice(itemIndex + 1, 0, itemToMove); }
         else if (direction === 'top' && itemIndex > 0) { categories.splice(itemIndex, 1); categories.unshift(itemToMove); }
         else if (direction === 'bottom' && itemIndex < categories.length - 1) { categories.splice(itemIndex, 1); categories.push(itemToMove); }
-        else return floor; 
+        else return floor;
         return { ...floor, categories };
       })};
     }));
@@ -655,46 +675,50 @@ export default function FireCheckPage() {
 
   const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
     setActiveTowersData(prevTowers => {
-      let overallTowersChanged = false;
-  
+      let overallTowersChanged = false; // Flag to track if any tower actually changed
+
       const newTowers = prevTowers.map((tower, tIdx) => {
         if (tIdx !== towerIndex) {
-          return tower; 
+          return tower; // Not the target tower, return original
         }
-  
-        let towerContentChanged = false;
+
+        // Target tower found, map its floors
+        let towerContentChanged = false; // Flag to track if this tower's content changed
         const newFloors = tower.floors.map((floor, fIdx) => {
           if (fIdx !== floorIndex) {
-            return floor; 
+            return floor; // Not the target floor, return original
           }
-  
+
+          // Target floor found, filter its categories
           const originalCategories = floor.categories;
           const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
-  
+
           if (filteredCategories.length < originalCategories.length) {
-            towerContentChanged = true; 
-            return { ...floor, categories: filteredCategories }; 
+            // Categories changed for this floor
+            towerContentChanged = true; // Mark that this tower's content changed
+            return { ...floor, categories: filteredCategories }; // New floor object with new categories array
           }
-          return floor; 
+          return floor; // No change to categories for this floor
         });
-  
+
         if (towerContentChanged) {
-          overallTowersChanged = true; 
-          return { ...tower, floors: newFloors }; 
+          overallTowersChanged = true; // Mark that overall towers array needs to be new
+          return { ...tower, floors: newFloors }; // New tower object with new floors array
         }
-        return tower; 
+        return tower; // No change to floors for this tower
       });
-  
+
+      // If any tower's content actually changed, return the new array of towers.
+      // Otherwise, return the original array to prevent unnecessary re-renders.
       if (overallTowersChanged) {
-        return newTowers; 
+        return newTowers;
       }
-      return prevTowers; 
+      return prevTowers;
     });
   }, []);
 
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
-    // Export activeTowersData directly, which includes photos and observations
     const inspectionToExport: FullInspectionData = {
       id: clientInfo.inspectionNumber || `export-id-${Date.now()}`,
       clientInfo: { ...clientInfo },
@@ -737,7 +761,7 @@ export default function FireCheckPage() {
 
     let firstInspectionToLoadToFormWithPhotos: FullInspectionData | null = null;
     const allInspectionsFromFiles: FullInspectionData[] = [];
-    
+
 
     const readFilePromise = (file: File): Promise<FullInspectionData[]> => {
       return new Promise((resolve, reject) => {
@@ -759,7 +783,7 @@ export default function FireCheckPage() {
           } catch (error) {
             console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
             toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}.`, variant: "destructive"});
-            reject(error); 
+            reject(error);
           }
         };
         reader.onerror = (err) => {
@@ -778,12 +802,12 @@ export default function FireCheckPage() {
         result.value.forEach((inspection, inspectionIndexWithinFile) => {
           allInspectionsFromFiles.push(inspection);
           if (fileIndex === 0 && inspectionIndexWithinFile === 0 && !firstInspectionToLoadToFormWithPhotos) {
-            firstInspectionToLoadToFormWithPhotos = inspection; 
+            firstInspectionToLoadToFormWithPhotos = inspection;
           }
         });
       }
     });
-    
+
     let finalImportedCount = 0;
     let finalUpdatedCount = 0;
 
@@ -792,10 +816,8 @@ export default function FireCheckPage() {
         let newOrUpdatedInspectionsList = [...currentSavedInspections];
         let currentImported = 0;
         let currentUpdated = 0;
-        
+
         allInspectionsFromFiles.forEach(inspectionToImport => {
-          // When importing, keep photos and observations if they exist in the JSON
-          // No need to strip them for inspectionForLocalStorage
           const inspectionForLocalStorage: FullInspectionData = { ...inspectionToImport };
 
           const existingIndex = newOrUpdatedInspectionsList.findIndex(insp => insp.id === inspectionForLocalStorage.id && insp.id);
@@ -807,53 +829,48 @@ export default function FireCheckPage() {
             currentImported++;
           }
         });
-        finalImportedCount = currentImported; 
+        finalImportedCount = currentImported;
         finalUpdatedCount = currentUpdated;
         return newOrUpdatedInspectionsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
     }
 
     if (firstInspectionToLoadToFormWithPhotos) {
-        // Pass the ID of the inspection that might have photos to handleLoadInspection
-        handleLoadInspection(firstInspectionToLoadToFormWithPhotos.id); 
-        
-        // Additionally, ensure the active form reflects the photos from the specific imported file,
-        // as handleLoadInspection loads from the potentially stripped localStorage version
+        handleLoadInspection(firstInspectionToLoadToFormWithPhotos.id);
+
         const inspectionForFormWithPhotos = allInspectionsFromFiles.find(i => i.id === firstInspectionToLoadToFormWithPhotos!.id);
 
         if (inspectionForFormWithPhotos) {
             setClientInfo(prev => ({
-                ...prev, 
-                ...(inspectionForFormWithPhotos.clientInfo || {}) 
+                ...prev,
+                ...(inspectionForFormWithPhotos.clientInfo || {})
             }));
             setUploadedLogoDataUrl(inspectionForFormWithPhotos.uploadedLogoDataUrl || null);
 
-            // This part ensures that activeTowersData gets the photo data from the imported file,
-            // not just from what handleLoadInspection might have (which uses savedInspections state)
              setActiveTowersData( (inspectionForFormWithPhotos.towers || []).map(tower => ({
                 ...tower,
                 id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
-                isTowerContentVisible: false, 
+                isTowerContentVisible: false,
                 floors: (tower.floors || []).map(floor => ({
                 ...floor,
                 id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
-                isFloorContentVisible: false, 
-                categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ 
+                isFloorContentVisible: false,
+                categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({
                     id: cfg.id, title: cfg.title, type: cfg.type, isExpanded: false,
-                    ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({ 
-                        id: sCfg.id, name: sCfg.name, 
-                        isRegistry: sCfg.isRegistry || false, 
-                        photoDataUri: null, photoDescription: '', 
-                        ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }), 
-                        ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }) 
+                    ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({
+                        id: sCfg.id, name: sCfg.name,
+                        isRegistry: sCfg.isRegistry || false,
+                        photoDataUri: null, photoDescription: '',
+                        ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
+                        ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] })
                     })) || [] }),
                     ...(cfg.type === 'special' && { status: undefined, observation: '', showObservation: false }),
                     ...(cfg.type === 'pressure' && { status: undefined, pressureValue: '', pressureUnit: '', observation: '', showObservation: false }),
                 }))).map((cat: InspectionCategoryState) => ({
                     ...cat, isExpanded: false,
-                    subItems: (cat.subItems || []).map(sub => ({ 
-                    ...sub, 
-                    id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`, 
+                    subItems: (cat.subItems || []).map(sub => ({
+                    ...sub,
+                    id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`,
                     registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
                     registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` }))
                     }))
@@ -869,10 +886,10 @@ export default function FireCheckPage() {
     else if (finalUpdatedCount > 0) summaryMessage = `${finalUpdatedCount} vistoria(s) atualizada(s).`;
 
     if (firstInspectionToLoadToFormWithPhotos) {
-        const hasPhotosOrLogo = firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || 
-                               (firstInspectionToLoadToFormWithPhotos.towers || []).some(t => 
-                                 (t.floors || []).some(f => 
-                                   (f.categories || []).some(c => 
+        const hasPhotosOrLogo = firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl ||
+                               (firstInspectionToLoadToFormWithPhotos.towers || []).some(t =>
+                                 (t.floors || []).some(f =>
+                                   (f.categories || []).some(c =>
                                      (c.subItems || []).some(s => s.photoDataUri)
                                    )
                                  )
@@ -885,7 +902,7 @@ export default function FireCheckPage() {
     if (summaryMessage) toast({ title: "Importação Concluída", description: summaryMessage });
     else if (files.length > 0 && allInspectionsFromFiles.length === 0) toast({ title: "Importação Concluída", description: "Nenhuma vistoria válida encontrada nos arquivos.", variant: "default" });
 
-    if (event.target) event.target.value = ''; 
+    if (event.target) event.target.value = '';
   }, [toast, setSavedInspections, handleLoadInspection]);
 
 
@@ -985,7 +1002,7 @@ export default function FireCheckPage() {
                                     const overallStatus = getCategoryOverallStatus(category);
                                     return (
                                       <InspectionCategoryItem
-                                        key={`${floorData.id}-${category.id}`} 
+                                        key={`${floorData.id}-${category.id}`}
                                         category={category}
                                         overallStatus={overallStatus}
                                         onCategoryItemUpdate={(catId, update) => handleCategoryItemUpdateForFloor(towerIndex, floorIndex, catId, update)}
@@ -1047,3 +1064,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
