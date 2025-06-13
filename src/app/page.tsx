@@ -113,7 +113,7 @@ export default function FireCheckPage() {
      if (!clientInfo.inspectionDate && typeof window !== 'undefined') {
       setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
     }
-  }, []);
+  }, [clientInfo.inspectionDate]);
 
   useEffect(() => {
     // setActiveTowersData([createNewTowerEntry()]); 
@@ -183,22 +183,28 @@ export default function FireCheckPage() {
         const updatedFloors = currentTower.floors.map((currentFloorData, fIndex) => {
           if (fIndex !== floorIndex) return currentFloorData;
           
-          let inspectionChangedOverall = false;
+          let inspectionChangedOverall = false; // Tracks if any category in *this floor* changed
           let autoCollapsedCategoryId: string | null = null;
 
           const intermediateCategories = currentFloorData.categories.map(cat => {
-            if (cat.id !== categoryId) return cat;
+            if (cat.id !== categoryId) return cat; // Not the target category
             
-            let updatedCatData = { ...cat };
-            let categoryStructurallyChanged = false; 
+            let updatedCatData = { ...cat }; // Shallow copy the target category
+            let categoryStructurallyChanged = false; // Tracks if *this specific category* changed
             const explicitExpansionChange = update.field === 'isExpanded';
 
             switch (update.field) {
               case 'isExpanded':
-                if (updatedCatData.isExpanded !== update.value) { updatedCatData.isExpanded = update.value; categoryStructurallyChanged = true; }
+                if (updatedCatData.isExpanded !== update.value) { 
+                  updatedCatData.isExpanded = update.value; 
+                  categoryStructurallyChanged = true; 
+                }
                 break;
               case 'status':
-                if (updatedCatData.status !== update.value) { updatedCatData.status = update.value; categoryStructurallyChanged = true; }
+                if (updatedCatData.status !== update.value) { 
+                  updatedCatData.status = update.value; 
+                  categoryStructurallyChanged = true; 
+                }
                 break;
               case 'subItemStatus':
               case 'subItemObservation':
@@ -233,20 +239,50 @@ export default function FireCheckPage() {
                   }
                 }
                 break;
-              default:
-                // Handles category-level fields like observation, title, pressure, registry adds/removes
+              default: // Handles category-level fields like observation, title, pressure, registry adds/removes
                 if (update.field === 'observation' && updatedCatData.observation !== update.value) { updatedCatData.observation = update.value; categoryStructurallyChanged = true; }
                 else if (update.field === 'showObservation' && updatedCatData.showObservation !== update.value) { updatedCatData.showObservation = update.value; categoryStructurallyChanged = true; }
                 else if (update.field === 'pressureValue' && updatedCatData.pressureValue !== update.value) { updatedCatData.pressureValue = update.value; categoryStructurallyChanged = true; }
                 else if (update.field === 'pressureUnit' && updatedCatData.pressureUnit !== update.value) { updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; categoryStructurallyChanged = true; }
                 else if (update.field === 'renameCategoryTitle' && updatedCatData.title !== update.newTitle) { updatedCatData.title = update.newTitle; categoryStructurallyChanged = true; }
-                else if (update.field === 'addRegisteredExtinguisher' && cat.subItems && update.subItemId) { /* full logic for adding extinguisher */ categoryStructurallyChanged = true; }
-                else if (update.field === 'removeRegisteredExtinguisher' && cat.subItems && update.subItemId && update.extinguisherId) { /* full logic for removing extinguisher */ categoryStructurallyChanged = true; }
-                else if (update.field === 'addRegisteredHose' && cat.subItems && update.subItemId) { /* full logic for adding hose */ categoryStructurallyChanged = true; }
-                else if (update.field === 'removeRegisteredHose' && cat.subItems && update.subItemId && update.hoseId) { /* full logic for removing hose */ categoryStructurallyChanged = true; }
-                else if (update.field === 'markAllSubItemsNA' && cat.subItems && cat.type === 'standard') { /* full logic for N/A all */ categoryStructurallyChanged = true; }
-                else if (update.field === 'addSubItem' && cat.type === 'standard' && update.value.trim() !== '') { /* full logic for adding subitem */ categoryStructurallyChanged = true; }
-                // Note: removeSubItem is now handled as its own case above.
+                else if (update.field === 'addRegisteredExtinguisher' && cat.subItems && update.subItemId && update.value) {
+                  const newExtinguisher: RegisteredExtinguisher = { ...update.value, id: `ext-${generateUniqueId()}` };
+                  updatedCatData.subItems = (updatedCatData.subItems || []).map(sub => 
+                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: [...(sub.registeredExtinguishers || []), newExtinguisher] } : sub
+                  );
+                  categoryStructurallyChanged = true;
+                }
+                else if (update.field === 'removeRegisteredExtinguisher' && cat.subItems && update.subItemId && update.extinguisherId) {
+                  updatedCatData.subItems = (updatedCatData.subItems || []).map(sub => 
+                    sub.id === update.subItemId ? { ...sub, registeredExtinguishers: (sub.registeredExtinguishers || []).filter(ext => ext.id !== update.extinguisherId) } : sub
+                  );
+                  categoryStructurallyChanged = true;
+                }
+                else if (update.field === 'addRegisteredHose' && cat.subItems && update.subItemId && update.value) {
+                  const newHose: RegisteredHose = { ...update.value, id: `hose-${generateUniqueId()}` };
+                  updatedCatData.subItems = (updatedCatData.subItems || []).map(sub =>
+                    sub.id === update.subItemId ? { ...sub, registeredHoses: [...(sub.registeredHoses || []), newHose] } : sub
+                  );
+                  categoryStructurallyChanged = true;
+                }
+                else if (update.field === 'removeRegisteredHose' && cat.subItems && update.subItemId && update.hoseId) {
+                  updatedCatData.subItems = (updatedCatData.subItems || []).map(sub =>
+                    sub.id === update.subItemId ? { ...sub, registeredHoses: (sub.registeredHoses || []).filter(h => h.id !== update.hoseId) } : sub
+                  );
+                  categoryStructurallyChanged = true;
+                }
+                else if (update.field === 'markAllSubItemsNA' && cat.subItems && cat.type === 'standard') {
+                  updatedCatData.subItems = (updatedCatData.subItems || []).map(sub => 
+                    !sub.isRegistry ? { ...sub, status: 'N/A' as StatusOption } : sub
+                  );
+                  categoryStructurallyChanged = true;
+                }
+                else if (update.field === 'addSubItem' && cat.type === 'standard' && typeof update.value === 'string' && update.value.trim() !== '') {
+                  const newId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+                  const newSub: SubItemState = { id: newId, name: update.value.trim(), status: undefined, observation: '', showObservation: false, isRegistry: false, photoDataUri: null, photoDescription: '' };
+                  updatedCatData.subItems = [...(updatedCatData.subItems || []), newSub];
+                  categoryStructurallyChanged = true;
+                }
                 break;
             }
             
@@ -261,7 +297,11 @@ export default function FireCheckPage() {
               } else if (updatedCatData.type === 'special' || updatedCatData.type === 'pressure') {
                   if (updatedCatData.status !== undefined) shouldAutoCollapse = true;
               }
-              if (shouldAutoCollapse && cat.isExpanded) { updatedCatData.isExpanded = false; autoCollapsedCategoryId = cat.id; }
+              if (shouldAutoCollapse && cat.isExpanded) { 
+                updatedCatData.isExpanded = false; 
+                autoCollapsedCategoryId = cat.id; 
+                // categoryStructurallyChanged = true; // isExpanded change is structural
+              }
             }
             if (categoryStructurallyChanged) inspectionChangedOverall = true;
             return updatedCatData;
@@ -275,7 +315,9 @@ export default function FireCheckPage() {
                 if (idx === collapsedCategoryIndex + 1 && !cat.isExpanded) return { ...cat, isExpanded: true };
                 return cat;
               });
-              if (finalCategories.some((cat, idx) => cat.isExpanded !== intermediateCategories[idx].isExpanded)) inspectionChangedOverall = true;
+              if (finalCategories.some((cat, idx) => cat.isExpanded !== intermediateCategories[idx].isExpanded)) {
+                inspectionChangedOverall = true;
+              }
             }
           }
           
@@ -945,7 +987,7 @@ export default function FireCheckPage() {
             onDuplicateInspection={handleDuplicateInspection}
             onUpdateClientLocation={handleUpdateClientLocationForSavedInspection}
             onDownloadSelected={handleDownloadSelectedInspections}
-            onDownloadSingleInspection={handleDownloadSingleSavedInspection}
+            onDownloadSingleInspection={handleDownloadSingleSavedInspection} // Pass the new handler
           />
         )}
 
@@ -954,3 +996,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
