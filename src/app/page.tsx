@@ -14,7 +14,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import type { FullInspectionData, InspectionData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState } from '@/lib/types';
 import { INITIAL_INSPECTION_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
-// PREDEFINED_CLIENTS is no longer used for auto-filling clientCode in this version
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator'; 
@@ -57,7 +56,6 @@ const calculateNextInspectionNumber = (
   if (!trimmedClientLocation) {
     return '';
   }
-  // Simplified: Generate a random number, clientLocation is just a trigger
   const randomNumber = Math.floor(100000 + Math.random() * 900000);
   return randomNumber.toString();
 };
@@ -79,7 +77,6 @@ const initiateFileDownload = (dataToDownload: FullInspectionData | FullInspectio
 
 export default function FireCheckPage() {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [blockAutoSaveOnce, setBlockAutoSaveOnce] = useState(false); // This might become less relevant
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const jsonImportFileInputRef = useRef<HTMLInputElement>(null);
@@ -116,7 +113,6 @@ export default function FireCheckPage() {
         });
       });
     }
-     // Initialize clientInfo.inspectionDate here if not already set by server/localStorage
      if (!clientInfo.inspectionDate && typeof window !== 'undefined') {
       setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
     }
@@ -431,7 +427,7 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo); 
     setActiveFloorsData([createNewFloorEntry()]);
     setIsChecklistVisible(false); 
-    setBlockAutoSaveOnce(true); 
+    // setBlockAutoSaveOnce(true); // Auto-save is disabled
   }, []);
 
   const handleNewFloorInspection = useCallback(() => {
@@ -529,16 +525,10 @@ export default function FireCheckPage() {
   }, [activeFloorsData.length]);
 
 
-  const handleSaveInspection = useCallback((isAutoSave = false) => {
+  const handleSaveInspection = useCallback(() => {
     const currentClientInfo = clientInfo;
     
     const namedFloors = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
-    if (namedFloors.length === 0 && activeFloorsData.some(floor => floor.categories.some(cat => cat.status !== undefined || (cat.subItems && cat.subItems.some(sub => sub.status !== undefined))))) {
-      if (!isAutoSave) {
-        // Removed toast for manual save as well, as PDF generation is allowed without named floors.
-        // toast({ title: "Sem Andares Nomeados", description: "Adicione e nomeie pelo menos um andar para salvar dados relevantes.", variant: "destructive" });
-      }
-    }
 
     const fullInspectionToSaveForLocalStorage: FullInspectionData = {
       id: currentClientInfo.inspectionNumber || `temp-id-${Date.now()}`,
@@ -548,7 +538,8 @@ export default function FireCheckPage() {
         categories: floor.categories.map(category => ({
           ...category,
           subItems: category.subItems ? category.subItems.map(subItem => {
-            const { photoDataUri, photoDescription, ...restOfSubItem } = subItem; // Strip photo data
+            // Strip photo data for localStorage to avoid quota issues
+            const { photoDataUri, photoDescription, ...restOfSubItem } = subItem; 
             return restOfSubItem;
           }) : undefined,
         })),
@@ -567,42 +558,18 @@ export default function FireCheckPage() {
         newSavedList.push(fullInspectionToSaveForLocalStorage);
       }
       const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      if (!isAutoSave && fullInspectionToSaveForLocalStorage.id && fullInspectionToSaveForLocalStorage.clientInfo.inspectionNumber) {
-        toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva no navegador.` });
+      if (fullInspectionToSaveForLocalStorage.id && fullInspectionToSaveForLocalStorage.clientInfo.inspectionNumber) {
+        toast({ title: "Vistoria Salva Localmente", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva no navegador (sem fotos).` });
       }
       return sortedList;
     });
   }, [clientInfo, activeFloorsData, setSavedInspections, uploadedLogoDataUrl, toast]);
 
 
-  // useEffect for Auto-Save - This is now disabled
-  useEffect(() => {
-    // if (blockAutoSaveOnce) {
-    //   setBlockAutoSaveOnce(false); 
-    //   return;
-    // }
-
-    // if (isClientInitialized) {
-    //   if (debounceTimeoutRef.current) {
-    //     clearTimeout(debounceTimeoutRef.current);
-    //   }
-    //   debounceTimeoutRef.current = setTimeout(() => {
-    //     handleSaveInspection(true); // Auto-save call
-    //   }, 2500); 
-    // }
-
-    // return () => {
-    //   if (debounceTimeoutRef.current) {
-    //     clearTimeout(debounceTimeoutRef.current);
-    //   }
-    // };
-  }, [clientInfo, activeFloorsData, isClientInitialized, handleSaveInspection, blockAutoSaveOnce, uploadedLogoDataUrl]);
-
-
   const handleLoadInspection = (fullInspectionId: string) => {
     const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
     if (inspectionToLoad) {
-      setBlockAutoSaveOnce(true);
+      // setBlockAutoSaveOnce(true); // Auto-save is disabled
       
       const loadedClientInfo = inspectionToLoad.clientInfo || {};
       setClientInfo({
@@ -629,9 +596,8 @@ export default function FireCheckPage() {
             id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) 
                 ? sub.id 
                 : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
-            // Initialize photo fields as empty since they are not stored in localStorage's saved list
-            photoDataUri: null, 
-            photoDescription: '',
+            photoDataUri: null, // Photos are not stored in localStorage's saved list
+            photoDescription: '', // Photos are not stored in localStorage's saved list
             registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({
               ...ext,
               id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-'))
@@ -651,7 +617,7 @@ export default function FireCheckPage() {
       setActiveFloorsData(sanitizedFloors);
       setIsSavedInspectionsVisible(false);
       setIsChecklistVisible(false); 
-      toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada. Fotos não são armazenadas na lista de salvas e precisarão ser recapturadas ou importadas de um JSON se necessário.`});
+      toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada. Fotos não são armazenadas na lista salva e precisam ser recapturadas ou importadas de um JSON.`});
     }
   };
 
@@ -707,7 +673,6 @@ export default function FireCheckPage() {
             id: sub.id.startsWith('custom-') || sub.isRegistry 
                 ? `${sub.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substring(2,9)}-copy` 
                 : sub.id,
-            // Photos are not part of the duplicated inspection from the saved list
             photoDataUri: null, 
             photoDescription: '', 
             registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({
@@ -768,40 +733,23 @@ export default function FireCheckPage() {
 
   const handleGeneratePdf = useCallback(() => {
     const floorsToPrint = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
-    if (floorsToPrint.length === 0 && activeFloorsData.some(f => f.categories.length > 0)) { 
-      // Toast removed as PDF generation is now allowed without these fields.
-      // toast({ title: "Sem Andares Nomeados para PDF", description: "Nomeie pelo menos um andar para incluir no PDF ou adicione itens.", variant: "destructive" });
-      // return; // No longer returning
-    }
     generateInspectionPdf(clientInfo, floorsToPrint.length > 0 ? floorsToPrint : activeFloorsData, uploadedLogoDataUrl);
-  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl]);
 
   const handleGenerateRegisteredItemsReport = useCallback(() => {
     const floorsToReport = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
-    if (floorsToReport.length === 0 && activeFloorsData.some(f => f.categories.length > 0)) {
-      // Toast removed
-      // return; // No longer returning
-    }
     generateRegisteredItemsPdf(clientInfo, floorsToReport.length > 0 ? floorsToReport : activeFloorsData, uploadedLogoDataUrl);
-  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl]);
 
   const handleGenerateNCItemsReport = useCallback(() => {
     const floorsToReport = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
-    if (floorsToReport.length === 0 && activeFloorsData.some(f => f.categories.length > 0)) {
-       // Toast removed
-       // return; // No longer returning
-    }
     generateNCItemsPdf(clientInfo, floorsToReport.length > 0 ? floorsToReport : activeFloorsData, uploadedLogoDataUrl);
-  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl]);
 
   const handleGeneratePhotoReportPdf = useCallback(() => {
     const floorsToReport = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
-    if (floorsToReport.length === 0 && activeFloorsData.some(f => f.categories.length > 0)) {
-      // Toast removed
-      // return; // No longer returning
-    }
     generatePhotoReportPdf(clientInfo, floorsToReport.length > 0 ? floorsToReport : activeFloorsData, uploadedLogoDataUrl);
-  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+  }, [clientInfo, activeFloorsData, uploadedLogoDataUrl]);
 
 
   const handlePrintPage = useCallback(() => {
@@ -950,10 +898,6 @@ export default function FireCheckPage() {
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
     const namedFloorsFromActiveData = activeFloorsData.filter(floor => floor.floor && floor.floor.trim() !== "");
-    // Toast for unnamed floors removed as per previous request
-    // if (namedFloorsFromActiveData.length === 0 && activeFloorsData.some(f => f.categories.length > 0)) {
-    //   // return;
-    // }
 
     const inspectionToExport: FullInspectionData = {
       id: clientInfo.inspectionNumber || `export-id-${Date.now()}`,
@@ -967,13 +911,11 @@ export default function FireCheckPage() {
     const clientInfoForFilename = {
         inspectionNumber: inspectionToExport.id,
         clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria',
-        clientCode: '', 
-        inspectionDate: '', 
     };
 
     const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
     const fileName = initiateFileDownload(inspectionToExport, baseFileName);
-    toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo.` });
+    toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (incluindo fotos da vistoria ativa).` });
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
 
   const handleDownloadSelectedInspections = useCallback((inspectionIds: string[]) => {
@@ -986,7 +928,7 @@ export default function FireCheckPage() {
       toast({ title: "Vistorias Não Encontradas", description: "Não foi possível encontrar as vistorias selecionadas.", variant: "destructive" });
       return;
     }
-    // Remember: inspectionsToDownload are from localStorage, so they won't have full photo data
+    // inspectionsToDownload are from localStorage, so they won't have full photo data
     const fileName = initiateFileDownload(inspectionsToDownload, 'vistorias_selecionadas');
     toast({ title: "Vistorias Exportadas", description: `Arquivo ${fileName} com ${inspectionsToDownload.length} vistoria(s) salvo (fotos não incluídas da lista salva).` });
   }, [savedInspections, toast]);
@@ -997,7 +939,7 @@ export default function FireCheckPage() {
       toast({ title: "Vistoria Não Encontrada", description: "Não foi possível encontrar a vistoria para download.", variant: "destructive" });
       return;
     }
-    // Remember: inspectionToDownload is from localStorage, so it won't have full photo data
+    // inspectionToDownload is from localStorage, so it won't have full photo data
     const clientLoc = (inspectionToDownload.clientInfo.clientLocation || 'sem_local').replace(/\s+/g, '_');
     const baseFileName = `vistoria_${inspectionToDownload.id}_${clientLoc}`;
     const fileName = initiateFileDownload(inspectionToDownload, baseFileName);
@@ -1005,150 +947,163 @@ export default function FireCheckPage() {
   }, [savedInspections, toast]);
 
 
-  const handleImportInspectionFromJson = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportInspectionFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) {
       toast({ title: "Nenhum arquivo selecionado", description: "Por favor, selecione um ou mais arquivos JSON para importar.", variant: "destructive"});
       return;
     }
-
-    let firstInspectionLoadedToForm = false;
-    let importedCount = 0;
-    let updatedCount = 0;
-    
-    const processFile = (file: File, isFirstFile: boolean) => {
-      return new Promise<void>((resolve, reject) => {
+  
+    let firstInspectionToLoadToFormWithPhotos: FullInspectionData | null = null;
+    const allInspectionsFromFiles: FullInspectionData[] = [];
+  
+    // Helper to read and parse a single file
+    const readFilePromise = (file: File): Promise<FullInspectionData[]> => {
+      return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           try {
             const jsonString = e.target?.result as string;
             const importedData = JSON.parse(jsonString);
             const inspectionsToProcess: FullInspectionData[] = Array.isArray(importedData) ? importedData : [importedData];
-
-            if (inspectionsToProcess.length === 0) {
-              throw new Error(`Nenhuma vistoria encontrada no arquivo ${file.name}.`);
-            }
-
-            setSavedInspections(currentSavedInspections => {
-              let newSavedList = [...currentSavedInspections];
-              inspectionsToProcess.forEach((inspectionToImport, index) => {
-                if (!inspectionToImport.id || !inspectionToImport.clientInfo || !inspectionToImport.floors || !inspectionToImport.timestamp) {
-                  console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} no índice ${index}, pulando.`);
-                  return; 
-                }
-                
-                // Prepare the version for localStorage (strip photos)
-                const inspectionForLocalStorage: FullInspectionData = {
-                  ...inspectionToImport,
-                  floors: inspectionToImport.floors.map(floor => ({
-                    ...floor,
-                    categories: floor.categories.map(category => ({
-                      ...category,
-                      subItems: category.subItems ? category.subItems.map(subItem => {
-                        const { photoDataUri, photoDescription, ...restOfSubItem } = subItem;
-                        return restOfSubItem;
-                      }) : undefined,
-                    })),
-                  })),
-                };
-
-
-                const existingIndex = newSavedList.findIndex(insp => insp.id === inspectionForLocalStorage.id);
-                if (existingIndex > -1) {
-                  newSavedList[existingIndex] = inspectionForLocalStorage; 
-                  updatedCount++;
-                } else {
-                  newSavedList.push(inspectionForLocalStorage); 
-                  importedCount++;
-                }
-
-                // Load the first valid inspection (with photos if present in JSON) from the very first file into the active form
-                if (isFirstFile && index === 0 && !firstInspectionLoadedToForm) {
-                  setBlockAutoSaveOnce(true);
-                  const loadedClientInfo = inspectionToImport.clientInfo || {};
-                  setClientInfo({
-                      clientLocation: loadedClientInfo.clientLocation || '',
-                      clientCode: loadedClientInfo.clientCode || '',
-                      inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToImport.id,
-                      inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
-                      inspectedBy: loadedClientInfo.inspectedBy || '',
-                  });
-                  setUploadedLogoDataUrl(inspectionToImport.uploadedLogoDataUrl || null);
-                  
-                  // Sanitize and load floors WITH photo data for the active form
-                  const sanitizedFloorsWithPhotos = (inspectionToImport.floors || []).map(floor => ({
-                    ...floor,
-                    id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
-                    isFloorContentVisible: false, 
-                    categories: (floor.categories || []).map(cat => ({
-                      ...cat, isExpanded: false, 
-                      subItems: (cat.subItems || []).map(sub => ({
-                        ...sub,
-                        id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `imported-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
-                        photoDataUri: sub.photoDataUri || null, // Keep photo for active form
-                        photoDescription: sub.photoDescription || '', // Keep photo description for active form
-                        registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-ext-imported` })),
-                        registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-hose-imported` }))
-                      }))
-                    }))
-                  }));
-                  setActiveFloorsData(sanitizedFloorsWithPhotos);
-                  setIsChecklistVisible(false); 
-                  firstInspectionLoadedToForm = true;
-                }
-              });
-              return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            
+            const validInspectionsFromFile: FullInspectionData[] = [];
+            inspectionsToProcess.forEach(inspection => {
+              if (inspection && inspection.id && inspection.clientInfo && inspection.floors && inspection.timestamp) {
+                validInspectionsFromFile.push(inspection);
+              } else {
+                console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada.`);
+              }
             });
-            resolve();
+            resolve(validInspectionsFromFile);
           } catch (error) {
-            console.error(`Erro ao importar JSON do arquivo ${file.name}:`, error);
-            let errorMessage = `Não foi possível importar do arquivo ${file.name}. Verifique o formato.`;
+            console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
+            let errorMessage = `Não foi possível parsear o JSON do arquivo ${file.name}.`;
             if (error instanceof Error) { errorMessage = error.message; }
-            toast({ title: "Erro na Importação", description: errorMessage, variant: "destructive"});
-            reject(error);
+            toast({ title: "Erro de Parse", description: errorMessage, variant: "destructive"});
+            reject(error); // Reject the promise for this file
           }
         };
         reader.onerror = (err) => {
           console.error(`Erro ao ler o arquivo ${file.name}:`, err);
           toast({ title: "Erro de Leitura", description: `Não foi possível ler o arquivo ${file.name}.`, variant: "destructive"});
-          reject(err);
+          reject(err); // Reject the promise for this file
         };
         reader.readAsText(file);
       });
     };
-
-    (async () => {
-      for (let i = 0; i < files.length; i++) {
-        await processFile(files[i], i === 0);
+  
+    // Process all files
+    const fileReadPromises = Array.from(files).map(file => readFilePromise(file));
+    const fileResults = await Promise.allSettled(fileReadPromises);
+  
+    fileResults.forEach((result, fileIndex) => {
+      if (result.status === 'fulfilled' && result.value) {
+        const inspectionsFromFile: FullInspectionData[] = result.value;
+        inspectionsFromFile.forEach((inspection, inspectionIndex) => {
+          allInspectionsFromFiles.push(inspection); // Accumulate all valid inspections
+          if (fileIndex === 0 && inspectionIndex === 0 && !firstInspectionToLoadToFormWithPhotos) {
+            firstInspectionToLoadToFormWithPhotos = inspection; // Keep the very first one with photos for form loading
+          }
+        });
+      } else if (result.status === 'rejected') {
+        // Error already toasted by readFilePromise
       }
+    });
+  
+    let finalImportedCount = 0;
+    let finalUpdatedCount = 0;
+  
+    if (allInspectionsFromFiles.length > 0) {
+      setSavedInspections(currentSavedInspections => {
+        let newSavedList = [...currentSavedInspections];
+        
+        allInspectionsFromFiles.forEach(inspectionToImport => {
+          // inspectionToImport is the full data from JSON (potentially with photos)
+          
+          // Prepare version for localStorage (strip photos)
+          const inspectionForLocalStorage: FullInspectionData = {
+            ...inspectionToImport,
+            floors: (inspectionToImport.floors || []).map(floor => ({
+              ...floor,
+              categories: (floor.categories || []).map(category => ({
+                ...category,
+                subItems: category.subItems ? category.subItems.map(subItem => {
+                  const { photoDataUri, photoDescription, ...restOfSubItem } = subItem;
+                  return restOfSubItem;
+                }) : undefined,
+              })),
+            })),
+          };
+
+          const existingIndex = newSavedList.findIndex(insp => insp.id === inspectionForLocalStorage.id && insp.id !== '');
+          if (existingIndex > -1) {
+            newSavedList[existingIndex] = inspectionForLocalStorage; 
+            finalUpdatedCount++; // Count updates based on what's processed
+          } else {
+            newSavedList.push(inspectionForLocalStorage); 
+            finalImportedCount++; // Count new imports
+          }
+        });
+        return newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      });
+    }
+  
+    // Load the first valid inspection (with photos) from the very first file into the active form
+    if (firstInspectionToLoadToFormWithPhotos) {
+      // setBlockAutoSaveOnce(true); // Auto-save is disabled
+      const loadedClientInfo = firstInspectionToLoadToFormWithPhotos.clientInfo || {};
+      setClientInfo({
+          clientLocation: loadedClientInfo.clientLocation || '',
+          clientCode: loadedClientInfo.clientCode || '',
+          inspectionNumber: loadedClientInfo.inspectionNumber || firstInspectionToLoadToFormWithPhotos.id,
+          inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
+          inspectedBy: loadedClientInfo.inspectedBy || '',
+      });
+      setUploadedLogoDataUrl(firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || null);
       
-      let summaryMessage = "";
-      if (importedCount > 0 && updatedCount > 0) {
-        summaryMessage = `${importedCount} nova(s) vistoria(s) importada(s) e ${updatedCount} atualizada(s).`;
-      } else if (importedCount > 0) {
-        summaryMessage = `${importedCount} nova(s) vistoria(s) importada(s).`;
-      } else if (updatedCount > 0) {
-        summaryMessage = `${updatedCount} vistoria(s) atualizada(s).`;
-      }
-      
-      if (firstInspectionLoadedToForm) {
-        summaryMessage += ` A primeira vistoria foi carregada no formulário (com fotos, se presentes no JSON). As vistorias salvas na lista local não armazenam fotos.`;
-      } else if (summaryMessage) {
-        summaryMessage += ` As vistorias salvas na lista local não armazenam fotos.`;
-      }
-
-
-      if (summaryMessage) {
-        toast({ title: "Importação Concluída", description: summaryMessage });
-      } else if (files.length > 0 && importedCount === 0 && updatedCount === 0 && !firstInspectionLoadedToForm) {
-        toast({ title: "Importação Concluída", description: "Nenhuma vistoria válida foi encontrada nos arquivos para importar ou atualizar.", variant: "default" });
-      }
-
-      if (event.target) {
-        event.target.value = ''; 
-      }
-    })();
-
+      const sanitizedFloorsWithPhotos = (firstInspectionToLoadToFormWithPhotos.floors || []).map(floor => ({
+        ...floor,
+        id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`,
+        isFloorContentVisible: false, 
+        categories: (floor.categories || []).map(cat => ({
+          ...cat, isExpanded: false, 
+          subItems: (cat.subItems || []).map(sub => ({
+            ...sub,
+            id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && !sub.id.startsWith('custom-')) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `imported-sub-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
+            photoDataUri: sub.photoDataUri || null, 
+            photoDescription: sub.photoDescription || '', 
+            registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-ext-imported` })),
+            registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${Date.now().toString()}-${Math.random().toString(36).substring(2, 10)}-hose-imported` }))
+          }))
+        }))
+      }));
+      setActiveFloorsData(sanitizedFloorsWithPhotos);
+      setIsChecklistVisible(false); 
+    }
+  
+    let summaryMessage = "";
+    if (finalImportedCount > 0 && finalUpdatedCount > 0) {
+      summaryMessage = `${finalImportedCount} nova(s) vistoria(s) importada(s) e ${finalUpdatedCount} atualizada(s).`;
+    } else if (finalImportedCount > 0) {
+      summaryMessage = `${finalImportedCount} nova(s) vistoria(s) importada(s).`;
+    } else if (finalUpdatedCount > 0) {
+      summaryMessage = `${finalUpdatedCount} vistoria(s) atualizada(s).`;
+    }
+    
+    if (firstInspectionToLoadToFormWithPhotos) {
+      summaryMessage += ` A primeira vistoria válida foi carregada no formulário (com fotos, se presentes no JSON).`;
+    }
+    
+    if (summaryMessage) {
+      toast({ title: "Importação Concluída", description: summaryMessage });
+    } else if (files.length > 0 && finalImportedCount === 0 && finalUpdatedCount === 0 && !firstInspectionToLoadToFormWithPhotos) {
+      toast({ title: "Importação Concluída", description: "Nenhuma vistoria válida foi encontrada nos arquivos para importar ou atualizar.", variant: "default" });
+    }
+  
+    if (event.target) {
+      event.target.value = ''; 
+    }
   }, [toast, setSavedInspections, setActiveFloorsData, setClientInfo, setUploadedLogoDataUrl]);
 
   const triggerJsonImport = useCallback(() => {
@@ -1296,7 +1251,7 @@ export default function FireCheckPage() {
         </div>
         
         <ActionButtonsPanel
-          onSave={() => handleSaveInspection(false)}
+          onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
           onNewFloor={handleNewFloorInspection}
           onToggleSavedInspections={toggleSavedInspections}
@@ -1316,7 +1271,7 @@ export default function FireCheckPage() {
           onChange={handleImportInspectionFromJson}
           className="hidden"
           id="json-import-input"
-          multiple // Allow multiple file selection
+          multiple
         />
 
         {isSavedInspectionsVisible && (
