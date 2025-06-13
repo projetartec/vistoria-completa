@@ -62,19 +62,18 @@ const calculateNextInspectionNumber = (
   return randomNumber.toString();
 };
 
-const initiateFileDownload = (inspectionData: FullInspectionData, clientInfoForFilename: ClientInfo) => {
-  const jsonString = JSON.stringify(inspectionData, null, 2);
+const initiateFileDownload = (dataToDownload: FullInspectionData | FullInspectionData[], baseFileName: string) => {
+  const jsonString = JSON.stringify(dataToDownload, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  const fileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}.json`;
-  link.download = fileName;
+  link.download = `${baseFileName}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  return fileName; 
+  return `${baseFileName}.json`;
 };
 
 
@@ -706,7 +705,7 @@ export default function FireCheckPage() {
             id: sub.id.startsWith('custom-') || sub.isRegistry 
                 ? `${sub.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substring(2,9)}-copy` 
                 : sub.id,
-            photoDataUri: null, // Duplicated inspection starts without photos
+            photoDataUri: null, // Duplicated inspection starts without photos from saved list
             photoDescription: '', 
             registeredExtinguishers: sub.registeredExtinguishers ? sub.registeredExtinguishers.map(ext => ({
               ...ext,
@@ -723,7 +722,7 @@ export default function FireCheckPage() {
       setSavedInspections(prevSaved => {
         return [duplicatedInspection, ...prevSaved].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
-      toast({ title: "Vistoria Duplicada", description: `Vistoria Nº ${newInspectionNumber} criada (sem fotos).`});
+      toast({ title: "Vistoria Duplicada", description: `Vistoria Nº ${newInspectionNumber} criada (sem fotos da lista).`});
     }
   }, [savedInspections, setSavedInspections, toast]);
 
@@ -977,10 +976,33 @@ export default function FireCheckPage() {
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl,
     };
+    
+    const clientInfoForFilename = {
+        inspectionNumber: inspectionToExport.id,
+        clientLocation: inspectionToExport.clientInfo.clientLocation,
+        clientCode: '', // Not used in this filename pattern but good to have for consistency
+        inspectionDate: '', // Not used for filename
+    };
 
-    const fileName = initiateFileDownload(inspectionToExport, clientInfo);
+    const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
+    const fileName = initiateFileDownload(inspectionToExport, baseFileName);
     toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (com fotos, se houver).` });
   }, [clientInfo, activeFloorsData, uploadedLogoDataUrl, toast]);
+
+  const handleDownloadSelectedInspections = useCallback((inspectionIds: string[]) => {
+    if (inspectionIds.length === 0) {
+      toast({ title: "Nenhuma Vistoria Selecionada", description: "Selecione uma ou mais vistorias para baixar.", variant: "destructive" });
+      return;
+    }
+    const inspectionsToDownload = savedInspections.filter(insp => inspectionIds.includes(insp.id));
+    if (inspectionsToDownload.length === 0) {
+      toast({ title: "Vistorias Não Encontradas", description: "Não foi possível encontrar as vistorias selecionadas.", variant: "destructive" });
+      return;
+    }
+    const fileName = initiateFileDownload(inspectionsToDownload, 'vistorias_selecionadas');
+    toast({ title: "Vistorias Exportadas", description: `Arquivo ${fileName} com ${inspectionsToDownload.length} vistoria(s) salvo.` });
+  }, [savedInspections, toast]);
+
 
   const handleImportInspectionFromJson = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -993,17 +1015,27 @@ export default function FireCheckPage() {
     reader.onload = (e) => {
       try {
         const jsonString = e.target?.result as string;
-        const importedData = JSON.parse(jsonString) as FullInspectionData;
+        const importedData = JSON.parse(jsonString) as FullInspectionData | FullInspectionData[]; // Can be single or multiple
 
-        if (!importedData.id || !importedData.clientInfo || !importedData.floors || !importedData.timestamp) {
-          throw new Error("Formato de arquivo JSON inválido.");
+        const inspectionsToProcess: FullInspectionData[] = Array.isArray(importedData) ? importedData : [importedData];
+
+        if (inspectionsToProcess.length === 0) {
+          throw new Error("Nenhuma vistoria encontrada no arquivo JSON.");
+        }
+        
+        // For simplicity, we'll load the first inspection from the file if multiple are present.
+        // A more complex UI could allow the user to choose which one to load or how to merge.
+        const firstInspectionToLoad = inspectionsToProcess[0];
+
+        if (!firstInspectionToLoad.id || !firstInspectionToLoad.clientInfo || !firstInspectionToLoad.floors || !firstInspectionToLoad.timestamp) {
+          throw new Error("Formato de arquivo JSON inválido para a primeira vistoria no arquivo.");
         }
         
         setBlockAutoSaveOnce(true);
-        setClientInfo(importedData.clientInfo);
-        setUploadedLogoDataUrl(importedData.uploadedLogoDataUrl || null);
+        setClientInfo(firstInspectionToLoad.clientInfo);
+        setUploadedLogoDataUrl(firstInspectionToLoad.uploadedLogoDataUrl || null);
         
-        const sanitizedFloors = importedData.floors.map(floor => ({
+        const sanitizedFloors = firstInspectionToLoad.floors.map(floor => ({
           ...floor,
           id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-'))
               ? floor.id
@@ -1037,11 +1069,29 @@ export default function FireCheckPage() {
         setActiveFloorsData(sanitizedFloors);
         setIsChecklistVisible(false); 
 
-        toast({ title: "Vistoria Importada", description: `Vistoria Nº ${importedData.id} carregada do arquivo (com fotos, se houver).` });
+        toast({ title: "Vistoria Importada", description: `Vistoria Nº ${firstInspectionToLoad.id} carregada do arquivo (com fotos, se houver).` });
         
+        // Optionally, if the imported file contained multiple inspections,
+        // you could save the others to the savedInspections list if they are not already there.
+        // This part is omitted for simplicity for now but can be added.
+        // For example:
+        // const otherInspections = inspectionsToProcess.slice(1);
+        // if (otherInspections.length > 0) {
+        //   setSavedInspections(prev => {
+        //     const newEntries = otherInspections.filter(importedInsp => !prev.some(savedInsp => savedInsp.id === importedInsp.id));
+        //     // Remember to strip photos if saving to localStorage and quota is a concern
+        //     return [...newEntries, ...prev].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+        //   });
+        //   toast({ title: "Vistorias Adicionais", description: `${otherInspections.length} vistorias adicionais encontradas no arquivo. Verifique a lista de salvas.` });
+        // }
+
       } catch (error) {
         console.error("Erro ao importar JSON:", error);
-        toast({ title: "Erro na Importação", description: "Não foi possível importar a vistoria do arquivo. Verifique o formato do arquivo e tente novamente.", variant: "destructive"});
+        let errorMessage = "Não foi possível importar a vistoria do arquivo. Verifique o formato do arquivo e tente novamente.";
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        toast({ title: "Erro na Importação", description: errorMessage, variant: "destructive"});
       } finally {
         if (event.target) {
           event.target.value = ''; 
@@ -1049,7 +1099,7 @@ export default function FireCheckPage() {
       }
     };
     reader.readAsText(file);
-  }, [toast]);
+  }, [toast, setSavedInspections]);
 
   const triggerJsonImport = useCallback(() => {
     jsonImportFileInputRef.current?.click();
@@ -1227,6 +1277,7 @@ export default function FireCheckPage() {
             onDeleteMultipleInspections={handleDeleteMultipleInspections}
             onDuplicateInspection={handleDuplicateInspection}
             onUpdateClientLocation={handleUpdateClientLocationForSavedInspection}
+            onDownloadSelected={handleDownloadSelectedInspections}
           />
         )}
 

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Edit3, Trash2, Search, Hash, Copy, Edit2 } from 'lucide-react';
+import { Edit3, Trash2, Search, Hash, Copy, Edit2, Download } from 'lucide-react'; // Added Download icon
 import type { FullInspectionData } from '@/lib/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -20,6 +20,7 @@ interface SavedInspectionsListProps {
   onDeleteMultipleInspections: (fullInspectionIds: string[]) => void;
   onDuplicateInspection: (fullInspectionId: string) => void;
   onUpdateClientLocation: (inspectionId: string, newClientLocation: string) => void;
+  onDownloadSelected: (inspectionIds: string[]) => void; // New prop
 }
 
 export function SavedInspectionsList({
@@ -29,9 +30,10 @@ export function SavedInspectionsList({
   onDeleteMultipleInspections,
   onDuplicateInspection,
   onUpdateClientLocation,
+  onDownloadSelected, // New prop
 }: SavedInspectionsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedToDelete, setSelectedToDelete] = useState<string[]>([]);
+  const [selectedInspections, setSelectedInspections] = useState<string[]>([]); // Renamed for clarity
   const [editingClientLocationForInspection, setEditingClientLocationForInspection] = useState<FullInspectionData | null>(null);
   const [newClientLocationInput, setNewClientLocationInput] = useState('');
 
@@ -44,7 +46,7 @@ export function SavedInspectionsList({
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
   const handleToggleSelection = (inspectionId: string) => {
-    setSelectedToDelete((prevSelected) =>
+    setSelectedInspections((prevSelected) =>
       prevSelected.includes(inspectionId)
         ? prevSelected.filter((id) => id !== inspectionId)
         : [...prevSelected, inspectionId]
@@ -52,14 +54,22 @@ export function SavedInspectionsList({
   };
 
   const handleDeleteSelectedClick = () => {
-    if (selectedToDelete.length === 0) {
-      console.warn("SavedInspectionsList: Botão 'Excluir Selecionadas' clicado, mas nenhuma vistoria está selecionada.");
+    if (selectedInspections.length === 0) {
+      // This case should ideally be prevented by disabling the button
       return;
     }
-    if (typeof window !== 'undefined' && window.confirm(`Tem certeza que deseja excluir ${selectedToDelete.length} vistoria(s) selecionada(s)? Esta ação é irreversível.`)) {
-      onDeleteMultipleInspections(selectedToDelete);
-      setSelectedToDelete([]);
+    if (typeof window !== 'undefined' && window.confirm(`Tem certeza que deseja excluir ${selectedInspections.length} vistoria(s) selecionada(s)? Esta ação é irreversível.`)) {
+      onDeleteMultipleInspections(selectedInspections);
+      setSelectedInspections([]);
     }
+  };
+
+  const handleDownloadSelectedClick = () => {
+    if (selectedInspections.length === 0) {
+      // This case should ideally be prevented by disabling the button
+      return;
+    }
+    onDownloadSelected(selectedInspections);
   };
 
   const openEditClientLocationDialog = useCallback((inspection: FullInspectionData) => {
@@ -84,12 +94,17 @@ export function SavedInspectionsList({
     <>
       <Card className="mt-6 mb-6 shadow-lg">
         <CardHeader>
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
             <CardTitle className="font-headline text-xl">Vistorias Salvas</CardTitle>
-            {selectedToDelete.length > 0 && (
-              <Button onClick={handleDeleteSelectedClick} variant="destructive" size="sm">
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir Selecionadas ({selectedToDelete.length})
-              </Button>
+            {selectedInspections.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleDownloadSelectedClick} variant="outline" size="sm" className="border-blue-500 text-blue-500 hover:bg-blue-500/10">
+                  <Download className="mr-2 h-4 w-4" /> Baixar Selecionadas ({selectedInspections.length})
+                </Button>
+                <Button onClick={handleDeleteSelectedClick} variant="destructive" size="sm">
+                  <Trash2 className="mr-2 h-4 w-4" /> Excluir Selecionadas ({selectedInspections.length})
+                </Button>
+              </div>
             )}
           </div>
           <div className="relative">
@@ -113,7 +128,7 @@ export function SavedInspectionsList({
                   <div className="flex items-center px-4 py-1 hover:bg-accent/10 rounded-t-md">
                     <Checkbox
                       id={`select-inspection-${inspection.id}`}
-                      checked={selectedToDelete.includes(inspection.id)}
+                      checked={selectedInspections.includes(inspection.id)}
                       onCheckedChange={() => handleToggleSelection(inspection.id)}
                       onClick={(e) => e.stopPropagation()}
                       aria-label={`Selecionar vistoria ${inspection.id}`}
@@ -199,4 +214,3 @@ export function SavedInspectionsList({
     </>
   );
 }
-
