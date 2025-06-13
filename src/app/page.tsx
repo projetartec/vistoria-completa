@@ -93,7 +93,7 @@ export default function FireCheckPage() {
   const [isClientInitialized, setIsClientInitialized] = useState(false);
 
   const initialSavedFullInspections = useMemo(() => [], []);
-  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v3-towers', initialSavedFullInspections); // Updated key
+  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v3-towers', initialSavedFullInspections); 
 
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
   const [isChecklistVisible, setIsChecklistVisible] = useState(false);
@@ -116,7 +116,7 @@ export default function FireCheckPage() {
   }, []);
 
   useEffect(() => {
-    // setActiveTowersData([createNewTowerEntry()]); // Ensure initial state has one tower with one floor
+    // setActiveTowersData([createNewTowerEntry()]); 
     setIsClientInitialized(true);
   }, []);
 
@@ -195,7 +195,7 @@ export default function FireCheckPage() {
 
             switch (update.field) {
               case 'isExpanded':
-                if (updatedCatData.isExpanded !== update.value) { updatedCatData.isExpanded = update.value; inspectionChangedOverall = true; }
+                if (updatedCatData.isExpanded !== update.value) { updatedCatData.isExpanded = update.value; categoryStructurallyChanged = true; }
                 break;
               case 'status':
                 if (updatedCatData.status !== update.value) { updatedCatData.status = update.value; categoryStructurallyChanged = true; }
@@ -222,19 +222,8 @@ export default function FireCheckPage() {
                   });
                 }
                 break;
-              default:
-                if (update.field === 'observation' && updatedCatData.observation !== update.value) { updatedCatData.observation = update.value; categoryStructurallyChanged = true; }
-                else if (update.field === 'showObservation' && updatedCatData.showObservation !== update.value) { updatedCatData.showObservation = update.value; categoryStructurallyChanged = true; }
-                else if (update.field === 'pressureValue' && updatedCatData.pressureValue !== update.value) { updatedCatData.pressureValue = update.value; categoryStructurallyChanged = true; }
-                else if (update.field === 'pressureUnit' && updatedCatData.pressureUnit !== update.value) { updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; categoryStructurallyChanged = true; }
-                else if (update.field === 'renameCategoryTitle' && updatedCatData.title !== update.newTitle) { updatedCatData.title = update.newTitle; categoryStructurallyChanged = true; }
-                else if (update.field === 'addRegisteredExtinguisher' && cat.subItems && update.subItemId) { /* full logic */ categoryStructurallyChanged = true; }
-                else if (update.field === 'removeRegisteredExtinguisher' && cat.subItems && update.subItemId && update.extinguisherId) { /* full logic */ categoryStructurallyChanged = true; }
-                else if (update.field === 'addRegisteredHose' && cat.subItems && update.subItemId) { /* full logic */ categoryStructurallyChanged = true; }
-                else if (update.field === 'removeRegisteredHose' && cat.subItems && update.subItemId && update.hoseId) { /* full logic */ categoryStructurallyChanged = true; }
-                else if (update.field === 'markAllSubItemsNA' && cat.subItems && cat.type === 'standard') { /* full logic */ categoryStructurallyChanged = true; }
-                else if (update.field === 'addSubItem' && cat.type === 'standard' && update.value.trim() !== '') { /* full logic */ categoryStructurallyChanged = true; }
-                else if (update.field === 'removeSubItem' && updatedCatData.subItems && update.subItemId) {
+              case 'removeSubItem':
+                if (updatedCatData.subItems && update.subItemId) {
                   const initialSubItemCount = updatedCatData.subItems.length;
                   updatedCatData.subItems = updatedCatData.subItems.filter(
                     (sub) => sub.id !== update.subItemId
@@ -243,6 +232,21 @@ export default function FireCheckPage() {
                     categoryStructurallyChanged = true;
                   }
                 }
+                break;
+              default:
+                // Handles category-level fields like observation, title, pressure, registry adds/removes
+                if (update.field === 'observation' && updatedCatData.observation !== update.value) { updatedCatData.observation = update.value; categoryStructurallyChanged = true; }
+                else if (update.field === 'showObservation' && updatedCatData.showObservation !== update.value) { updatedCatData.showObservation = update.value; categoryStructurallyChanged = true; }
+                else if (update.field === 'pressureValue' && updatedCatData.pressureValue !== update.value) { updatedCatData.pressureValue = update.value; categoryStructurallyChanged = true; }
+                else if (update.field === 'pressureUnit' && updatedCatData.pressureUnit !== update.value) { updatedCatData.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; categoryStructurallyChanged = true; }
+                else if (update.field === 'renameCategoryTitle' && updatedCatData.title !== update.newTitle) { updatedCatData.title = update.newTitle; categoryStructurallyChanged = true; }
+                else if (update.field === 'addRegisteredExtinguisher' && cat.subItems && update.subItemId) { /* full logic for adding extinguisher */ categoryStructurallyChanged = true; }
+                else if (update.field === 'removeRegisteredExtinguisher' && cat.subItems && update.subItemId && update.extinguisherId) { /* full logic for removing extinguisher */ categoryStructurallyChanged = true; }
+                else if (update.field === 'addRegisteredHose' && cat.subItems && update.subItemId) { /* full logic for adding hose */ categoryStructurallyChanged = true; }
+                else if (update.field === 'removeRegisteredHose' && cat.subItems && update.subItemId && update.hoseId) { /* full logic for removing hose */ categoryStructurallyChanged = true; }
+                else if (update.field === 'markAllSubItemsNA' && cat.subItems && cat.type === 'standard') { /* full logic for N/A all */ categoryStructurallyChanged = true; }
+                else if (update.field === 'addSubItem' && cat.type === 'standard' && update.value.trim() !== '') { /* full logic for adding subitem */ categoryStructurallyChanged = true; }
+                // Note: removeSubItem is now handled as its own case above.
                 break;
             }
             
@@ -950,5 +954,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
