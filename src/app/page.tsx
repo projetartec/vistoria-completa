@@ -497,75 +497,92 @@ export default function FireCheckPage() {
     });
     setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-    const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
-        ...tower,
-        id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
-        isTowerContentVisible: false,
-        floors: (tower.floors || []).map(floor => ({
-            ...floor,
-            id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
-            isFloorContentVisible: false,
-            categories: INSPECTION_CONFIG.map(cfgCategory => {
-                const jsonCategory = (floor.categories || []).find(cat => cat.id === cfgCategory.id);
-                let finalSubItems: SubItemState[] = [];
+    const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {
+      const sanitizedFloorsForForm = (loadedTower.floors || []).map(loadedFloor => {
+        const sanitizedCategoriesForForm = INSPECTION_CONFIG.map(cfgCategory => {
+          const jsonCategory = (loadedFloor.categories || []).find(cat => cat.id === cfgCategory.id);
+          let finalSubItems: SubItemState[] = [];
 
-                if (cfgCategory.type === 'standard') {
-                    const jsonSubItemsFromCategory = jsonCategory?.subItems;
-
-                    if (jsonCategory && Array.isArray(jsonSubItemsFromCategory)) {
-                        const jsonSubItemsMap = new Map(jsonSubItemsFromCategory.map(js => [js.id, js]));
-                        finalSubItems = (cfgCategory.subItems || []).map(cfgSub => {
-                            const jsonSub = jsonSubItemsMap.get(cfgSub.id);
-                            return {
-                                id: cfgSub.id,
-                                name: jsonSub?.name || cfgSub.name,
-                                status: jsonSub?.status,
-                                observation: jsonSub?.observation || '',
-                                showObservation: jsonSub?.showObservation || false,
-                                isRegistry: cfgSub.isRegistry || false,
-                                photoDataUri: jsonSub?.photoDataUri || null,
-                                photoDescription: jsonSub?.photoDescription || '',
-                                registeredExtinguishers: (jsonSub?.registeredExtinguishers || (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
-                                registeredHoses: (jsonSub?.registeredHoses || (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })),
-                            };
-                        });
-
-                        jsonSubItemsFromCategory.forEach(jsonSub => {
-                            if (!(cfgCategory.subItems || []).some(cfgSub => cfgSub.id === jsonSub.id)) {
-                                finalSubItems.push({
-                                    ...jsonSub,
-                                    id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20) ) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-sub-${generateUniqueId()}`,
-                                    photoDataUri: jsonSub.photoDataUri || null,
-                                    photoDescription: jsonSub.photoDescription || '',
-                                });
-                            }
-                        });
-                    } else { // jsonCategory not found or no subItems in json
-                        finalSubItems = (cfgCategory.subItems || []).map(cfgSub => ({
-                            id: cfgSub.id, name: cfgSub.name, status: undefined, observation: '', showObservation: false,
-                            isRegistry: cfgSub.isRegistry || false, photoDataUri: null, photoDescription: '',
-                            registeredExtinguishers: (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined),
-                            registeredHoses: (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
-                        }));
-                    }
-                }
-                
+          if (cfgCategory.type === 'standard') {
+            const configSubItems = cfgCategory.subItems || [];
+            if (jsonCategory && Array.isArray(jsonCategory.subItems)) {
+              const jsonSubItemsMap = new Map(jsonCategory.subItems.map(js => [js.id, js]));
+              
+              finalSubItems = configSubItems.map(cfgSub => {
+                const jsonSub = jsonSubItemsMap.get(cfgSub.id);
                 return {
-                    id: cfgCategory.id,
-                    title: jsonCategory?.title || cfgCategory.title,
-                    type: cfgCategory.type, isExpanded: false,
-                    status: jsonCategory?.status,
-                    observation: jsonCategory?.observation || '',
-                    showObservation: jsonCategory?.showObservation || false,
-                    pressureValue: jsonCategory?.pressureValue || '',
-                    pressureUnit: jsonCategory?.pressureUnit || '',
-                    subItems: cfgCategory.type === 'standard' ? finalSubItems : undefined,
+                  id: cfgSub.id,
+                  name: jsonSub?.name || cfgSub.name,
+                  status: jsonSub?.status,
+                  observation: jsonSub?.observation || '',
+                  showObservation: jsonSub?.showObservation || false,
+                  isRegistry: cfgSub.isRegistry || false,
+                  photoDataUri: jsonSub?.photoDataUri || null,
+                  photoDescription: jsonSub?.photoDescription || '',
+                  registeredExtinguishers: (jsonSub?.registeredExtinguishers || (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `loaded-${generateUniqueId()}-ext` })),
+                  registeredHoses: (jsonSub?.registeredHoses || (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `loaded-${generateUniqueId()}-hose` })),
                 };
-            }),
-        })),
-    }));
+              });
 
-    setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
+              jsonCategory.subItems.forEach(jsonSub => {
+                if (!configSubItems.some(cfgSub => cfgSub.id === jsonSub.id)) { // Custom sub-item from JSON
+                  finalSubItems.push({
+                    ...jsonSub, // Spread all properties from jsonSub
+                    id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20)) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-custom-sub-${generateUniqueId()}`,
+                    name: jsonSub.name || 'Subitem Carregado',
+                    photoDataUri: jsonSub.photoDataUri || null,
+                    photoDescription: jsonSub.photoDescription || '',
+                    // Ensure other SubItemState properties have defaults if not in jsonSub
+                    status: jsonSub.status,
+                    observation: jsonSub.observation || '',
+                    showObservation: jsonSub.showObservation || false,
+                    isRegistry: jsonSub.isRegistry || false,
+                    registeredExtinguishers: (jsonSub.registeredExtinguishers || undefined)?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `loaded-custom-${generateUniqueId()}-ext` })),
+                    registeredHoses: (jsonSub.registeredHoses || undefined)?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `loaded-custom-${generateUniqueId()}-hose` })),
+                  });
+                }
+              });
+            } else { // jsonCategory not found or no subItems in json, use config defaults
+              finalSubItems = configSubItems.map(cfgSub => ({
+                id: cfgSub.id, name: cfgSub.name, status: undefined, observation: '', showObservation: false,
+                isRegistry: cfgSub.isRegistry || false, photoDataUri: null, photoDescription: '',
+                registeredExtinguishers: (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined),
+                registeredHoses: (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
+              }));
+            }
+          }
+          
+          return {
+            id: cfgCategory.id,
+            title: jsonCategory?.title || cfgCategory.title,
+            type: cfgCategory.type,
+            isExpanded: false, // Always start collapsed
+            status: jsonCategory?.status,
+            observation: jsonCategory?.observation || '',
+            showObservation: jsonCategory?.showObservation || false,
+            pressureValue: jsonCategory?.pressureValue || '',
+            pressureUnit: jsonCategory?.pressureUnit || '',
+            subItems: cfgCategory.type === 'standard' ? finalSubItems : undefined,
+          };
+        });
+        return {
+          ...loadedFloor, // Spread other properties from loadedFloor like floor name
+          id: (loadedFloor.id && typeof loadedFloor.id === 'string' && !loadedFloor.id.startsWith('server-temp-id-')) ? loadedFloor.id : generateUniqueId(),
+          floor: loadedFloor.floor || '', // Ensure floor has a value
+          categories: sanitizedCategoriesForForm,
+          isFloorContentVisible: false, // Always start collapsed
+        };
+      });
+      return {
+        ...loadedTower, // Spread other properties from loadedTower like towerName
+        id: (loadedTower.id && typeof loadedTower.id === 'string' && !loadedTower.id.startsWith('server-temp-id-')) ? loadedTower.id : generateUniqueId(),
+        towerName: loadedTower.towerName || '', // Ensure towerName has a value
+        floors: sanitizedFloorsForForm,
+        isTowerContentVisible: false, // Always start collapsed
+      };
+    });
+
+    setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
     setIsChecklistVisible(true);
   }, [setActiveTowersData, setClientInfo, setUploadedLogoDataUrl]);
 
@@ -589,6 +606,16 @@ export default function FireCheckPage() {
       });
       const file = await fileHandle.getFile();
       const contents = await file.text();
+      
+      if (!contents || contents.trim() === "") {
+        toast({
+          title: "Arquivo Vazio ou Inválido",
+          description: "O arquivo selecionado está vazio ou não pôde ser lido como texto.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const inspectionToLoad = JSON.parse(contents) as FullInspectionData;
 
       if (inspectionToLoad && typeof inspectionToLoad === 'object' && inspectionToLoad.id && inspectionToLoad.clientInfo && inspectionToLoad.towers) {
@@ -598,11 +625,15 @@ export default function FireCheckPage() {
         toast({ title: "Arquivo Inválido", description: "O arquivo selecionado não parece ser uma vistoria válida.", variant: "destructive" });
       }
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
+      if (err.name === 'AbortError') {
+         toast({ title: "Abertura Cancelada", description: "A seleção de arquivo foi cancelada.", variant: "default" });
+      } else if (err instanceof SyntaxError) {
+        console.error('Erro ao parsear JSON do arquivo:', err);
+        toast({ title: "Erro de Formato", description: "O arquivo JSON está malformatado e não pôde ser lido.", variant: "destructive" });
+      }
+      else {
         console.error('Erro ao abrir arquivo:', err);
         toast({ title: "Erro ao Abrir", description: "Não foi possível abrir ou processar o arquivo.", variant: "destructive" });
-      } else {
-        toast({ title: "Abertura Cancelada", description: "A seleção de arquivo foi cancelada.", variant: "default" });
       }
     }
   }, [loadInspectionDataToForm, toast]);
@@ -664,7 +695,7 @@ export default function FireCheckPage() {
     setActiveTowersData(prevTowers => prevTowers.map((tower, index) => index === towerIndex ? { ...tower, isTowerContentVisible: !(tower.isTowerContentVisible !== undefined ? tower.isTowerContentVisible : true) } : tower));
   }, []);
   const handleToggleFloorContent = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) } : floor) } : tower));
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) } : floor) } : floor));
   }, []);
 
 
@@ -737,7 +768,7 @@ export default function FireCheckPage() {
     let firstInspectionToLoadToFormWithPhotos: FullInspectionData | null = null;
    
 
-    const readFilePromise = (file: File): Promise<FullInspectionData | null> => { // Reads a single inspection from a file
+    const readFilePromise = (file: File): Promise<FullInspectionData | null> => { 
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -750,7 +781,7 @@ export default function FireCheckPage() {
             }
             const importedData = JSON.parse(jsonString);
 
-            if (typeof importedData !== 'object' || importedData === null || Array.isArray(importedData)) { // Expecting a single inspection object
+            if (typeof importedData !== 'object' || importedData === null || Array.isArray(importedData)) { 
                 console.warn(`Conteúdo JSON não é um objeto de vistoria válido no arquivo ${file.name}:`, JSON.stringify(importedData, null, 2).substring(0,100));
                 resolve(null);
                 return;
@@ -767,25 +798,28 @@ export default function FireCheckPage() {
               console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspection, null, 2).substring(0, 500));
               resolve(null);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
-            toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}. Verifique o formato.`, variant: "destructive"});
-            reject(error); // Reject if parsing fails
+            if (error instanceof SyntaxError) {
+              toast({ title: "Erro de Formato", description: `Arquivo ${file.name} malformatado. Verifique o conteúdo.`, variant: "destructive"});
+            } else {
+              toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}. Verifique o formato.`, variant: "destructive"});
+            }
+            reject(error); 
           }
         };
         reader.onerror = (err) => {
           console.error(`Erro ao ler o arquivo ${file.name}:`, err);
           toast({ title: "Erro de Leitura", description: `Não foi possível ler ${file.name}.`, variant: "destructive"});
-          reject(err); // Reject on read error
+          reject(err); 
         };
-        reader.readAsText(currentFiles[0]); // Process only the first file for this input
+        reader.readAsText(currentFiles[0]); 
       });
     };
 
     try {
         firstInspectionToLoadToFormWithPhotos = await readFilePromise(currentFiles[0]);
     } catch (error) {
-        // Error already toasted in readFilePromise
          if (jsonImportFileInputRef.current) {
             jsonImportFileInputRef.current.value = '';
         }
