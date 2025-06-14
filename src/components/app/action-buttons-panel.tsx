@@ -9,18 +9,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Save, PlusSquare, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText, Image as ImageIcon, Building, FolderOpen } from 'lucide-react'; // Added Building, FolderOpen
+import { Save, PlusSquare, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText, Image as ImageIcon, Building, Database, Eye, EyeOff } from 'lucide-react';
 
 interface ActionButtonsPanelProps {
-  onSave: () => void;
+  onSave: () => void; // Will now save to IndexedDB
   onNewInspection: () => void;
   onAddNewTower: () => void;
-  // onToggleSavedInspections: () => void; // Removed
-  // isSavedInspectionsVisible: boolean; // Removed
+  onToggleSavedInspections: () => void; // Re-added
+  isSavedInspectionsVisible: boolean; // Re-added
   onPrint: () => void;
-  onExportJson: () => void; // Kept for traditional export
-  onTriggerImportJson: () => void; // Kept for traditional import
-  onLoadFromFileSystem: () => void; // New prop for File System Access API load
+  onExportJson: () => void; 
+  onTriggerImportJson: () => void; 
+  // onLoadFromFileSystem removed as primary load mechanism replaced by IndexedDB list
   onGenerateRegisteredItemsReport: () => void;
   onGenerateNCItemsReport: () => void;
   onGeneratePdf: () => void;
@@ -31,12 +31,11 @@ export function ActionButtonsPanel({
   onSave,
   onNewInspection,
   onAddNewTower,
-  // onToggleSavedInspections, // Removed
-  // isSavedInspectionsVisible, // Removed
+  onToggleSavedInspections, // Re-added
+  isSavedInspectionsVisible, // Re-added
   onPrint,
   onExportJson,
   onTriggerImportJson,
-  onLoadFromFileSystem, // New prop
   onGenerateRegisteredItemsReport,
   onGenerateNCItemsReport,
   onGeneratePdf,
@@ -67,20 +66,21 @@ export function ActionButtonsPanel({
 
       {isActionsContentVisible && (
         <div id="actions-content-panel" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
-          <Button onClick={onSave} title="Salvar Vistoria (no dispositivo)" size="sm">
-            <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar Vistoria</span>
+          <Button onClick={onSave} title="Salvar Vistoria no Navegador (IndexedDB)" size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+            <Database className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar Vistoria</span>
           </Button>
           <Button
-            onClick={onLoadFromFileSystem} // New handler
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-            title="Carregar Vistoria (do dispositivo)"
+            onClick={onToggleSavedInspections}
+            variant="outline"
+            title={isSavedInspectionsVisible ? "Ocultar Vistorias Salvas" : "Ver Vistorias Salvas (Navegador)"}
             size="sm"
           >
-            <FolderOpen className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Carregar Vistoria</span>
+            {isSavedInspectionsVisible ? <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> : <Eye className="mr-1 h-4 w-4 sm:mr-2" />}
+             <span className="hidden sm:inline">{isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}</span>
           </Button>
            <Button
             onClick={onAddNewTower} 
-            className="bg-green-500 hover:bg-green-600 text-white"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white" // Changed color for variety
             title="Nova Torre" 
             size="sm"
           >
@@ -94,7 +94,6 @@ export function ActionButtonsPanel({
           >
             <Printer className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Imprimir</span>
           </Button>
-          {/* Removed "Ver/Ocultar Salvas" button */}
            <Button
             onClick={onExportJson}
             className="bg-teal-500 hover:bg-teal-600 text-white"
@@ -105,7 +104,7 @@ export function ActionButtonsPanel({
           </Button>
           <Button
             onClick={onTriggerImportJson}
-            className="bg-teal-500 hover:bg-teal-600 text-white"
+            className="bg-blue-500 hover:bg-blue-600 text-white"
             title="Importar Vistoria de JSON (via seletor de arquivo)"
             size="sm"
           >
@@ -148,11 +147,9 @@ export function ActionButtonsPanel({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
         </div>
       )}
     </div>
   );
 }
-
     

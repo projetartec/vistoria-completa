@@ -6,7 +6,7 @@ import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
 import { ActionButtonsPanel } from '@/components/app/action-buttons-panel';
-// SavedInspectionsList is no longer used
+import { SavedInspectionsList } from '@/components/app/saved-inspections-list'; // Re-enabled
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Building, Plus, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { saveInspectionToDB, getAllInspectionsFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
+import { format } from 'date-fns';
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -64,7 +66,6 @@ const calculateNextInspectionNumber = (clientLocation: string): string => {
   return randomNumber.toString();
 };
 
-// This helper remains for the "Exportar JSON" button as a fallback or alternative.
 const initiateFileDownload = (dataToDownload: FullInspectionData | FullInspectionData[], baseFileName: string) => {
   const jsonString = JSON.stringify(dataToDownload, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
@@ -96,14 +97,32 @@ export default function FireCheckPage() {
   const [activeTowersData, setActiveTowersData] = useState<TowerData[]>([createNewTowerEntry()]);
   const [isClientInitialized, setIsClientInitialized] = useState(false);
 
-  // Remove localStorage for full inspections
-  // const initialSavedFullInspections = useMemo(() => [], []);
-  // const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v3-towers', initialSavedFullInspections);
+  const [dbInspections, setDbInspections] = useState<FullInspectionData[]>([]);
+  const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
+  const [isLoadingDbInspections, setIsLoadingDbInspections] = useState(true);
+
 
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
   const [isChecklistVisible, setIsChecklistVisible] = useState(false);
-  // isSavedInspectionsVisible is no longer needed
   const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
+
+  const fetchSavedInspectionsFromDb = useCallback(async () => {
+    setIsLoadingDbInspections(true);
+    try {
+      const inspections = await getAllInspectionsFromDB();
+      setDbInspections(inspections);
+    } catch (error) {
+      console.error("Failed to fetch inspections from IndexedDB:", error);
+      toast({
+        title: "Erro ao Carregar Vistorias Salvas",
+        description: "Não foi possível buscar as vistorias do banco de dados do navegador.",
+        variant: "destructive",
+      });
+      setDbInspections([]);
+    } finally {
+      setIsLoadingDbInspections(false);
+    }
+  }, [toast]);
 
  useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -119,9 +138,10 @@ export default function FireCheckPage() {
       if (!clientInfo.inspectionDate) {
         setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
       }
+      fetchSavedInspectionsFromDb();
     }
     setIsClientInitialized(true);
-  }, [clientInfo.inspectionDate]);
+  }, [clientInfo.inspectionDate, fetchSavedInspectionsFromDb]);
 
 
   const handleLogoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -377,8 +397,12 @@ export default function FireCheckPage() {
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
     setIsChecklistVisible(false);
+    setIsSavedInspectionsVisible(false); // Hide saved list on new inspection
     setUploadedLogoDataUrl(null);
-  }, []);
+     if (clientInfo.clientLocation) { // Auto-generate new number only if location was set
+        setClientInfo(prev => ({...prev, inspectionNumber: calculateNextInspectionNumber(prev.clientLocation)}));
+    }
+  }, [clientInfo.clientLocation]);
 
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => [...prevTowers, createNewTowerEntry()]);
@@ -441,49 +465,28 @@ export default function FireCheckPage() {
     );
   }, [toast]);
 
-  const handleSaveInspection = useCallback(async () => {
-    if (!window.showSaveFilePicker) {
-      toast({
-        title: "Navegador incompatível",
-        description: "Seu navegador não suporta a API para salvar arquivos diretamente. Use o botão 'Exportar JSON'.",
-        variant: "destructive",
-      });
-      return;
+  const handleSaveInspectionToDB = useCallback(async () => {
+    if (!clientInfo.inspectionNumber) {
+       toast({ title: "ID da Vistoria Necessário", description: "Por favor, preencha o Local para gerar um Número de Vistoria ou insira manualmente.", variant: "destructive" });
+       return;
     }
-
-    const currentClientInfo = clientInfo;
     const inspectionToSave: FullInspectionData = {
-      id: currentClientInfo.inspectionNumber || `temp-id-${Date.now()}`,
-      clientInfo: { ...currentClientInfo },
-      towers: activeTowersData, // Includes photoDataUri
+      id: clientInfo.inspectionNumber, // Use inspectionNumber as the key for IndexedDB
+      clientInfo: { ...clientInfo },
+      towers: activeTowersData,
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl
     };
 
-    const jsonString = JSON.stringify(inspectionToSave, null, 2);
-    const suggestedName = `vistoria_${(currentClientInfo.inspectionNumber || 'NO-NUM').replace(/\s+/g, '_')}_${(currentClientInfo.clientLocation || 'LOCAL').replace(/[^\w.-]/g, '_')}.json`;
-
     try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: suggestedName,
-        types: [{
-          description: 'JSON Files',
-          accept: { 'application/json': ['.json'] },
-        }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(jsonString);
-      await writable.close();
-      toast({ title: "Vistoria Salva", description: `Arquivo ${handle.name} salvo com sucesso (incluindo fotos e observações).` });
+      await saveInspectionToDB(inspectionToSave);
+      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva no navegador (incluindo fotos e observações).` });
+      fetchSavedInspectionsFromDb(); // Refresh the list of saved inspections
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        console.error('Erro ao salvar arquivo:', err);
-        toast({ title: "Erro ao Salvar", description: "Não foi possível salvar o arquivo no seu dispositivo.", variant: "destructive" });
-      } else {
-        toast({ title: "Salvamento Cancelado", description: "O salvamento do arquivo foi cancelado.", variant: "default" });
-      }
+      console.error('Erro ao salvar vistoria no IndexedDB:', err);
+      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria no banco de dados do navegador.", variant: "destructive" });
     }
-  }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast]);
+  }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast, fetchSavedInspectionsFromDb]);
 
 
   const loadInspectionDataToForm = useCallback((inspectionToLoad: FullInspectionData) => {
@@ -491,7 +494,7 @@ export default function FireCheckPage() {
     setClientInfo({
         clientLocation: loadedClientInfo.clientLocation || '',
         clientCode: loadedClientInfo.clientCode || '',
-        inspectionNumber: loadedClientInfo.inspectionNumber || '',
+        inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '', // Prioritize clientInfo.inspectionNumber, then inspectionToLoad.id
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
         inspectedBy: loadedClientInfo.inspectedBy || '',
     });
@@ -525,14 +528,13 @@ export default function FireCheckPage() {
               });
 
               jsonCategory.subItems.forEach(jsonSub => {
-                if (!configSubItems.some(cfgSub => cfgSub.id === jsonSub.id)) { // Custom sub-item from JSON
+                if (!configSubItems.some(cfgSub => cfgSub.id === jsonSub.id)) { // Custom sub-item from JSON/DB
                   finalSubItems.push({
-                    ...jsonSub, // Spread all properties from jsonSub
+                    ...jsonSub, 
                     id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20)) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-custom-sub-${generateUniqueId()}`,
                     name: jsonSub.name || 'Subitem Carregado',
                     photoDataUri: jsonSub.photoDataUri || null,
                     photoDescription: jsonSub.photoDescription || '',
-                    // Ensure other SubItemState properties have defaults if not in jsonSub
                     status: jsonSub.status,
                     observation: jsonSub.observation || '',
                     showObservation: jsonSub.showObservation || false,
@@ -542,7 +544,7 @@ export default function FireCheckPage() {
                   });
                 }
               });
-            } else { // jsonCategory not found or no subItems in json, use config defaults
+            } else { 
               finalSubItems = configSubItems.map(cfgSub => ({
                 id: cfgSub.id, name: cfgSub.name, status: undefined, observation: '', showObservation: false,
                 isRegistry: cfgSub.isRegistry || false, photoDataUri: null, photoDescription: '',
@@ -556,7 +558,7 @@ export default function FireCheckPage() {
             id: cfgCategory.id,
             title: jsonCategory?.title || cfgCategory.title,
             type: cfgCategory.type,
-            isExpanded: false, // Always start collapsed
+            isExpanded: false, 
             status: jsonCategory?.status,
             observation: jsonCategory?.observation || '',
             showObservation: jsonCategory?.showObservation || false,
@@ -566,182 +568,85 @@ export default function FireCheckPage() {
           };
         });
         return {
-          ...loadedFloor, // Spread other properties from loadedFloor like floor name
+          ...loadedFloor, 
           id: (loadedFloor.id && typeof loadedFloor.id === 'string' && !loadedFloor.id.startsWith('server-temp-id-')) ? loadedFloor.id : generateUniqueId(),
-          floor: loadedFloor.floor || '', // Ensure floor has a value
+          floor: loadedFloor.floor || '', 
           categories: sanitizedCategoriesForForm,
-          isFloorContentVisible: false, // Always start collapsed
+          isFloorContentVisible: false, 
         };
       });
       return {
-        ...loadedTower, // Spread other properties from loadedTower like towerName
+        ...loadedTower, 
         id: (loadedTower.id && typeof loadedTower.id === 'string' && !loadedTower.id.startsWith('server-temp-id-')) ? loadedTower.id : generateUniqueId(),
-        towerName: loadedTower.towerName || '', // Ensure towerName has a value
+        towerName: loadedTower.towerName || '', 
         floors: sanitizedFloorsForForm,
-        isTowerContentVisible: false, // Always start collapsed
+        isTowerContentVisible: false, 
       };
     });
 
     setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
     setIsChecklistVisible(true);
-  }, [setActiveTowersData, setClientInfo, setUploadedLogoDataUrl]);
+    setIsSavedInspectionsVisible(false); // Hide list after loading
+  }, [setActiveTowersData, setClientInfo, setUploadedLogoDataUrl, setIsChecklistVisible, setIsSavedInspectionsVisible]);
 
-
-  const handleLoadFromFileSystem = useCallback(async () => {
-    if (!window.showOpenFilePicker) {
-      toast({
-        title: "Navegador incompatível",
-        description: "Seu navegador não suporta a API para abrir arquivos diretamente. Use o botão 'Importar JSON'.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleLoadInspectionFromDBList = useCallback(async (inspectionId: string) => {
     try {
-      const [fileHandle] = await window.showOpenFilePicker({
-        types: [{
-          description: 'JSON Files',
-          accept: { 'application/json': ['.json'] },
-        }],
-        multiple: false,
-      });
-      const file = await fileHandle.getFile();
-      const contents = await file.text();
-      
-      if (!contents || contents.trim() === "") {
-        toast({
-          title: "Arquivo Vazio ou Inválido",
-          description: "O arquivo selecionado está vazio ou não pôde ser lido como texto.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const inspectionToLoad = JSON.parse(contents) as FullInspectionData;
-
-      if (inspectionToLoad && typeof inspectionToLoad === 'object' && inspectionToLoad.id && inspectionToLoad.clientInfo && inspectionToLoad.towers) {
+      const inspectionToLoad = await loadInspectionFromDB(inspectionId);
+      if (inspectionToLoad) {
         loadInspectionDataToForm(inspectionToLoad);
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada do arquivo ${file.name} (incluindo fotos e observações).`});
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada do armazenamento do navegador.` });
       } else {
-        toast({ title: "Arquivo Inválido", description: "O arquivo selecionado não parece ser uma vistoria válida.", variant: "destructive" });
+        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada.`, variant: "destructive" });
       }
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-         toast({ title: "Abertura Cancelada", description: "A seleção de arquivo foi cancelada.", variant: "default" });
-      } else if (err instanceof SyntaxError) {
-        console.error('Erro ao parsear JSON do arquivo:', err);
-        toast({ title: "Erro de Formato", description: "O arquivo JSON está malformatado e não pôde ser lido.", variant: "destructive" });
-      }
-      else {
-        console.error('Erro ao abrir arquivo:', err);
-        toast({ title: "Erro ao Abrir", description: "Não foi possível abrir ou processar o arquivo.", variant: "destructive" });
-      }
+    } catch (error) {
+      console.error("Error loading inspection from DB list:", error);
+      toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria.", variant: "destructive" });
     }
   }, [loadInspectionDataToForm, toast]);
 
+  const handleDeleteInspectionFromDBList = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
+    try {
+      await deleteInspectionFromDB(inspectionId);
+      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida com sucesso.` });
+      fetchSavedInspectionsFromDb(); // Refresh the list
+    } catch (error) {
+      console.error("Error deleting inspection from DB list:", error);
+      toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria.", variant: "destructive" });
+    }
+  }, [fetchSavedInspectionsFromDb, toast]);
 
-  const handleGeneratePdf = useCallback(async () => {
-    await generateInspectionPdf(clientInfo, activeTowersData, uploadedLogoDataUrl);
-  }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
-
-  const handleGenerateRegisteredItemsReport = useCallback(async () => {
-    await generateRegisteredItemsPdf(clientInfo, activeTowersData, uploadedLogoDataUrl);
-  }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
-
-  const handleGenerateNCItemsReport = useCallback(async () => {
-    await generateNCItemsPdf(clientInfo, activeTowersData, uploadedLogoDataUrl);
-  }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
-
-  const handleGeneratePhotoReportPdf = useCallback(async () => {
-    await generatePhotoReportPdf(clientInfo, activeTowersData, uploadedLogoDataUrl);
-  }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
-
-
-  const handlePrintPage = useCallback(() => { if (typeof window !== 'undefined') window.print(); }, []);
-  
-
-  const handleCollapseAllGlobalCategories = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: tower.floors.map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) })) })));
-  }, []);
-  const handleExpandAllGlobalCategories = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: tower.floors.map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) })) })));
-  }, []);
-
-  const handleShowAllTowerContent = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, isTowerContentVisible: true })));
-  }, []);
-  const handleHideAllTowerContent = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, isTowerContentVisible: false })));
-  }, []);
-
-  const handleShowAllFloorContent = useCallback((towerIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map(f => ({ ...f, isFloorContentVisible: true })) } : tower));
-  }, []);
-  const handleHideAllFloorContent = useCallback((towerIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map(f => ({ ...f, isFloorContentVisible: false })) } : tower));
-  }, []);
-
-  const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
-  }, []);
-  const handleCollapseAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) } : floor) } : tower));
-  }, []);
-  const handleToggleAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    const tower = activeTowersData[towerIndex];
-    if (tower) { const floor = tower.floors[floorIndex]; if (floor) { const areAnyExpanded = floor.categories.some(cat => cat.isExpanded); if (areAnyExpanded) handleCollapseAllCategoriesForFloor(towerIndex, floorIndex); else handleExpandAllCategoriesForFloor(towerIndex, floorIndex); } }
-  }, [activeTowersData, handleCollapseAllCategoriesForFloor, handleExpandAllCategoriesForFloor]);
-
-  const handleToggleTowerContent = useCallback((towerIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, index) => index === towerIndex ? { ...tower, isTowerContentVisible: !(tower.isTowerContentVisible !== undefined ? tower.isTowerContentVisible : true) } : tower));
-  }, []);
-  const handleToggleFloorContent = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) } : floor) } : floor));
-  }, []);
-
-
-  const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
-    setActiveTowersData(prevTowers => {
-      let overallTowersChanged = false; 
-
-      const newTowers = prevTowers.map((tower, tIdx) => {
-        if (tIdx !== towerIndex) {
-          return tower; 
-        }
-
-        let towerContentChanged = false; 
-        const newFloors = tower.floors.map((floor, fIdx) => {
-          if (fIdx !== floorIndex) {
-            return floor; 
-          }
-          
-          const originalCategories = floor.categories;
-          const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
-
-          if (filteredCategories.length < originalCategories.length) {
-            towerContentChanged = true; 
-            return { ...floor, categories: filteredCategories }; 
-          }
-          return floor; 
-        });
-
-        if (towerContentChanged) {
-          overallTowersChanged = true; 
-          return { ...tower, floors: newFloors }; 
-        }
-        return tower; 
-      });
-      
-      if (overallTowersChanged) {
-        return newTowers;
+  const handleDownloadJsonFromDBList = useCallback(async (inspectionId: string) => {
+    try {
+      const inspectionData = await loadInspectionFromDB(inspectionId);
+      if (inspectionData) {
+        const clientInfoForFilename = { inspectionNumber: inspectionData.id, clientLocation: inspectionData.clientInfo.clientLocation || 'vistoria' };
+        const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
+        initiateFileDownload(inspectionData, baseFileName);
+        toast({ title: "Download Iniciado", description: `JSON da Vistoria Nº ${inspectionId} está sendo baixado (inclui fotos).` });
+      } else {
+        toast({ title: "Erro", description: "Vistoria não encontrada para download.", variant: "destructive" });
       }
-      return prevTowers;
-    });
-  }, []);
+    } catch (error) {
+      console.error("Error downloading JSON from DB list:", error);
+      toast({ title: "Erro no Download", description: "Não foi possível baixar o JSON da vistoria.", variant: "destructive" });
+    }
+  }, [toast]);
+
+  const handleToggleSavedInspections = useCallback(() => {
+    setIsSavedInspectionsVisible(prev => !prev);
+    if (!isSavedInspectionsVisible) { // If opening, refresh the list
+      fetchSavedInspectionsFromDb();
+    }
+  }, [isSavedInspectionsVisible, fetchSavedInspectionsFromDb]);
 
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
+    if (!clientInfo.inspectionNumber) {
+       toast({ title: "ID da Vistoria Necessário", description: "Por favor, preencha o Local para gerar um Número de Vistoria ou insira manualmente.", variant: "destructive" });
+       return;
+    }
     const inspectionToExport: FullInspectionData = {
-      id: clientInfo.inspectionNumber || `export-id-${Date.now()}`,
+      id: clientInfo.inspectionNumber,
       clientInfo: { ...clientInfo },
       towers: activeTowersData, 
       timestamp: Date.now(),
@@ -749,7 +654,7 @@ export default function FireCheckPage() {
     };
     const clientInfoForFilename = { inspectionNumber: inspectionToExport.id, clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria' };
     const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
-    const fileName = initiateFileDownload(inspectionToExport, baseFileName); // Uses the traditional blob download
+    const fileName = initiateFileDownload(inspectionToExport, baseFileName);
     toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (incluindo fotos e observações da vistoria ativa).` });
   }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast]);
 
@@ -781,7 +686,7 @@ export default function FireCheckPage() {
             }
             const importedData = JSON.parse(jsonString);
 
-            if (typeof importedData !== 'object' || importedData === null || Array.isArray(importedData)) { 
+            if (typeof importedData !== 'object' || importedData === null ) { 
                 console.warn(`Conteúdo JSON não é um objeto de vistoria válido no arquivo ${file.name}:`, JSON.stringify(importedData, null, 2).substring(0,100));
                 resolve(null);
                 return;
@@ -838,7 +743,7 @@ export default function FireCheckPage() {
                                    )
                                  )
                                );
-        toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${currentFiles[0].name} carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}.`, duration: 7000 });
+        toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${currentFiles[0].name} carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
     } else {
          toast({ title: "Importação Falhou", description: `Nenhuma vistoria válida encontrada no arquivo ${currentFiles[0].name}.`, variant: "destructive" });
     }
@@ -850,6 +755,76 @@ export default function FireCheckPage() {
 
 
   const triggerJsonImport = useCallback(() => { jsonImportFileInputRef.current?.click(); }, []);
+  const handlePrintPage = useCallback(() => { if (typeof window !== 'undefined') window.print(); }, []);
+
+  const handleCollapseAllGlobalCategories = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: tower.floors.map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) })) })));
+  }, []);
+  const handleExpandAllGlobalCategories = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: tower.floors.map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) })) })));
+  }, []);
+
+  const handleShowAllTowerContent = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, isTowerContentVisible: true })));
+  }, []);
+  const handleHideAllTowerContent = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, isTowerContentVisible: false })));
+  }, []);
+
+  const handleShowAllFloorContent = useCallback((towerIndex: number) => {
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map(f => ({ ...f, isFloorContentVisible: true })) } : tower));
+  }, []);
+  const handleHideAllFloorContent = useCallback((towerIndex: number) => {
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map(f => ({ ...f, isFloorContentVisible: false })) } : tower));
+  }, []);
+
+  const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
+  }, []);
+  const handleCollapseAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) } : floor) } : tower));
+  }, []);
+  const handleToggleAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
+    const tower = activeTowersData[towerIndex];
+    if (tower) { const floor = tower.floors[floorIndex]; if (floor) { const areAnyExpanded = floor.categories.some(cat => cat.isExpanded); if (areAnyExpanded) handleCollapseAllCategoriesForFloor(towerIndex, floorIndex); else handleExpandAllCategoriesForFloor(towerIndex, floorIndex); } }
+  }, [activeTowersData, handleCollapseAllCategoriesForFloor, handleExpandAllCategoriesForFloor]);
+
+  const handleToggleTowerContent = useCallback((towerIndex: number) => {
+    setActiveTowersData(prevTowers => prevTowers.map((tower, index) => index === towerIndex ? { ...tower, isTowerContentVisible: !(tower.isTowerContentVisible !== undefined ? tower.isTowerContentVisible : true) } : tower));
+  }, []);
+  const handleToggleFloorContent = useCallback((towerIndex: number, floorIndex: number) => {
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) } : floor) } : floor));
+  }, []);
+
+  const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
+    setActiveTowersData(prevTowers => {
+      let overallTowersChanged = false; 
+      const newTowers = prevTowers.map((tower, tIdx) => {
+        if (tIdx !== towerIndex) { return tower; }
+        let towerContentChanged = false; 
+        const newFloors = tower.floors.map((floor, fIdx) => {
+          if (fIdx !== floorIndex) { return floor; }
+          const originalCategories = floor.categories;
+          const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
+          if (filteredCategories.length < originalCategories.length) {
+            towerContentChanged = true; 
+            return { ...floor, categories: filteredCategories }; 
+          }
+          return floor; 
+        });
+        if (towerContentChanged) { overallTowersChanged = true; return { ...tower, floors: newFloors }; }
+        return tower; 
+      });
+      if (overallTowersChanged) { return newTowers; }
+      return prevTowers;
+    });
+  }, []);
+
+  const handleGeneratePdf = useCallback(async () => { await generateInspectionPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
+  const handleGenerateRegisteredItemsReport = useCallback(async () => { await generateRegisteredItemsPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
+  const handleGenerateNCItemsReport = useCallback(async () => { await generateNCItemsPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
+  const handleGeneratePhotoReportPdf = useCallback(async () => { await generatePhotoReportPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
+
 
   if (!isClientInitialized) return <div className="flex justify-center items-center h-screen bg-background"><p className="text-foreground">Carregando formulário...</p></div>;
 
@@ -968,13 +943,14 @@ export default function FireCheckPage() {
         </div>
 
         <ActionButtonsPanel
-          onSave={handleSaveInspection}
+          onSave={handleSaveInspectionToDB} // Updated to save to IndexedDB
           onNewInspection={resetInspectionForm}
           onAddNewTower={handleAddNewTower}
+          onToggleSavedInspections={handleToggleSavedInspections} // Re-added
+          isSavedInspectionsVisible={isSavedInspectionsVisible} // Re-added
           onPrint={handlePrintPage}
-          onExportJson={handleExportCurrentInspectionToJson} // Traditional export
-          onTriggerImportJson={triggerJsonImport} // Traditional import via input
-          onLoadFromFileSystem={handleLoadFromFileSystem} // New File System API Load
+          onExportJson={handleExportCurrentInspectionToJson}
+          onTriggerImportJson={triggerJsonImport}
           onGenerateRegisteredItemsReport={handleGenerateRegisteredItemsReport}
           onGenerateNCItemsReport={handleGenerateNCItemsReport}
           onGeneratePdf={handleGeneratePdf}
@@ -982,7 +958,15 @@ export default function FireCheckPage() {
         />
          <input type="file" ref={jsonImportFileInputRef} accept=".json,application/json" onChange={handleImportInspectionFromJson} className="hidden" id="json-import-input" />
 
-        {/* SavedInspectionsList is removed */}
+        {isSavedInspectionsVisible && (
+          <SavedInspectionsList
+            inspections={dbInspections}
+            isLoading={isLoadingDbInspections}
+            onLoadInspection={handleLoadInspectionFromDBList}
+            onDeleteInspection={handleDeleteInspectionFromDBList}
+            onDownloadJson={handleDownloadJsonFromDBList}
+          />
+        )}
 
         <footer className="text-center text-sm text-muted-foreground mt-12 pb-8">FireCheck Brazil &copy; {new Date().getFullYear()} - BRAZIL EXTINTORES</footer>
       </div>
@@ -992,3 +976,4 @@ export default function FireCheckPage() {
     
 
     
+
