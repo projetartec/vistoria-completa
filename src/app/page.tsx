@@ -189,9 +189,10 @@ export default function FireCheckPage() {
     setActiveTowersData(prevTowers =>
       prevTowers.map((tower, tIndex) => {
         if (tIndex !== towerIndex) return tower;
+        const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
         return {
           ...tower,
-          floors: tower.floors.map((floor, fIndex) =>
+          floors: currentFloors.map((floor, fIndex) =>
             fIndex === floorIndex ? { ...floor, [field]: value } : floor
           ),
         };
@@ -205,7 +206,8 @@ export default function FireCheckPage() {
             if (tIndex !== towerIndex) return currentTower;
 
             let floorOverallStateChanged = false;
-            const updatedFloors = currentTower.floors.map((currentFloorData, fIndex) => {
+            const currentTowerFloors = Array.isArray(currentTower.floors) ? currentTower.floors : [];
+            const updatedFloors = currentTowerFloors.map((currentFloorData, fIndex) => {
                 if (fIndex !== floorIndex) return currentFloorData;
 
                 const originalCategory = currentFloorData.categories.find(cat => cat.id === categoryId);
@@ -339,12 +341,12 @@ export default function FireCheckPage() {
                 if (!isExpansionChange &&
                     categoryStructurallyModifiedForAutoCollapse &&
                     originalCategory.isExpanded &&
-                    getCategoryOverallStatus(originalCategory) !== 'all-items-selected' &&
+                    getCategoryOverallStatus(originalCategory) !== 'all-items-selected' && // Only auto-collapse if it wasn't already complete
                     getCategoryOverallStatus(mutatedCategory) === 'all-items-selected'
                    ) {
                     mutatedCategory.isExpanded = false;
                     autoCollapsedCategoryIdHolder.id = originalCategory.id;
-                    actualModificationsMadeToCategory = true; 
+                    actualModificationsMadeToCategory = true;
                 }
 
 
@@ -365,7 +367,7 @@ export default function FireCheckPage() {
                     const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
                     if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
                         const nextCatOriginal = finalCategoriesForFloor[collapsedIdx + 1];
-                        if (!nextCatOriginal.isExpanded) { 
+                        if (!nextCatOriginal.isExpanded) {
                             const updatedNextCat = { ...nextCatOriginal, isExpanded: true };
                              finalCategoriesForFloor = [
                                 ...finalCategoriesForFloor.slice(0, collapsedIdx + 1),
@@ -380,7 +382,7 @@ export default function FireCheckPage() {
                 return floorOverallStateChanged ? { ...currentFloorData, categories: finalCategoriesForFloor } : currentFloorData;
             });
 
-            return (updatedFloors.some((floor, idx) => floor !== currentTower.floors[idx]))
+            return (updatedFloors.some((floor, idx) => floor !== currentTowerFloors[idx]))
                 ? { ...currentTower, floors: updatedFloors }
                 : currentTower;
         });
@@ -421,7 +423,8 @@ export default function FireCheckPage() {
       prevTowers.map((tower, index) => {
         if (index === towerIndex) {
           let newFloorCategories: InspectionCategoryState[];
-          const sourceFloorForCategories = tower.floors.length > 0 ? tower.floors[tower.floors.length - 1] : null;
+          const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
+          const sourceFloorForCategories = currentFloors.length > 0 ? currentFloors[currentFloors.length - 1] : null;
 
           if (sourceFloorForCategories) {
              newFloorCategories = JSON.parse(JSON.stringify(sourceFloorForCategories.categories)).map((cat: InspectionCategoryState) => ({
@@ -439,7 +442,7 @@ export default function FireCheckPage() {
 
           return {
             ...tower,
-            floors: [...tower.floors, { ...createNewFloorEntry(), categories: newFloorCategories }],
+            floors: [...currentFloors, { ...createNewFloorEntry(), categories: newFloorCategories }],
           };
         }
         return tower;
@@ -451,13 +454,14 @@ export default function FireCheckPage() {
     setActiveTowersData(prevTowers =>
       prevTowers.map((tower, tIndex) => {
         if (tIndex === towerIndex) {
-          if (tower.floors.length <= 1) {
+          const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
+          if (currentFloors.length <= 1) {
              toast({ title: "Ação não permitida", description: "Não é possível remover o único andar da torre.", variant: "default" });
              return tower;
           }
           return {
             ...tower,
-            floors: tower.floors.filter((_, fIndex) => fIndex !== floorIndex),
+            floors: currentFloors.filter((_, fIndex) => fIndex !== floorIndex),
           };
         }
         return tower;
@@ -501,7 +505,8 @@ export default function FireCheckPage() {
     setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
     const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {
-      const sanitizedFloorsForForm = (loadedTower.floors || []).map(loadedFloor => {
+      const loadedTowerFloors = Array.isArray(loadedTower.floors) ? loadedTower.floors : [];
+      const sanitizedFloorsForForm = loadedTowerFloors.map(loadedFloor => {
         const sanitizedCategoriesForForm = INSPECTION_CONFIG.map(cfgCategory => {
           const jsonCategory = (loadedFloor.categories || []).find(cat => cat.id === cfgCategory.id);
           let finalSubItems: SubItemState[] = [];
@@ -661,96 +666,80 @@ export default function FireCheckPage() {
 
  const handleImportInspectionFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentInput = event.target;
-    const currentFiles = currentInput.files; 
+    const currentFiles = currentInput.files;
     if (!currentFiles || currentFiles.length === 0) {
       toast({ title: "Nenhum arquivo selecionado", variant: "destructive" });
       if (jsonImportFileInputRef.current) {
-        jsonImportFileInputRef.current.value = ''; 
+        jsonImportFileInputRef.current.value = '';
       }
       return;
     }
 
-    let firstInspectionToLoadToFormWithPhotos: FullInspectionData | null = null;
-   
+    const file = currentFiles[0];
+    const reader = new FileReader();
 
-    const readFilePromise = (file: File): Promise<FullInspectionData | null> => { 
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const jsonString = e.target?.result as string;
-            if (!jsonString || jsonString.trim() === "") {
-                console.warn(`Conteúdo vazio ou inválido no arquivo ${file.name}`);
-                resolve(null);
-                return;
-            }
-            const importedData = JSON.parse(jsonString);
-
-            if (typeof importedData !== 'object' || importedData === null ) { 
-                console.warn(`Conteúdo JSON não é um objeto de vistoria válido no arquivo ${file.name}:`, JSON.stringify(importedData, null, 2).substring(0,100));
-                resolve(null);
-                return;
-            }
-            
-            const inspection = importedData as FullInspectionData;
-            if (inspection && typeof inspection === 'object' &&
-                typeof inspection.id === 'string' &&
-                inspection.clientInfo && typeof inspection.clientInfo === 'object' &&
-                Array.isArray(inspection.towers) &&
-                typeof inspection.timestamp === 'number') {
-              resolve(inspection);
-            } else {
-              console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspection, null, 2).substring(0, 500));
-              resolve(null);
-            }
-          } catch (error: any) {
-            console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
-            if (error instanceof SyntaxError) {
-              toast({ title: "Erro de Formato", description: `Arquivo ${file.name} malformatado. Verifique o conteúdo.`, variant: "destructive"});
-            } else {
-              toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}. Verifique o formato.`, variant: "destructive"});
-            }
-            reject(error); 
-          }
-        };
-        reader.onerror = (err) => {
-          console.error(`Erro ao ler o arquivo ${file.name}:`, err);
-          toast({ title: "Erro de Leitura", description: `Não foi possível ler ${file.name}.`, variant: "destructive"});
-          reject(err); 
-        };
-        reader.readAsText(currentFiles[0]); 
-      });
-    };
-
-    try {
-        firstInspectionToLoadToFormWithPhotos = await readFilePromise(currentFiles[0]);
-    } catch (error) {
-         if (jsonImportFileInputRef.current) {
-            jsonImportFileInputRef.current.value = '';
+    reader.onload = (e) => {
+      try {
+        const jsonString = e.target?.result as string;
+        if (!jsonString || jsonString.trim() === "") {
+          console.warn(`Conteúdo vazio ou inválido no arquivo ${file.name}`);
+          toast({ title: "Arquivo Vazio", description: `O arquivo ${file.name} está vazio ou não pôde ser lido.`, variant: "destructive" });
+          if (jsonImportFileInputRef.current) jsonImportFileInputRef.current.value = '';
+          return;
         }
-        return;
-    }
-
-
-    if (firstInspectionToLoadToFormWithPhotos) {
-        loadInspectionDataToForm(firstInspectionToLoadToFormWithPhotos);
         
-        const hasPhotosOrLogo = firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl ||
-                               (firstInspectionToLoadToFormWithPhotos.towers || []).some(t =>
-                                 (t.floors || []).some(f =>
-                                   (f.categories || []).some(c =>
-                                     (c.subItems || []).some(s => s.photoDataUri)
-                                   )
-                                 )
-                               );
-        toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${currentFiles[0].name} carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
-    } else {
-         toast({ title: "Importação Falhou", description: `Nenhuma vistoria válida encontrada no arquivo ${currentFiles[0].name}.`, variant: "destructive" });
-    }
+        const importedData = JSON.parse(jsonString);
 
-    if (jsonImportFileInputRef.current) {
-      jsonImportFileInputRef.current.value = '';
-    }
+        if (typeof importedData !== 'object' || importedData === null ) {
+            console.warn(`Conteúdo JSON não é um objeto de vistoria válido no arquivo ${file.name}:`, JSON.stringify(importedData, null, 2).substring(0,100));
+            toast({ title: "Formato Inválido", description: `O arquivo ${file.name} não contém uma vistoria válida.`, variant: "destructive" });
+            if (jsonImportFileInputRef.current) jsonImportFileInputRef.current.value = '';
+            return;
+        }
+        
+        const inspectionToLoad = importedData as FullInspectionData;
+        if (inspectionToLoad && typeof inspectionToLoad === 'object' &&
+            typeof inspectionToLoad.id === 'string' &&
+            inspectionToLoad.clientInfo && typeof inspectionToLoad.clientInfo === 'object' &&
+            Array.isArray(inspectionToLoad.towers) &&
+            typeof inspectionToLoad.timestamp === 'number') {
+          
+          loadInspectionDataToForm(inspectionToLoad);
+          
+          const hasPhotosOrLogo = inspectionToLoad.uploadedLogoDataUrl ||
+                                 (inspectionToLoad.towers || []).some(t =>
+                                   (t.floors || []).some(f =>
+                                     (f.categories || []).some(c =>
+                                       (c.subItems || []).some(s => s.photoDataUri)
+                                     )
+                                   )
+                                 );
+          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
+        } else {
+          console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspectionToLoad, null, 2).substring(0, 500));
+          toast({ title: "Estrutura Inválida", description: `O arquivo ${file.name} não corresponde à estrutura de vistoria esperada.`, variant: "destructive" });
+        }
+      } catch (error: any) {
+        console.error(`Erro ao processar JSON do arquivo ${file.name}:`, error);
+        if (error instanceof SyntaxError) {
+          toast({ title: "Erro de Formato", description: `Arquivo ${file.name} malformatado. Verifique o conteúdo.`, variant: "destructive"});
+        } else {
+          toast({ title: "Erro de Importação", description: `Não foi possível importar ${file.name}. Verifique o formato.`, variant: "destructive"});
+        }
+      } finally {
+        if (jsonImportFileInputRef.current) {
+          jsonImportFileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.onerror = (err) => {
+      console.error(`Erro ao ler o arquivo ${file.name}:`, err);
+      toast({ title: "Erro de Leitura", description: `Não foi possível ler ${file.name}.`, variant: "destructive"});
+      if (jsonImportFileInputRef.current) {
+        jsonImportFileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
   }, [toast, loadInspectionDataToForm]);
 
 
@@ -758,10 +747,10 @@ export default function FireCheckPage() {
   const handlePrintPage = useCallback(() => { if (typeof window !== 'undefined') window.print(); }, []);
 
   const handleCollapseAllGlobalCategories = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: tower.floors.map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) })) })));
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) })) })));
   }, []);
   const handleExpandAllGlobalCategories = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: tower.floors.map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) })) })));
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) })) })));
   }, []);
 
   const handleShowAllTowerContent = useCallback(() => {
@@ -772,48 +761,65 @@ export default function FireCheckPage() {
   }, []);
 
   const handleShowAllFloorContent = useCallback((towerIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map(f => ({ ...f, isFloorContentVisible: true })) } : tower));
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map(f => ({ ...f, isFloorContentVisible: true })) } : tower));
   }, []);
   const handleHideAllFloorContent = useCallback((towerIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map(f => ({ ...f, isFloorContentVisible: false })) } : tower));
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map(f => ({ ...f, isFloorContentVisible: false })) } : tower));
   }, []);
 
   const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
   }, []);
   const handleCollapseAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) } : floor) } : tower));
+    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) } : floor) } : tower));
   }, []);
   const handleToggleAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
     const tower = activeTowersData[towerIndex];
-    if (tower) { const floor = tower.floors[floorIndex]; if (floor) { const areAnyExpanded = floor.categories.some(cat => cat.isExpanded); if (areAnyExpanded) handleCollapseAllCategoriesForFloor(towerIndex, floorIndex); else handleExpandAllCategoriesForFloor(towerIndex, floorIndex); } }
+    if (tower) { const currentFloors = Array.isArray(tower.floors) ? tower.floors : []; const floor = currentFloors[floorIndex]; if (floor) { const areAnyExpanded = floor.categories.some(cat => cat.isExpanded); if (areAnyExpanded) handleCollapseAllCategoriesForFloor(towerIndex, floorIndex); else handleExpandAllCategoriesForFloor(towerIndex, floorIndex); } }
   }, [activeTowersData, handleCollapseAllCategoriesForFloor, handleExpandAllCategoriesForFloor]);
 
   const handleToggleTowerContent = useCallback((towerIndex: number) => {
     setActiveTowersData(prevTowers => prevTowers.map((tower, index) => index === towerIndex ? { ...tower, isTowerContentVisible: !(tower.isTowerContentVisible !== undefined ? tower.isTowerContentVisible : true) } : tower));
   }, []);
+
   const handleToggleFloorContent = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) } : floor) } : floor));
+    setActiveTowersData(prevTowers =>
+      prevTowers.map((tower, tIdx) => {
+        if (tIdx === towerIndex) {
+          const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
+          return {
+            ...tower,
+            floors: currentFloors.map((floor, fIdx) =>
+              fIdx === floorIndex
+                ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) }
+                : floor
+            )
+          };
+        }
+        return tower;
+      })
+    );
   }, []);
 
   const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
     setActiveTowersData(prevTowers => {
-      let overallTowersChanged = false; 
+      let overallTowersChanged = false;
       const newTowers = prevTowers.map((tower, tIdx) => {
         if (tIdx !== towerIndex) { return tower; }
-        let towerContentChanged = false; 
-        const newFloors = tower.floors.map((floor, fIdx) => {
+        let towerContentChanged = false;
+        const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
+        const newFloors = currentFloors.map((floor, fIdx) => {
           if (fIdx !== floorIndex) { return floor; }
           const originalCategories = floor.categories;
           const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
           if (filteredCategories.length < originalCategories.length) {
-            towerContentChanged = true; 
-            return { ...floor, categories: filteredCategories }; 
+            towerContentChanged = true;
+            return { ...floor, categories: filteredCategories };
           }
-          return floor; 
+          return floor;
         });
         if (towerContentChanged) { overallTowersChanged = true; return { ...tower, floors: newFloors }; }
-        return tower; 
+        return tower;
       });
       if (overallTowersChanged) { return newTowers; }
       return prevTowers;
@@ -880,7 +886,7 @@ export default function FireCheckPage() {
                   </CardHeader>
                   {tower.isTowerContentVisible !== false && (
                     <CardContent className="p-4 space-y-4">
-                      {tower.floors.map((floorData, floorIndex) => {
+                      {(Array.isArray(tower.floors) ? tower.floors : []).map((floorData, floorIndex) => {
                         const areAnyCategoriesExpanded = floorData.categories.some(cat => cat.isExpanded);
                         return (
                           <Card key={floorData.id} className="mb-6 shadow-sm">
@@ -907,7 +913,7 @@ export default function FireCheckPage() {
                                     {floorData.isFloorContentVisible !== false ? <ChevronUp className="mr-1 h-3 w-3"/> : <ChevronDown className="mr-1 h-3 w-3"/>}
                                     <span className="hidden sm:inline">{floorData.isFloorContentVisible !== false ? "Ocultar" : "Mostrar"}</span>
                                   </Button>
-                                  {tower.floors.length > 1 && (
+                                  {(Array.isArray(tower.floors) ? tower.floors : []).length > 1 && (
                                     <Button variant="ghost" size="icon" onClick={() => handleRemoveFloorFromTower(towerIndex, floorIndex)} className="text-destructive hover:bg-destructive/10 h-8 w-8" title="Remover este andar">
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -976,4 +982,5 @@ export default function FireCheckPage() {
     
 
     
+
 
