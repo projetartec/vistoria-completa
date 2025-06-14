@@ -36,12 +36,12 @@ const PDF_COMMON_STYLES = `
   
   .pdf-section-title { font-size: 12pt; font-weight: 700; color: #1F2937; margin-top: 20px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1.5px solid #2563EB; }
   
-  .pdf-tower-section { margin-bottom: 15px; border: 1px solid #DDD; padding: 10px; border-radius: 6px; background-color: #fdfdfd; page-break-inside: avoid; }
+  .pdf-tower-section { margin-bottom: 15px; border: 1px solid #DDD; padding: 10px; border-radius: 6px; background-color: #fdfdfd; }
   .pdf-tower-title { font-size: 11pt; font-weight: bold; color: #111827; margin-top: 5px; margin-bottom: 10px; padding: 5px; background-color: #E0E7FF; border-radius: 4px; text-align: center; }
-  .pdf-floor-section { margin-bottom: 10px; padding-left: 15px; border-left: 3px solid #BFDBFE; page-break-inside: avoid; }
+  .pdf-floor-section { margin-bottom: 10px; padding-left: 15px; border-left: 3px solid #BFDBFE; }
   .pdf-floor-title { font-size: 10pt; font-weight: 700; color: #1F2937; margin-top: 10px; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px solid #60A5FA; }
   
-  .pdf-category-card { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 4px; margin-bottom: 8px; page-break-inside: avoid; }
+  .pdf-category-card { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 4px; margin-bottom: 8px; }
   .pdf-category-header { display: flex; align-items: center; padding: 5px 8px; background-color: #F3F4F6; border-bottom: 1px solid #E5E7EB; }
   .pdf-category-title-text { font-size: 10pt; font-weight: 600; color: #111827; flex-grow: 1; }
   .pdf-category-content { padding: 8px; font-size: 9pt; }
@@ -59,7 +59,7 @@ const PDF_COMMON_STYLES = `
   .pdf-registered-items-section li { font-size: 9pt; color: #4B5563; margin-bottom: 2px; }
   .pdf-no-items { font-style: italic; color: #6B7280; font-size: 9pt; }
   
-  .pdf-totals-summary { margin-top: 15px; padding-top: 10px; border-top: 1px solid #E5E7EB; page-break-before: auto; }
+  .pdf-totals-summary { margin-top: 15px; padding-top: 10px; border-top: 1px solid #E5E7EB; }
   .pdf-totals-summary h4 { font-size: 10pt; font-weight: 600; color: #111827; margin-bottom: 5px; }
   .pdf-totals-summary p { font-size: 9pt; color: #1F2937; margin-bottom: 3px; }
   .pdf-totals-summary .pdf-type-breakdown { list-style: none; padding-left: 5px; margin-top: 2px; margin-bottom: 5px; }
@@ -69,7 +69,7 @@ const PDF_COMMON_STYLES = `
 
   .pdf-photo-report-section, .pdf-photo-report-section-standalone { margin-top: 15px; }
   .pdf-photo-items-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px; }
-  .pdf-photo-item { border: 1px solid #E5E7EB; border-radius: 6px; padding: 10px; background-color: #F9FAFB; display: flex; flex-direction: column; page-break-inside: avoid; }
+  .pdf-photo-item { border: 1px solid #E5E7EB; border-radius: 6px; padding: 10px; background-color: #F9FAFB; display: flex; flex-direction: column; }
   .pdf-photo-item img { width: 100%; max-height: 250px; object-fit: contain; border-radius: 4px; margin-bottom: 8px; border: 1px solid #DDD; background-color: #FFF; }
   .pdf-photo-item p { font-size: 8pt; margin: 2px 0; color: #374151; line-height: 1.2; }
   .pdf-photo-item strong { font-weight: 600; color: #111827; }
@@ -77,46 +77,42 @@ const PDF_COMMON_STYLES = `
   
   .pdf-footer { text-align: center; margin-top: 20px; padding-top: 10px; border-top: 1px solid #E5E7EB; font-size: 8pt; color: #6B7280; }
 
-  /* Classes for specific report layouts based on previous request for generateInspectionPdf */
-  .first-page-center-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 80vh; /* This may need adjustment for print view */
-  }
+  .first-page-center-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: calc(100vh - 40mm); /* Adjust height to fit content within viewport if needed for single page effect */ }
   
-  .verified-items-page-content .pdf-verified-items-list {
-    column-count: 2;
-    column-gap: 20px;
-  }
-  .verified-items-page-content .category-group { margin-bottom: 8px; page-break-inside: avoid; }
+  .verified-items-page-content .pdf-verified-items-list { column-count: 2; column-gap: 20px; }
+  .verified-items-page-content .category-group { margin-bottom: 8px; }
   .verified-items-page-content .category-title { font-weight: bold; font-size: 10pt; margin-bottom: 3px; }
   .verified-items-page-content ul { list-style: disc; margin-left: 15px; padding-left: 0; font-size: 9pt; }
   .verified-items-page-content li { margin-bottom: 2px; }
   
-  .nc-items-page-content .pdf-tower-section { page-break-inside: avoid; }
-  .nc-items-page-content .pdf-floor-section { page-break-inside: avoid; }
   .nc-items-page-content .pdf-nc-item-category { font-weight: bold; margin-top: 8px; margin-bottom: 3px; font-size: 10pt; color: #111827; }
   .nc-items-page-content .pdf-nc-item-name { margin-left: 10px; font-size: 9pt; color: #1F2937; }
   .nc-items-page-content .pdf-nc-observation { margin-left: 10px; margin-top: 2px; padding: 4px 6px; background-color: #FEF2F2 !important; border-left: 2px solid #F87171 !important; font-size: 8.5pt; color: #7F1D1D !important; white-space: pre-wrap; }
   .nc-items-page-content .pdf-nc-pressure-details { margin-left: 10px; font-size: 9pt; }
-  /* .nc-items-page-content .pdf-nc-summary-list { column-count: 2; column-gap: 20px; } This style was for a summary list not currently in nc items report */
   
+  .nc-summary-page-content .nc-summary-list { list-style: none; padding-left: 0; }
+  .nc-summary-page-content .nc-summary-category { margin-bottom: 10px; }
+  .nc-summary-page-content .nc-summary-category-title { font-weight: bold; font-size: 10pt; color: #111827; }
+  .nc-summary-page-content .nc-summary-category-count { font-weight: normal; color: #DC2626; } /* Red for N/C count */
+  .nc-summary-page-content .nc-summary-subitem-list { list-style: disc; margin-left: 20px; padding-left: 5px; }
+  .nc-summary-page-content .nc-summary-subitem { font-size: 9pt; color: #374151; }
+  .nc-summary-page-content .nc-summary-subitem-count { font-weight: normal; color: #DC2626; }
+
   .status-ok { background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }
   .status-nc { background-color: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
   .status-na { background-color: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
   .status-pending { background-color: #E5E7EB; color: #4B5563; border: 1px solid #D1D5DB; }
+
+  .page-break-after { page-break-after: always !important; }
+  .page-break-before { page-break-before: always !important; }
+  .page-break-inside-avoid { page-break-inside: avoid !important; }
+
 
   @media print {
     body { margin: 10mm; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .pdf-container { padding: 0; }
     .pdf-header-main .company-name, .pdf-client-info .pdf-main-title { color: #1E40AF !important; } /* Darker blue for print */
     
-    .page-break-after { page-break-after: always !important; }
-    .page-break-before { page-break-before: always !important; }
-    .page-break-inside-avoid { page-break-inside: avoid !important; }
-
     .status-ok, .status-nc, .status-na, .status-pending {
        border: 1px solid #ccc !important;
        background-color: #fff !important; /* Remove background for cleaner print */
@@ -130,6 +126,7 @@ const PDF_COMMON_STYLES = `
     .pdf-category-header { background-color: #f0f0f0 !important; }
     .pdf-observation { background-color: #fdfdfd !important; border-left-color: #bbb !important; }
     .nc-items-page-content .pdf-nc-observation { background-color: #fff2f2 !important; border-left-color: #ffbaba !important; color: #7F1D1D !important;}
+    .first-page-center-container { height: auto; min-height: calc(297mm - 40mm - 20mm); /* A4 height - top/bottom margins for body - padding of container */ display: flex; flex-direction: column; align-items: center; justify-content: center;}
   }
 `;
 
@@ -148,7 +145,7 @@ function openHtmlInNewWindow(htmlContent: string, reportTitle: string = "Relató
           <script>
             setTimeout(() => {
               window.print();
-            }, 1200); // Increased delay slightly for potentially complex content
+            }, 1200);
           </script>
         </body>
       </html>
@@ -204,7 +201,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
         .map(floor => {
           let floorRegisteredExtinguishers: RegisteredExtinguisher[] = [];
           let floorRegisteredHoses: RegisteredHose[] = [];
-          floor.categories.forEach(category => { // Iterate over actual categories in floor data
+          floor.categories.forEach(category => {
             if (category.type === 'standard' && category.subItems) {
               category.subItems.forEach(subItem => {
                 if (subItem.isRegistry && subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers) floorRegisteredExtinguishers.push(...subItem.registeredExtinguishers);
@@ -256,6 +253,54 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
     });
   });
 
+  // Data collection for N/C Summary Counts
+  const ncSummaryCounts = new Map<string, { 
+    categoryTitle: string; 
+    categoryNcCount: number; // For special/pressure types
+    subItemsNc: Map<string, { subItemName: string; count: number }>; 
+  }>();
+
+  INSPECTION_CONFIG.forEach(configCategory => {
+    ncSummaryCounts.set(configCategory.id, {
+      categoryTitle: configCategory.title,
+      categoryNcCount: 0,
+      subItemsNc: new Map()
+    });
+    if (configCategory.subItems) {
+      configCategory.subItems.forEach(configSubItem => {
+        if (!configSubItem.isRegistry) {
+          ncSummaryCounts.get(configCategory.id)!.subItemsNc.set(configSubItem.id, {
+            subItemName: configSubItem.name,
+            count: 0
+          });
+        }
+      });
+    }
+  });
+  
+  towersToActuallyPrint.forEach(tower => {
+    tower.floors.forEach(floor => {
+      floor.categories.forEach(category => {
+        const summaryCategory = ncSummaryCounts.get(category.id);
+        if (!summaryCategory) return;
+
+        if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
+          summaryCategory.categoryNcCount++;
+        } else if (category.type === 'standard' && category.subItems) {
+          category.subItems.forEach(subItem => {
+            if (!subItem.isRegistry && subItem.status === 'N/C') {
+              const summarySubItem = summaryCategory.subItemsNc.get(subItem.id);
+              if (summarySubItem) {
+                summarySubItem.count++;
+              }
+            }
+          });
+        }
+      });
+    });
+  });
+
+
   let htmlBodyContent = '';
 
   // Page 1: Header & Client Data (Centered)
@@ -293,12 +338,12 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
   if (overallUniqueVerifiedCategoryTitles.size > 0) {
     htmlBodyContent += `<div class="pdf-verified-items-list">`;
-    INSPECTION_CONFIG.forEach(cfgCat => { // Iterate based on defined order
+    INSPECTION_CONFIG.forEach(cfgCat => {
       if (overallUniqueVerifiedCategoryTitles.has(cfgCat.title)) {
         htmlBodyContent += `<div class="category-group page-break-inside-avoid"><p class="category-title">${cfgCat.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
         if (cfgCat.type === 'standard' && categoryToSubitemsMap[cfgCat.title]?.size > 0) {
           htmlBodyContent += `<ul>`;
-          cfgCat.subItems?.forEach(subCfg => { // Iterate based on defined order
+          cfgCat.subItems?.forEach(subCfg => {
             if (!subCfg.isRegistry && categoryToSubitemsMap[cfgCat.title].has(subCfg.name)) {
               htmlBodyContent += `<li>${subCfg.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
             }
@@ -325,12 +370,17 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
     tower.floors.forEach(floor => {
       let floorHasNCItemsForReport = false;
       let floorNCItemsContent = '';
-      floor.categories.forEach(category => {
+      INSPECTION_CONFIG.forEach(cfgCat => {
+        const category = floor.categories.find(c => c.id === cfgCat.id);
+        if (!category) return;
+
         let catHasNC = false;
         let catNCContent = '';
         if (category.type === 'standard' && category.subItems) {
-          category.subItems.forEach(sub => {
-            if (!sub.isRegistry && sub.status === 'N/C') {
+          cfgCat.subItems?.forEach(cfgSubItem => {
+            if (cfgSubItem.isRegistry) return;
+            const sub = category.subItems?.find(s => s.id === cfgSubItem.id);
+            if (sub && sub.status === 'N/C') {
               catHasNC = true;
               anyNonConformingItemsFound = true;
               catNCContent += `<div class="pdf-subitem-wrapper page-break-inside-avoid">`;
@@ -344,10 +394,10 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
         } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
           catHasNC = true;
           anyNonConformingItemsFound = true;
-          catNCContent += `<div class="page-break-inside-avoid">`; // Consider making this a subitem-wrapper for consistency if needed
+          catNCContent += `<div class="page-break-inside-avoid">`;
           catNCContent += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-          if (category.type === 'pressure' && category.status === 'N/C') { // Only show pressure if N/C
-            catNCContent += `<p class="pdf-nc-pressure-details">Pressão: ${category.pressureValue?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/P'} ${category.pressureUnit || ''}</p>`;
+          if (category.type === 'pressure' && category.status === 'N/C' && category.pressureValue) {
+            catNCContent += `<p class="pdf-nc-pressure-details">Pressão: ${category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/P'} ${category.pressureUnit || ''}</p>`;
           }
           if (category.observation && category.observation.trim() !== "") {
             catNCContent += `<div class="pdf-nc-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
@@ -357,13 +407,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
         if (catHasNC) {
           floorHasNCItemsForReport = true;
-          floorNCItemsContent += `<div class="pdf-nc-item-category">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${catNCContent}`;
+          floorNCItemsContent += `<div class="pdf-nc-item-category page-break-inside-avoid">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${catNCContent}`;
         }
       });
 
       if (floorHasNCItemsForReport) {
         towerHasNCItemsForReport = true;
-        towerNCItemsContent += `<div class="pdf-floor-section"><h3 class="pdf-floor-title">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>${floorNCItemsContent}</div>`;
+        towerNCItemsContent += `<div class="pdf-floor-section page-break-inside-avoid"><h3 class="pdf-floor-title">${(floor.floor || 'Andar Não Especificado').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3>${floorNCItemsContent}</div>`;
       }
     });
     if (towerHasNCItemsForReport) {
@@ -415,7 +465,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
   if (anyRegItems || grandTotalExtinguishersCount > 0 || grandTotalHosesCount > 0) {
     htmlBodyContent += `<div class="registered-items-page-content page-break-after">`;
     htmlBodyContent += `<h3 class="pdf-section-title">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
-    if (anyRegItems) { // Show per-floor details only if there are items on floors
+    if (anyRegItems) {
        towersToActuallyPrint.forEach(tower => {
         let towerHasRegItems = false;
         let towerRegContent = '';
@@ -447,7 +497,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
     } else if (grandTotalExtinguishersCount > 0 || grandTotalHosesCount > 0) {
          htmlBodyContent += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhum item cadastrado diretamente nos andares, verifique o resumo total.</p>`;
     }
-
 
     htmlBodyContent += `<div class="pdf-totals-summary page-break-inside-avoid"><h4>Totais Gerais</h4><p><strong>Extintores:</strong></p><ul class="pdf-type-breakdown">`;
     let hasExtTot = false;
@@ -488,20 +537,75 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
       htmlBodyContent += `</div>`;
   }
 
+  // Page 5: N/C Summary Counts
+  htmlBodyContent += `<div class="nc-summary-page-content page-break-before page-break-after">`; // Added page-break-before
+  htmlBodyContent += `<h3 class="pdf-section-title">Resumo de Quantidade de Itens Não Conformes (N/C)</h3>`;
+  let hasAnyNcSummary = false;
+  htmlBodyContent += `<ul class="nc-summary-list">`;
+  INSPECTION_CONFIG.forEach(configCategory => {
+    const summaryEntry = ncSummaryCounts.get(configCategory.id);
+    if (summaryEntry) {
+      let categoryHasNc = false;
+      let categoryHtml = `<li class="nc-summary-category page-break-inside-avoid"><span class="nc-summary-category-title">${configCategory.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}:</span> `;
+      
+      if (summaryEntry.categoryNcCount > 0) {
+        categoryHtml += `<span class="nc-summary-category-count">${summaryEntry.categoryNcCount} ocorrência(s) N/C</span>`;
+        categoryHasNc = true;
+      }
+      
+      let subItemsHtml = '<ul class="nc-summary-subitem-list">';
+      let hasNcSubItems = false;
+      if (configCategory.subItems) {
+        configCategory.subItems.forEach(configSubItem => {
+           if (configSubItem.isRegistry) return;
+           const subItemNcEntry = summaryEntry.subItemsNc.get(configSubItem.id);
+           if (subItemNcEntry && subItemNcEntry.count > 0) {
+             hasNcSubItems = true;
+             categoryHasNc = true;
+             subItemsHtml += `<li class="nc-summary-subitem">${subItemNcEntry.subItemName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}: <span class="nc-summary-subitem-count">${subItemNcEntry.count}</span></li>`;
+           }
+        });
+      }
+      subItemsHtml += '</ul>';
 
-  // Page 5+: Photo Report
+      if (hasNcSubItems) {
+        categoryHtml += subItemsHtml;
+      } else if (summaryEntry.categoryNcCount === 0 && !categoryHasNc) {
+        // If category itself wasn't N/C and no subitems were N/C, don't print anything for this category
+        categoryHtml = ""; // Clear it
+      } else if (summaryEntry.categoryNcCount > 0 && !hasNcSubItems) {
+        // Category itself N/C, no subitems N/C - already handled
+      }
+
+
+      if (categoryHasNc) {
+        htmlBodyContent += categoryHtml + `</li>`;
+        hasAnyNcSummary = true;
+      }
+    }
+  });
+  htmlBodyContent += `</ul>`;
+  if (!hasAnyNcSummary) {
+    htmlBodyContent += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhum item "Não Conforme" (N/C) para resumir.</p>`;
+  }
+  htmlBodyContent += `</div>`;
+
+
+  // Page 6+: Photo Report
   if (photosForReport.length > 0) {
     htmlBodyContent += `<div class="photo-report-page-content page-break-before">`; 
     htmlBodyContent += `<h3 class="pdf-section-title">Registro Fotográfico</h3>`;
     htmlBodyContent += `<div class="pdf-photo-items-container">`;
     photosForReport.forEach(p => {
-      htmlBodyContent += `<div class="pdf-photo-item">`;
+      htmlBodyContent += `<div class="pdf-photo-item page-break-inside-avoid">`; // Added page-break-inside-avoid to photo item
       htmlBodyContent += `<img src="${p.photoDataUri}" alt="Foto ${p.subItemName.replace(/"/g, "'")}"/>`;
       htmlBodyContent += `<p><strong>Torre:</strong> ${p.towerName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Andar:</strong> ${p.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Categoria:</strong> ${p.categoryTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Subitem:</strong> ${p.subItemName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
-      htmlBodyContent += `<p class="photo-observation"><strong>Obs:</strong> ${p.photoDescription?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'Nenhuma'}</p>`;
+      if (p.photoDescription && p.photoDescription.trim() !== "") {
+        htmlBodyContent += `<p class="photo-observation"><strong>Obs:</strong> ${p.photoDescription.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+      }
       htmlBodyContent += `</div>`;
     });
     htmlBodyContent += `</div></div>`;
@@ -683,8 +787,8 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData
           ncItemsFoundOverall=true; floorHasNC=true; catHasNC=true;
           catHtmlInner += `<div class="page-break-inside-avoid">`;
           catHtmlInner += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-          if (category.type === 'pressure' && category.status === 'N/C') {
-            catHtmlInner += `<p class="pdf-nc-pressure-details">Pressão: ${category.pressureValue?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/P'} ${category.pressureUnit || ''}</p>`;
+          if (category.type === 'pressure' && category.status === 'N/C' && category.pressureValue) {
+            catHtmlInner += `<p class="pdf-nc-pressure-details">Pressão: ${category.pressureValue.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/P'} ${category.pressureUnit || ''}</p>`;
           }
           if (category.observation && category.observation.trim() !== "") {
             catHtmlInner += `<div class="pdf-nc-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
@@ -749,13 +853,15 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
   if (photosForReport.length > 0) {
     htmlBodyContent += `<div class="pdf-photo-items-container">`;
     photosForReport.forEach(p => {
-      htmlBodyContent += `<div class="pdf-photo-item">`;
+      htmlBodyContent += `<div class="pdf-photo-item page-break-inside-avoid">`;
       htmlBodyContent += `<img src="${p.photoDataUri}" alt="Foto ${p.subItemName.replace(/"/g, "'")}"/>`;
       htmlBodyContent += `<p><strong>Torre:</strong> ${p.towerName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Andar:</strong> ${p.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Categoria:</strong> ${p.categoryTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Subitem:</strong> ${p.subItemName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
-      htmlBodyContent += `<p class="photo-observation"><strong>Obs:</strong> ${p.photoDescription?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'Nenhuma'}</p>`;
+      if (p.photoDescription && p.photoDescription.trim() !== "") {
+        htmlBodyContent += `<p class="photo-observation"><strong>Obs:</strong> ${p.photoDescription.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+      }
       htmlBodyContent += `</div>`;
     });
     htmlBodyContent += `</div>`;
@@ -766,4 +872,3 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
 
   openHtmlInNewWindow(htmlBodyContent, `RelatorioFotografico_${clientInfo.inspectionNumber}`);
 }
-
