@@ -314,15 +314,15 @@ export default function FireCheckPage() {
                         break;
                 }
 
-                 if (!isExpansionChange &&
+                if (!isExpansionChange &&
                     categoryStructurallyModifiedForAutoCollapse &&
-                    originalCategory.isExpanded && // Key: Only consider auto-collapse if it was ALREADY open
-                    getCategoryOverallStatus(originalCategory) !== 'all-items-selected' && // And it wasn't complete before
-                    getCategoryOverallStatus(mutatedCategory) === 'all-items-selected'      // And it IS complete now
+                    originalCategory.isExpanded &&
+                    getCategoryOverallStatus(originalCategory) !== 'all-items-selected' &&
+                    getCategoryOverallStatus(mutatedCategory) === 'all-items-selected'
                    ) {
                     mutatedCategory.isExpanded = false;
                     autoCollapsedCategoryIdHolder.id = originalCategory.id;
-                    actualModificationsMadeToCategory = true;
+                    actualModificationsMadeToCategory = true; // Ensure this flag is set if auto-collapse happens
                 }
 
 
@@ -442,25 +442,11 @@ export default function FireCheckPage() {
   const handleSaveInspection = useCallback(() => {
     const currentClientInfo = clientInfo;
 
-    const towersForLocalStorage = activeTowersData.map(tower => ({
-        ...tower,
-        floors: tower.floors.map(floor => ({
-            ...floor,
-            categories: floor.categories.map(category => ({
-                ...category,
-                subItems: category.subItems ? category.subItems.map(subItem => {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    const { photoDataUri, ...restOfSubItem } = subItem;
-                    return { ...restOfSubItem, photoDataUri: null }; // Ensure photoDataUri is null for localStorage
-                }) : undefined,
-            })),
-        })),
-    }));
-
+    // Prepare data for localStorage, preserving photoDataUri and uploadedLogoDataUrl
     const fullInspectionToSaveForLocalStorage: FullInspectionData = {
       id: currentClientInfo.inspectionNumber || `temp-id-${Date.now()}`,
       clientInfo: { ...currentClientInfo },
-      towers: towersForLocalStorage,
+      towers: activeTowersData, // Save activeTowersData directly
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl
     };
@@ -478,9 +464,11 @@ export default function FireCheckPage() {
       const hasNamedTowersOrFloors = activeTowersData.some(t => (t.towerName && t.towerName.trim() !== "") || t.floors.some(f => f.floor && f.floor.trim() !== ""));
 
       if (fullInspectionToSaveForLocalStorage.id && !fullInspectionToSaveForLocalStorage.id.startsWith('temp-id-')) {
-        toast({ title: "Vistoria Salva", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva (observações salvas, fotos não são salvas no navegador para economizar espaço).` });
+        toast({ title: "Vistoria Salva", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva (incluindo fotos e observações).` });
       } else if (hasNamedTowersOrFloors) {
-         toast({ title: "Vistoria Salva", description: `Vistoria (ID temporário) salva (observações salvas, fotos não são salvas no navegador para economizar espaço). Preencha o Local para gerar Nº Vistoria.` });
+         toast({ title: "Vistoria Salva", description: `Vistoria (ID temporário) salva (incluindo fotos e observações). Preencha o Local para gerar Nº Vistoria.` });
+      } else {
+         toast({ title: "Vistoria Salva", description: `Vistoria salva (incluindo fotos e observações). Preencha o Local para gerar Nº Vistoria.`});
       }
       return sortedList;
     });
@@ -499,6 +487,7 @@ export default function FireCheckPage() {
         });
         setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
+        // When loading from localStorage, ensure photos are part of the loaded data structure if they exist
         const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
             ...tower,
             id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
@@ -530,17 +519,17 @@ export default function FireCheckPage() {
                                 observation: loadedSubItem?.observation || '',
                                 showObservation: loadedSubItem?.showObservation || false,
                                 isRegistry: sCfg.isRegistry || false,
-                                photoDataUri: loadedSubItem?.photoDataUri || null, // Will be null from localStorage
+                                photoDataUri: loadedSubItem?.photoDataUri || null, // Keep photoDataUri from localStorage
                                 photoDescription: loadedSubItem?.photoDescription || '',
                                 registeredExtinguishers: loadedSubItem?.registeredExtinguishers?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })) || (sCfg.isRegistry && sCfg.id === 'extintor_cadastro' ? [] : undefined),
                                 registeredHoses: loadedSubItem?.registeredHoses?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })) || (sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
                             };
-                        }).concat( // Add custom sub-items from localStorage not in INSPECTION_CONFIG
+                        }).concat(
                             loadedSubItems.filter(ls => !cfg.subItems?.some(sCfg => sCfg.id === ls.id))
                             .map(customSub => ({
                                 ...customSub,
                                 id: (customSub.id && typeof customSub.id === 'string' && !customSub.id.includes('NaN') && !customSub.id.startsWith('server-temp-id-') && (!customSub.id.startsWith('custom-') || customSub.id.length > 20) ) ? customSub.id : customSub.id.startsWith('custom-') ? customSub.id : `loaded-sub-${generateUniqueId()}`,
-                                photoDataUri: null, // Explicitly null for localStorage sourced custom items
+                                photoDataUri: customSub.photoDataUri || null, // Keep photoDataUri for custom items
                                 photoDescription: customSub.photoDescription || '',
                             }))
                         ) || [],
@@ -552,7 +541,7 @@ export default function FireCheckPage() {
         setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
         setIsSavedInspectionsVisible(false); setIsChecklistVisible(true);
         
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada (observações restauradas; fotos de vistorias salvas no navegador não são armazenadas).`});
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada (incluindo fotos e observações salvas).`});
     }
   };
 
@@ -572,17 +561,18 @@ export default function FireCheckPage() {
   const handleDuplicateInspection = useCallback((originalInspectionId: string) => {
     const originalInspection = savedInspections.find(insp => insp.id === originalInspectionId);
     if (originalInspection) {
-      const duplicatedInspection = JSON.parse(JSON.stringify(originalInspection)) as FullInspectionData; // Deep copy from localStorage
+      const duplicatedInspection = JSON.parse(JSON.stringify(originalInspection)) as FullInspectionData; // Deep copy
       const newInspectionNumber = `${(originalInspection.clientInfo.inspectionNumber || 'COPIA')}_CÓPIA_${Date.now().toString().slice(-5)}`;
       duplicatedInspection.id = newInspectionNumber;
       duplicatedInspection.clientInfo = {
         ...(originalInspection.clientInfo || {}),
         inspectionNumber: newInspectionNumber,
         inspectionDate: typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '',
-        inspectedBy: clientInfo.inspectedBy || '', // Use current inspector for new copy
+        inspectedBy: clientInfo.inspectedBy || '',
       };
       duplicatedInspection.timestamp = Date.now();
       
+      // Ensure photoDataUri and other details are preserved from the original (which now contains them if saved to localStorage)
       duplicatedInspection.towers = (duplicatedInspection.towers || []).map(tower => ({
         ...tower, id: generateUniqueId(), isTowerContentVisible: false,
         floors: (tower.floors || []).map(floor => ({
@@ -591,7 +581,7 @@ export default function FireCheckPage() {
             ...cat, isExpanded: false,
             subItems: (cat.subItems || []).map(sub => ({
               ...sub, 
-              photoDataUri: null, // Photos are not duplicated from localStorage copies
+              // photoDataUri is already part of 'sub' from JSON.parse(JSON.stringify(originalInspection))
               id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id,
               registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: `${generateUniqueId()}-extcopy`})),
               registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: `${generateUniqueId()}-hosecopy` }))
@@ -601,7 +591,7 @@ export default function FireCheckPage() {
       }));
       setSavedInspections(prev => [duplicatedInspection, ...prev].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
       
-      toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada. Fotos não são duplicadas de dados salvos no navegador.`});
+      toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada (incluindo fotos e observações da original).`});
     }
   }, [savedInspections, setSavedInspections, toast, clientInfo.inspectedBy]);
 
@@ -737,7 +727,7 @@ export default function FireCheckPage() {
     const inspectionsToDownload = savedInspections.filter(insp => inspectionIds.includes(insp.id));
     if (inspectionsToDownload.length > 0) {
       const fileName = initiateFileDownload(inspectionsToDownload, 'vistorias_selecionadas');
-      toast({ title: "Download Iniciado", description: `${inspectionsToDownload.length} vistoria(s) salvas em ${fileName} (fotos não inclusas no JSON do navegador).`});
+      toast({ title: "Download Iniciado", description: `${inspectionsToDownload.length} vistoria(s) salvas em ${fileName} (incluindo fotos e observações).`});
     } else {
       toast({ title: "Nenhuma Vistoria Selecionada", description: "Selecione vistorias para baixar.", variant: "default"});
     }
@@ -752,17 +742,17 @@ export default function FireCheckPage() {
       };
       const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
       const fileName = initiateFileDownload(inspectionToDownload, baseFileName);
-      toast({ title: "Download Iniciado", description: `Vistoria ${fileName} salva (fotos não inclusas no JSON do navegador).`});
+      toast({ title: "Download Iniciado", description: `Vistoria ${fileName} salva (incluindo fotos e observações).`});
     }
   }, [savedInspections, toast]);
 
  const handleImportInspectionFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentInput = event.target;
-    const currentFiles = currentInput.files; // Capture files at the beginning
+    const currentFiles = currentInput.files; 
     if (!currentFiles || currentFiles.length === 0) {
       toast({ title: "Nenhum arquivo selecionado", variant: "destructive" });
       if (jsonImportFileInputRef.current) {
-        jsonImportFileInputRef.current.value = ''; // Clear input
+        jsonImportFileInputRef.current.value = ''; 
       }
       return;
     }
@@ -807,13 +797,13 @@ export default function FireCheckPage() {
           } catch (error) {
             console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
             toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}. Verifique o formato.`, variant: "destructive"});
-            reject(error); // Reject the promise on error
+            reject(error);
           }
         };
         reader.onerror = (err) => {
           console.error(`Erro ao ler o arquivo ${file.name}:`, err);
           toast({ title: "Erro de Leitura", description: `Não foi possível ler ${file.name}.`, variant: "destructive"});
-          reject(err); // Reject the promise on error
+          reject(err);
         };
         reader.readAsText(file);
       });
@@ -844,29 +834,15 @@ export default function FireCheckPage() {
         let currentUpdated = 0;
 
         allInspectionsFromFiles.forEach(inspectionToImport => {
-          const inspectionForLocalStorageProcessing: FullInspectionData = JSON.parse(JSON.stringify(inspectionToImport));
-           inspectionForLocalStorageProcessing.towers = inspectionForLocalStorageProcessing.towers.map(tower => ({
-              ...tower,
-              floors: tower.floors.map(floor => ({
-                  ...floor,
-                  categories: floor.categories.map(category => ({
-                      ...category,
-                      subItems: category.subItems ? category.subItems.map(subItem => {
-                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                          const { photoDataUri, ...restOfSubItem } = subItem;
-                          return { ...restOfSubItem, photoDataUri: null };
-                      }) : undefined,
-                  })),
-              })),
-          }));
-
-
-          const existingIndex = newOrUpdatedInspectionsList.findIndex(insp => insp.id === inspectionForLocalStorageProcessing.id && insp.id);
+          // Data for localStorage now preserves photos as per the updated handleSaveInspection logic
+          const inspectionForProcessing: FullInspectionData = JSON.parse(JSON.stringify(inspectionToImport));
+          
+          const existingIndex = newOrUpdatedInspectionsList.findIndex(insp => insp.id === inspectionForProcessing.id && insp.id);
           if (existingIndex > -1) {
-            newOrUpdatedInspectionsList[existingIndex] = inspectionForLocalStorageProcessing;
+            newOrUpdatedInspectionsList[existingIndex] = inspectionForProcessing; // Update with full data
             currentUpdated++;
           } else {
-            newOrUpdatedInspectionsList.push(inspectionForLocalStorageProcessing);
+            newOrUpdatedInspectionsList.push(inspectionForProcessing); // Add new with full data
             currentImported++;
           }
         });
@@ -899,11 +875,10 @@ export default function FireCheckPage() {
                     let finalSubItems: SubItemState[] = [];
 
                     if (cfgCategory.type === 'standard') {
-                        const jsonSubItemsFromCategory = jsonCategory?.subItems; // Use subItems from the found jsonCategory
+                        const jsonSubItemsFromCategory = jsonCategory?.subItems;
 
                         if (jsonCategory && Array.isArray(jsonSubItemsFromCategory)) {
                             const jsonSubItemsMap = new Map(jsonSubItemsFromCategory.map(js => [js.id, js]));
-
                             finalSubItems = (cfgCategory.subItems || []).map(cfgSub => {
                                 const jsonSub = jsonSubItemsMap.get(cfgSub.id);
                                 return {
@@ -913,7 +888,7 @@ export default function FireCheckPage() {
                                     observation: jsonSub?.observation || '',
                                     showObservation: jsonSub?.showObservation || false,
                                     isRegistry: cfgSub.isRegistry || false,
-                                    photoDataUri: jsonSub?.photoDataUri || null,
+                                    photoDataUri: jsonSub?.photoDataUri || null, // Load photo URI from JSON
                                     photoDescription: jsonSub?.photoDescription || '',
                                     registeredExtinguishers: (jsonSub?.registeredExtinguishers || (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
                                     registeredHoses: (jsonSub?.registeredHoses || (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })),
@@ -921,27 +896,19 @@ export default function FireCheckPage() {
                             });
 
                             jsonSubItemsFromCategory.forEach(jsonSub => {
-                                if (!(cfgCategory.subItems || []).some(cfgSub => cfgSub.id === jsonSub.id)) { // Check against config subitems
+                                if (!(cfgCategory.subItems || []).some(cfgSub => cfgSub.id === jsonSub.id)) {
                                     finalSubItems.push({
-                                        ...jsonSub,
+                                        ...jsonSub, // Load custom sub-item from JSON
                                         id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20) ) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-sub-${generateUniqueId()}`,
-                                        photoDataUri: jsonSub.photoDataUri || null,
+                                        photoDataUri: jsonSub.photoDataUri || null, // Load photo URI for custom sub-item
                                         photoDescription: jsonSub.photoDescription || '',
                                     });
                                 }
                             });
                         } else {
-                            // Category from config not in JSON for this floor, or jsonCategory has no subItems.
-                            // Populate with default config subItems (photos will be null).
                             finalSubItems = (cfgCategory.subItems || []).map(cfgSub => ({
-                                id: cfgSub.id,
-                                name: cfgSub.name,
-                                status: undefined,
-                                observation: '',
-                                showObservation: false,
-                                isRegistry: cfgSub.isRegistry || false,
-                                photoDataUri: null,
-                                photoDescription: '',
+                                id: cfgSub.id, name: cfgSub.name, status: undefined, observation: '', showObservation: false,
+                                isRegistry: cfgSub.isRegistry || false, photoDataUri: null, photoDescription: '',
                                 registeredExtinguishers: (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined),
                                 registeredHoses: (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
                             }));
@@ -951,8 +918,7 @@ export default function FireCheckPage() {
                     return {
                         id: cfgCategory.id,
                         title: jsonCategory?.title || cfgCategory.title,
-                        type: cfgCategory.type,
-                        isExpanded: false,
+                        type: cfgCategory.type, isExpanded: false,
                         status: jsonCategory?.status,
                         observation: jsonCategory?.observation || '',
                         showObservation: jsonCategory?.showObservation || false,
@@ -982,7 +948,7 @@ export default function FireCheckPage() {
                                    )
                                  )
                                );
-        summaryMessage += ` A primeira vistoria válida do arquivo foi carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}. As fotos são mantidas no formulário ativo e em exportações JSON, mas não no armazenamento do navegador.`;
+        summaryMessage += ` A primeira vistoria válida do arquivo foi carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}. As fotos são mantidas no formulário ativo, em exportações JSON e agora também no armazenamento do navegador.`;
     } else if (allInspectionsFromFiles.length === 0 && currentFiles.length > 0) {
         summaryMessage = "Nenhuma vistoria válida encontrada nos arquivos processados.";
     } else if (allInspectionsFromFiles.length > 0 && !summaryMessage) {
