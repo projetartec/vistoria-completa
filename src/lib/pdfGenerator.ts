@@ -59,7 +59,7 @@ const PDF_COMMON_STYLES = `
   .pdf-registered-items-section li { font-size: 9pt; color: #4B5563; margin-bottom: 2px; }
   .pdf-no-items { font-style: italic; color: #6B7280; font-size: 9pt; }
   
-  .pdf-totals-summary { margin-top: 15px; padding-top: 10px; border-top: 1px solid #E5E7EB; }
+  .pdf-totals-summary { margin-top: 15px; padding-top: 10px; border-top: 1px solid #E5E7EB; page-break-before: auto; }
   .pdf-totals-summary h4 { font-size: 10pt; font-weight: 600; color: #111827; margin-bottom: 5px; }
   .pdf-totals-summary p { font-size: 9pt; color: #1F2937; margin-bottom: 3px; }
   .pdf-totals-summary .pdf-type-breakdown { list-style: none; padding-left: 5px; margin-top: 2px; margin-bottom: 5px; }
@@ -99,9 +99,9 @@ const PDF_COMMON_STYLES = `
   .nc-items-page-content .pdf-floor-section { page-break-inside: avoid; }
   .nc-items-page-content .pdf-nc-item-category { font-weight: bold; margin-top: 8px; margin-bottom: 3px; font-size: 10pt; color: #111827; }
   .nc-items-page-content .pdf-nc-item-name { margin-left: 10px; font-size: 9pt; color: #1F2937; }
-  .nc-items-page-content .pdf-nc-observation { margin-left: 10px; margin-top: 2px; padding: 4px 6px; background-color: #FEF2F2; border-left: 2px solid #F87171; font-size: 8.5pt; color: #7F1D1D; white-space: pre-wrap; }
+  .nc-items-page-content .pdf-nc-observation { margin-left: 10px; margin-top: 2px; padding: 4px 6px; background-color: #FEF2F2 !important; border-left: 2px solid #F87171 !important; font-size: 8.5pt; color: #7F1D1D !important; white-space: pre-wrap; }
   .nc-items-page-content .pdf-nc-pressure-details { margin-left: 10px; font-size: 9pt; }
-  .nc-items-page-content .pdf-nc-summary-list { column-count: 2; column-gap: 20px; }
+  /* .nc-items-page-content .pdf-nc-summary-list { column-count: 2; column-gap: 20px; } This style was for a summary list not currently in nc items report */
   
   .status-ok { background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }
   .status-nc { background-color: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
@@ -111,16 +111,14 @@ const PDF_COMMON_STYLES = `
   @media print {
     body { margin: 10mm; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .pdf-container { padding: 0; }
-    .pdf-header-main .company-name, .pdf-client-info .pdf-main-title { color: #1E40AF; } /* Darker blue for print */
+    .pdf-header-main .company-name, .pdf-client-info .pdf-main-title { color: #1E40AF !important; } /* Darker blue for print */
     
-    /* Attempt to force page breaks. Use on wrapper divs for sections. */
-    .print-page-break-after { page-break-after: always !important; }
-    .print-page-break-before { page-break-before: always !important; }
-    .print-page-break-inside-avoid { page-break-inside: avoid !important; }
+    .page-break-after { page-break-after: always !important; }
+    .page-break-before { page-break-before: always !important; }
+    .page-break-inside-avoid { page-break-inside: avoid !important; }
 
     .status-ok, .status-nc, .status-na, .status-pending {
-      /* Ensure colors print, or simplify for black & white */
-       border: 1px solid #ccc;
+       border: 1px solid #ccc !important;
        background-color: #fff !important; /* Remove background for cleaner print */
     }
     .status-ok { color: #006400 !important; } 
@@ -130,48 +128,54 @@ const PDF_COMMON_STYLES = `
 
     .pdf-tower-title { background-color: #e8e8e8 !important; }
     .pdf-category-header { background-color: #f0f0f0 !important; }
-    .pdf-observation { background-color: #fdfdfd !important; border-left-color: #bbb; }
-    .nc-items-page-content .pdf-nc-observation { background-color: #fff2f2 !important; border-left-color: #ffbaba; }
+    .pdf-observation { background-color: #fdfdfd !important; border-left-color: #bbb !important; }
+    .nc-items-page-content .pdf-nc-observation { background-color: #fff2f2 !important; border-left-color: #ffbaba !important; color: #7F1D1D !important;}
   }
 `;
 
 
-function openHtmlInNewWindow(htmlContent: string) {
+function openHtmlInNewWindow(htmlContent: string, reportTitle: string = "Relatório") {
   const win = window.open('', '_blank');
   if (win) {
-    win.document.write(htmlContent);
-    win.document.close(); // Important for some browsers
-    // Delay print to allow content to render, especially images
-    setTimeout(() => {
-      win.print();
-    }, 1000); // Increased delay for potentially complex content or many images
+    win.document.write(`
+      <html>
+        <head>
+          <title>${reportTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
+          <style>${PDF_COMMON_STYLES}</style>
+        </head>
+        <body>
+          <div class="pdf-container">${htmlContent}</div>
+          <script>
+            setTimeout(() => {
+              window.print();
+            }, 1200); // Increased delay slightly for potentially complex content
+          </script>
+        </body>
+      </html>
+    `);
+    win.document.close();
   } else {
     alert('Por favor, desabilite o bloqueador de pop-ups para gerar o PDF.');
   }
 }
 
 function getHeaderHtml(clientInfo: ClientInfo, title: string, uploadedLogoDataUrl?: string | null): string {
-  const defaultLogoUrl = '/brazil-extintores-logo.png'; // Make sure this path is correct from /public
+  const defaultLogoUrl = '/brazil-extintores-logo.png'; 
   const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
-  // For window.print, relative paths or absolute paths from the domain root are fine.
-  // Data URIs also work.
   const logoSrc = logoToUse;
-
 
   return `
     <header class="pdf-header-main">
-      <div class="pdf-header-content-wrapper">
-        <div class="pdf-logo-container"><img src="${logoSrc}" alt="Logo"/></div>
-        <div class="pdf-company-info-container">
-          <div class="company-name">BRAZIL EXTINTORES - SP</div>
-          <div class="company-details">
-            <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
-            <p>OSORIO MACHADO DE PAIVA, 915</p>
-            <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
-            <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
-            <p>Registro Inmetro N°: 001459/2018</p>
-            <p>e-mail: comercial@brazilexintores.com.br</p>
-          </div>
+      <div class="pdf-logo-container"><img src="${logoSrc}" alt="Logo"/></div>
+      <div class="pdf-company-info-container">
+        <div class="company-name">BRAZIL EXTINTORES - SP</div>
+        <div class="company-details">
+          <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
+          <p>OSORIO MACHADO DE PAIVA, 915</p>
+          <p>PARQUE BOM RETIRO - Cep: 13142-128 - PAULINIA - SP</p>
+          <p>CNPJ: 24.218.850/0001-29 | I.E.: 513096549110</p>
+          <p>Registro Inmetro N°: 001459/2018</p>
+          <p>e-mail: comercial@brazilexintores.com.br</p>
         </div>
       </div>
     </header>
@@ -192,7 +196,7 @@ function getHeaderHtml(clientInfo: ClientInfo, title: string, uploadedLogoDataUr
 
 export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerData[], uploadedLogoDataUrl?: string | null): void {
   const processedTowersData = towersData
-    .filter(tower => tower && (tower.towerName?.trim() !== "" || tower.floors.some(f => f.floor?.trim() !== ""))) // Consider tower if it has name OR named floors
+    .filter(tower => tower && (tower.towerName?.trim() !== "" || tower.floors.some(f => f.floor?.trim() !== "")))
     .map(tower => ({
       ...tower,
       floors: tower.floors
@@ -200,34 +204,32 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
         .map(floor => {
           let floorRegisteredExtinguishers: RegisteredExtinguisher[] = [];
           let floorRegisteredHoses: RegisteredHose[] = [];
-          const categories = floor.categories.map(category => {
+          floor.categories.forEach(category => { // Iterate over actual categories in floor data
             if (category.type === 'standard' && category.subItems) {
               category.subItems.forEach(subItem => {
                 if (subItem.isRegistry && subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers) floorRegisteredExtinguishers.push(...subItem.registeredExtinguishers);
                 if (subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && subItem.registeredHoses) floorRegisteredHoses.push(...subItem.registeredHoses);
               });
             }
-            return category;
           });
-          return { ...floor, categories, floorRegisteredExtinguishers, floorRegisteredHoses };
+          return { ...floor, floorRegisteredExtinguishers, floorRegisteredHoses };
         }),
     }));
 
-  const towersToActuallyPrint = processedTowersData.length > 0 ? processedTowersData : towersData.map(tower => ({ // Fallback to all towers if filtering results in empty
+  const towersToActuallyPrint = processedTowersData.length > 0 ? processedTowersData : towersData.map(tower => ({
     ...tower,
     floors: tower.floors.map(floor => { 
         let floorRegisteredExtinguishers: RegisteredExtinguisher[] = [];
         let floorRegisteredHoses: RegisteredHose[] = [];
-        const categories = floor.categories.map(category => {
+        floor.categories.forEach(category => {
             if (category.type === 'standard' && category.subItems) {
                 category.subItems.forEach(subItem => {
                 if (subItem.isRegistry && subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers) floorRegisteredExtinguishers.push(...subItem.registeredExtinguishers);
                 if (subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && subItem.registeredHoses) floorRegisteredHoses.push(...subItem.registeredHoses);
                 });
             }
-            return category;
         });
-        return { ...floor, categories, floorRegisteredExtinguishers, floorRegisteredHoses };
+        return { ...floor, floorRegisteredExtinguishers, floorRegisteredHoses };
     }),
   }));
 
@@ -257,12 +259,12 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
   let htmlBodyContent = '';
 
   // Page 1: Header & Client Data (Centered)
-  htmlBodyContent += `<div class="first-page-center-container print-page-break-after">`;
+  htmlBodyContent += `<div class="first-page-center-container page-break-after">`;
   htmlBodyContent += getHeaderHtml(clientInfo, "Relatório de Vistoria Técnica", uploadedLogoDataUrl);
   htmlBodyContent += `</div>`;
 
   // Page 2: Verified Items
-  htmlBodyContent += `<div class="verified-items-page-content print-page-break-after">`;
+  htmlBodyContent += `<div class="verified-items-page-content page-break-after">`;
   htmlBodyContent += `<h3 class="pdf-section-title">Itens e Subitens Verificados na Vistoria (Geral)</h3>`;
   const overallUniqueVerifiedCategoryTitles = new Set<string>();
   const categoryToSubitemsMap: Record<string, Set<string>> = {};
@@ -291,12 +293,12 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
   if (overallUniqueVerifiedCategoryTitles.size > 0) {
     htmlBodyContent += `<div class="pdf-verified-items-list">`;
-    INSPECTION_CONFIG.forEach(cfgCat => {
+    INSPECTION_CONFIG.forEach(cfgCat => { // Iterate based on defined order
       if (overallUniqueVerifiedCategoryTitles.has(cfgCat.title)) {
-        htmlBodyContent += `<div class="category-group"><p class="category-title">${cfgCat.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+        htmlBodyContent += `<div class="category-group page-break-inside-avoid"><p class="category-title">${cfgCat.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
         if (cfgCat.type === 'standard' && categoryToSubitemsMap[cfgCat.title]?.size > 0) {
           htmlBodyContent += `<ul>`;
-          cfgCat.subItems?.forEach(subCfg => {
+          cfgCat.subItems?.forEach(subCfg => { // Iterate based on defined order
             if (!subCfg.isRegistry && categoryToSubitemsMap[cfgCat.title].has(subCfg.name)) {
               htmlBodyContent += `<li>${subCfg.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`;
             }
@@ -314,7 +316,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
 
   // Page 3: Non-Compliant (N/C) Items
-  htmlBodyContent += `<div class="nc-items-page-content print-page-break-after">`;
+  htmlBodyContent += `<div class="nc-items-page-content page-break-after">`;
   htmlBodyContent += `<h3 class="pdf-section-title">Detalhes de Itens Não Conformes (N/C)</h3>`;
   let anyNonConformingItemsFound = false;
   towersToActuallyPrint.forEach(tower => {
@@ -330,9 +332,10 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
           category.subItems.forEach(sub => {
             if (!sub.isRegistry && sub.status === 'N/C') {
               catHasNC = true;
+              anyNonConformingItemsFound = true;
               catNCContent += `<div class="pdf-subitem-wrapper page-break-inside-avoid">`;
               catNCContent += `<div class="pdf-subitem"><span class="pdf-subitem-name">${sub.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span><span class="pdf-status ${getStatusClass(sub.status)}">${getStatusLabel(sub.status)}</span></div>`;
-              if (sub.showObservation && sub.observation) {
+              if (sub.observation && sub.observation.trim() !== "") {
                 catNCContent += `<div class="pdf-nc-observation">${sub.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
               }
               catNCContent += `</div>`;
@@ -340,12 +343,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
           });
         } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
           catHasNC = true;
-          catNCContent += `<div class="page-break-inside-avoid">`;
+          anyNonConformingItemsFound = true;
+          catNCContent += `<div class="page-break-inside-avoid">`; // Consider making this a subitem-wrapper for consistency if needed
           catNCContent += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
-          if (category.type === 'pressure' && category.status === 'N/C') {
+          if (category.type === 'pressure' && category.status === 'N/C') { // Only show pressure if N/C
             catNCContent += `<p class="pdf-nc-pressure-details">Pressão: ${category.pressureValue?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/P'} ${category.pressureUnit || ''}</p>`;
           }
-          if (category.showObservation && category.observation) {
+          if (category.observation && category.observation.trim() !== "") {
             catNCContent += `<div class="pdf-nc-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
           }
           catNCContent += `</div>`;
@@ -353,7 +357,6 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
         if (catHasNC) {
           floorHasNCItemsForReport = true;
-          anyNonConformingItemsFound = true;
           floorNCItemsContent += `<div class="pdf-nc-item-category">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${catNCContent}`;
         }
       });
@@ -364,7 +367,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
       }
     });
     if (towerHasNCItemsForReport) {
-      htmlBodyContent += `<div class="pdf-tower-section"><h2 class="pdf-tower-title">${(tower.towerName || 'Torre Não Especificada').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h2>${towerNCItemsContent}</div>`;
+      htmlBodyContent += `<div class="pdf-tower-section page-break-inside-avoid"><h2 class="pdf-tower-title">${(tower.towerName || 'Torre Não Especificada').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h2>${towerNCItemsContent}</div>`;
     }
   });
   if (!anyNonConformingItemsFound) {
@@ -375,7 +378,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
   // Page 4: Registered Items
   let anyRegItems = false;
-  towersToActuallyPrint.forEach(t => t.floors.forEach(f => { if (f.floorRegisteredExtinguishers.length > 0 || f.floorRegisteredHoses.length > 0) anyRegItems = true; }));
+  towersToActuallyPrint.forEach(t => t.floors.forEach(f => { if ((f.floorRegisteredExtinguishers && f.floorRegisteredExtinguishers.length > 0) || (f.floorRegisteredHoses && f.floorRegisteredHoses.length > 0)) anyRegItems = true; }));
   
   let grandTotalExtinguishersCount = 0;
   const extinguisherTypeAndWeightTotals: { [type: string]: { [weight: string]: number } } = {};
@@ -386,44 +389,48 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
   towersToActuallyPrint.forEach(tower => {
     tower.floors.forEach(floor => {
-      floor.floorRegisteredExtinguishers.forEach(ext => {
-        if (ext.type && ext.weight && ext.quantity > 0) {
-          extinguisherTypeAndWeightTotals[ext.type][ext.weight] = (extinguisherTypeAndWeightTotals[ext.type][ext.weight] || 0) + ext.quantity;
-          grandTotalExtinguishersCount += ext.quantity;
-        }
-      });
-      floor.floorRegisteredHoses.forEach(hose => {
-        if (hose.length && hose.diameter && hose.type && hose.quantity > 0) {
-          const key = `${hose.length}_${hose.diameter}_${hose.type}`;
-          if (!hoseCombinationTotals[key]) {
-            hoseCombinationTotals[key] = { quantity: 0, length: hose.length, diameter: hose.diameter, type: hose.type };
+      if (floor.floorRegisteredExtinguishers) {
+        floor.floorRegisteredExtinguishers.forEach(ext => {
+          if (ext.type && ext.weight && ext.quantity > 0) {
+            extinguisherTypeAndWeightTotals[ext.type][ext.weight] = (extinguisherTypeAndWeightTotals[ext.type][ext.weight] || 0) + ext.quantity;
+            grandTotalExtinguishersCount += ext.quantity;
           }
-          hoseCombinationTotals[key].quantity += hose.quantity;
-          grandTotalHosesCount += hose.quantity;
-        }
-      });
+        });
+      }
+      if (floor.floorRegisteredHoses) {
+        floor.floorRegisteredHoses.forEach(hose => {
+          if (hose.length && hose.diameter && hose.type && hose.quantity > 0) {
+            const key = `${hose.length}_${hose.diameter}_${hose.type}`;
+            if (!hoseCombinationTotals[key]) {
+              hoseCombinationTotals[key] = { quantity: 0, length: hose.length, diameter: hose.diameter, type: hose.type };
+            }
+            hoseCombinationTotals[key].quantity += hose.quantity;
+            grandTotalHosesCount += hose.quantity;
+          }
+        });
+      }
     });
   });
   
   if (anyRegItems || grandTotalExtinguishersCount > 0 || grandTotalHosesCount > 0) {
-    htmlBodyContent += `<div class="registered-items-page-content print-page-break-after">`; // Add page break before if not first content page after NC items
+    htmlBodyContent += `<div class="registered-items-page-content page-break-after">`;
     htmlBodyContent += `<h3 class="pdf-section-title">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
-    if (anyRegItems) {
+    if (anyRegItems) { // Show per-floor details only if there are items on floors
        towersToActuallyPrint.forEach(tower => {
         let towerHasRegItems = false;
         let towerRegContent = '';
         tower.floors.forEach(floor => {
-          if (floor.floorRegisteredExtinguishers.length > 0 || floor.floorRegisteredHoses.length > 0) {
+          if ((floor.floorRegisteredExtinguishers && floor.floorRegisteredExtinguishers.length > 0) || (floor.floorRegisteredHoses && floor.floorRegisteredHoses.length > 0)) {
             towerHasRegItems = true;
-            towerRegContent += `<div class="pdf-floor-section"><h3 class="pdf-floor-title">${(floor.floor || 'Andar N/E').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3><div class="pdf-registered-items-section">`;
-            if (floor.floorRegisteredExtinguishers.length > 0) {
+            towerRegContent += `<div class="pdf-floor-section page-break-inside-avoid"><h3 class="pdf-floor-title">${(floor.floor || 'Andar N/E').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h3><div class="pdf-registered-items-section">`;
+            if (floor.floorRegisteredExtinguishers && floor.floorRegisteredExtinguishers.length > 0) {
               towerRegContent += `<h4>Extintores:</h4><ul>`;
               floor.floorRegisteredExtinguishers.forEach(e => towerRegContent += `<li>${e.quantity}x - ${e.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${e.weight.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`);
               towerRegContent += `</ul>`;
             } else {
               towerRegContent += `<h4>Extintores:</h4><p class="pdf-no-items">Nenhum.</p>`;
             }
-            if (floor.floorRegisteredHoses.length > 0) {
+            if (floor.floorRegisteredHoses && floor.floorRegisteredHoses.length > 0) {
               towerRegContent += `<h4>Mangueiras:</h4><ul>`;
               floor.floorRegisteredHoses.forEach(h => towerRegContent += `<li>${h.quantity}x - ${h.length.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${h.diameter.replace(/</g, "&lt;").replace(/>/g, "&gt;")} - ${h.type.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`);
               towerRegContent += `</ul>`;
@@ -434,12 +441,13 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
           }
         });
         if (towerHasRegItems) {
-          htmlBodyContent += `<div class="pdf-tower-section"><h2 class="pdf-tower-title">${(tower.towerName || 'Torre N/E').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h2>${towerRegContent}</div>`;
+          htmlBodyContent += `<div class="pdf-tower-section page-break-inside-avoid"><h2 class="pdf-tower-title">${(tower.towerName || 'Torre N/E').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h2>${towerRegContent}</div>`;
         }
       });
-    } else {
-         htmlBodyContent += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhum item cadastrado nos andares.</p>`;
+    } else if (grandTotalExtinguishersCount > 0 || grandTotalHosesCount > 0) {
+         htmlBodyContent += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhum item cadastrado diretamente nos andares, verifique o resumo total.</p>`;
     }
+
 
     htmlBodyContent += `<div class="pdf-totals-summary page-break-inside-avoid"><h4>Totais Gerais</h4><p><strong>Extintores:</strong></p><ul class="pdf-type-breakdown">`;
     let hasExtTot = false;
@@ -458,7 +466,9 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
       }
     });
     if (!hasExtTot && grandTotalExtinguishersCount === 0) htmlBodyContent += `<li>Nenhum.</li>`;
+    else if (!hasExtTot && grandTotalExtinguishersCount > 0) htmlBodyContent += `<li>Total não detalhado por tipo/peso: ${grandTotalExtinguishersCount}</li>`;
     htmlBodyContent += `</ul><p><strong>Total Geral Extintores:</strong> ${grandTotalExtinguishersCount}</p>`;
+    
     htmlBodyContent += `<p style="margin-top: 10px;"><strong>Mangueiras:</strong></p><ul class="pdf-type-breakdown">`;
     let hasHoseTot = false;
     Object.values(hoseCombinationTotals).forEach(d => {
@@ -468,14 +478,20 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
       }
     });
     if (!hasHoseTot && grandTotalHosesCount === 0) htmlBodyContent += `<li>Nenhuma.</li>`;
+    else if (!hasHoseTot && grandTotalHosesCount > 0) htmlBodyContent += `<li>Total não detalhado por combinação: ${grandTotalHosesCount}</li>`;
     htmlBodyContent += `</ul><p><strong>Total Geral Mangueiras:</strong> ${grandTotalHosesCount}</p></div>`;
     htmlBodyContent += `</div>`;
+  } else {
+      htmlBodyContent += `<div class="registered-items-page-content page-break-after">`;
+      htmlBodyContent += `<h3 class="pdf-section-title">Itens Cadastrados (Extintores e Mangueiras)</h3>`;
+      htmlBodyContent += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhum item cadastrado (extintor ou mangueira) nesta vistoria.</p>`;
+      htmlBodyContent += `</div>`;
   }
 
 
   // Page 5+: Photo Report
   if (photosForReport.length > 0) {
-    htmlBodyContent += `<div class="photo-report-page-content print-page-break-before">`; // Add page break before
+    htmlBodyContent += `<div class="photo-report-page-content page-break-before">`; 
     htmlBodyContent += `<h3 class="pdf-section-title">Registro Fotográfico</h3>`;
     htmlBodyContent += `<div class="pdf-photo-items-container">`;
     photosForReport.forEach(p => {
@@ -489,26 +505,16 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
       htmlBodyContent += `</div>`;
     });
     htmlBodyContent += `</div></div>`;
+  } else {
+     htmlBodyContent += `<div class="photo-report-page-content page-break-before">`;
+     htmlBodyContent += `<h3 class="pdf-section-title">Registro Fotográfico</h3>`;
+     htmlBodyContent += `<p class="pdf-no-items" style="text-align: center; padding: 12px;">Nenhuma foto registrada nesta vistoria.</p>`;
+     htmlBodyContent += `</div>`;
   }
 
   htmlBodyContent += `<footer class="pdf-footer">FireCheck Brazil &copy; ${new Date().getFullYear()} - BRAZIL EXTINTORES</footer>`;
 
-  const fullHtml = `
-    <html>
-      <head>
-        <title>Relatório Vistoria Técnica - ${clientInfo.inspectionNumber}</title>
-        <style>${PDF_COMMON_STYLES}</style>
-      </head>
-      <body>
-        <div class="pdf-container">${htmlBodyContent}</div>
-        <script>
-          setTimeout(() => {
-            window.print();
-          }, 1000); // Delay for rendering
-        </script>
-      </body>
-    </html>`;
-  openHtmlInNewWindow(fullHtml);
+  openHtmlInNewWindow(htmlBodyContent, `VistoriaTecnica_${clientInfo.inspectionNumber}`);
 }
 
 
@@ -529,40 +535,45 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: T
   const towersToReport = relevantTowersData.length > 0 ? relevantTowersData : towersData;
 
   const processedTowersForReport = towersToReport.map(tower => {
-    tower.floors.forEach(floor => {
-      floor.categories.forEach(category => {
-        if (category.subItems) category.subItems.forEach(subItem => {
-          if (subItem.isRegistry) {
-            if (subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers) {
-              subItem.registeredExtinguishers.forEach(ext => {
-                if (ext.type && ext.weight && ext.quantity > 0) {
-                  extinguisherTypeAndWeightTotals[ext.type][ext.weight] = (extinguisherTypeAndWeightTotals[ext.type][ext.weight] || 0) + ext.quantity;
-                  grandTotalExtinguishersCount += ext.quantity;
+    const floorsWithItems = tower.floors.map(f => {
+        let extList: RegisteredExtinguisher[] = [];
+        let hoseList: RegisteredHose[] = [];
+        f.categories.forEach(category => {
+            if(category.subItems) category.subItems.forEach(subItem => {
+                if (subItem.isRegistry) {
+                    if (subItem.id === 'extintor_cadastro' && subItem.registeredExtinguishers) {
+                        extList.push(...subItem.registeredExtinguishers);
+                        subItem.registeredExtinguishers.forEach(ext => {
+                            if (ext.type && ext.weight && ext.quantity > 0) {
+                                extinguisherTypeAndWeightTotals[ext.type][ext.weight] = (extinguisherTypeAndWeightTotals[ext.type][ext.weight] || 0) + ext.quantity;
+                                grandTotalExtinguishersCount += ext.quantity;
+                            }
+                        });
+                    } else if (subItem.id === 'hidrantes_cadastro_mangueiras' && subItem.registeredHoses) {
+                        hoseList.push(...subItem.registeredHoses);
+                        subItem.registeredHoses.forEach(hose => {
+                            if (hose.length && hose.diameter && hose.type && hose.quantity > 0) {
+                                const key = `${hose.length}_${hose.diameter}_${hose.type}`;
+                                if (!hoseCombinationTotals[key]) {
+                                    hoseCombinationTotals[key] = { quantity: 0, length: hose.length, diameter: hose.diameter, type: hose.type };
+                                }
+                                hoseCombinationTotals[key].quantity += hose.quantity;
+                                grandTotalHosesCount += hose.quantity;
+                            }
+                        });
+                    }
                 }
-              });
-            } else if (subItem.id === 'hidrantes_cadastro_mangueiras' && subItem.registeredHoses) {
-              subItem.registeredHoses.forEach(hose => {
-                if (hose.length && hose.diameter && hose.type && hose.quantity > 0) {
-                  const key = `${hose.length}_${hose.diameter}_${hose.type}`;
-                  if (!hoseCombinationTotals[key]) {
-                    hoseCombinationTotals[key] = { quantity: 0, length: hose.length, diameter: hose.diameter, type: hose.type };
-                  }
-                  hoseCombinationTotals[key].quantity += hose.quantity;
-                  grandTotalHosesCount += hose.quantity;
-                }
-              });
-            }
-          }
+            });
         });
-      });
+        return {
+            floorName: f.floor || 'Andar N/E',
+            extinguishers: extList,
+            hoses: hoseList
+        };
     });
     return {
       towerName: tower.towerName || 'Torre N/E',
-      floors: tower.floors.map(f => ({
-        floorName: f.floor || 'Andar N/E',
-        extinguishers: f.categories.flatMap(c => c.subItems?.filter(si => si.id === 'extintor_cadastro' && si.isRegistry).flatMap(si => si.registeredExtinguishers || []) || []),
-        hoses: f.categories.flatMap(c => c.subItems?.filter(si => si.id === 'hidrantes_cadastro_mangueiras' && si.isRegistry).flatMap(si => si.registeredHoses || []) || [])
-      }))
+      floors: floorsWithItems
     };
   });
 
@@ -596,9 +607,7 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: T
       htmlBodyContent += `<div class="pdf-tower-section page-break-inside-avoid"><h2 class="pdf-tower-title">${tower.towerName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h2>${towerHtml}</div>`;
     }
   });
-  if (!anyItemsOnFloors && (grandTotalExtinguishersCount > 0 || grandTotalHosesCount > 0)) {
-    // If no items on floors but there are totals, implies an issue or all items are global (not handled here)
-  } else if (!anyItemsOnFloors) {
+  if (!anyItemsOnFloors && (grandTotalExtinguishersCount === 0 && grandTotalHosesCount === 0)) {
     htmlBodyContent += `<p class="pdf-no-items" style="text-align:center; padding: 12px;">Nenhum item cadastrado.</p>`;
   }
   htmlBodyContent += `</section>`;
@@ -633,20 +642,7 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: T
   htmlBodyContent += `</ul><p><strong>Total Geral Mangueiras: ${grandTotalHosesCount}</strong></p></section>`;
   htmlBodyContent += `<footer class="pdf-footer">FireCheck Brazil &copy; ${new Date().getFullYear()} - BRAZIL EXTINTORES</footer>`;
 
-  const fullHtml = `
-    <html>
-      <head>
-        <title>Itens Cadastrados - ${clientInfo.inspectionNumber}</title>
-        <style>${PDF_COMMON_STYLES}</style>
-      </head>
-      <body>
-        <div class="pdf-container">${htmlBodyContent}</div>
-        <script>
-          setTimeout(() => { window.print(); }, 1000);
-        </script>
-      </body>
-    </html>`;
-  openHtmlInNewWindow(fullHtml);
+  openHtmlInNewWindow(htmlBodyContent, `ItensCadastrados_${clientInfo.inspectionNumber}`);
 }
 
 export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData[], uploadedLogoDataUrl?: string | null): void {
@@ -666,32 +662,37 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData
     let towerHasNC = false; let towerHtml = '';
     tower.floors.forEach(floor => {
       let floorHasNC = false; let floorHtml = '';
-      INSPECTION_CONFIG.forEach(cfgCat => {
+      INSPECTION_CONFIG.forEach(cfgCat => { 
         const category = floor.categories.find(cat => cat.id === cfgCat.id); if (!category) return;
-        let catHasNC = false; let catHtml = '';
+        let catHasNC = false; let catHtmlInner = '';
         if (category.type === 'standard' && category.subItems) {
-          cfgCat.subItems?.forEach(cfgSub => {
+          cfgCat.subItems?.forEach(cfgSub => { 
             if (cfgSub.isRegistry) return;
-            const sub = category.subItems?.find(si => si.id === cfgSub.id);
+            const sub = category.subItems?.find(si => si.id === cfgSub.id); 
             if (sub && sub.status === 'N/C') {
               ncItemsFoundOverall=true; floorHasNC=true; catHasNC=true;
-              catHtml += `<div class="pdf-nc-item-name page-break-inside-avoid">${sub.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
-              if (sub.showObservation && sub.observation) {
-                catHtml += `<div class="pdf-nc-observation page-break-inside-avoid">${sub.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+              catHtmlInner += `<div class="pdf-subitem-wrapper page-break-inside-avoid">`;
+              catHtmlInner += `<div class="pdf-subitem"><span class="pdf-subitem-name">${sub.name.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span><span class="pdf-status ${getStatusClass(sub.status)}">${getStatusLabel(sub.status)}</span></div>`;
+              if (sub.observation && sub.observation.trim() !== "") {
+                catHtmlInner += `<div class="pdf-nc-observation">${sub.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
               }
+              catHtmlInner += `</div>`;
             }
           });
         } else if ((category.type === 'special' || category.type === 'pressure') && category.status === 'N/C') {
           ncItemsFoundOverall=true; floorHasNC=true; catHasNC=true;
-          if (category.type === 'pressure') {
-            catHtml += `<div class="pdf-nc-pressure-details page-break-inside-avoid">Pressão: ${category.pressureValue?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/P'} ${category.pressureUnit || ''}</div>`;
+          catHtmlInner += `<div class="page-break-inside-avoid">`;
+          catHtmlInner += `<p><span class="pdf-subitem-name">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")} Status:</span> <span class="pdf-status ${getStatusClass(category.status)}">${getStatusLabel(category.status)}</span></p>`;
+          if (category.type === 'pressure' && category.status === 'N/C') {
+            catHtmlInner += `<p class="pdf-nc-pressure-details">Pressão: ${category.pressureValue?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/P'} ${category.pressureUnit || ''}</p>`;
           }
-          if (category.showObservation && category.observation) {
-            catHtml += `<div class="pdf-nc-observation page-break-inside-avoid">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+          if (category.observation && category.observation.trim() !== "") {
+            catHtmlInner += `<div class="pdf-nc-observation">${category.observation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
           }
+          catHtmlInner += `</div>`;
         }
         if (catHasNC) {
-          floorHtml += `<div class="pdf-nc-item-category page-break-inside-avoid">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${catHtml}`;
+          floorHtml += `<div class="pdf-nc-item-category page-break-inside-avoid">${category.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>${catHtmlInner}`;
         }
       });
       if (floorHasNC) {
@@ -708,23 +709,7 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData
   }
   htmlBodyContent += `</section><footer class="pdf-footer">FireCheck Brazil &copy; ${new Date().getFullYear()} - BRAZIL EXTINTORES</footer>`;
   
-  const fullHtml = `
-    <html>
-      <head>
-        <title>Itens N_C - ${clientInfo.inspectionNumber}</title>
-        <style>
-          ${PDF_COMMON_STYLES}
-          .nc-items-page-content { column-count: 2; column-gap: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="pdf-container">${htmlBodyContent}</div>
-        <script>
-          setTimeout(() => { window.print(); }, 1000);
-        </script>
-      </body>
-    </html>`;
-  openHtmlInNewWindow(fullHtml);
+  openHtmlInNewWindow(htmlBodyContent, `ItensNC_${clientInfo.inspectionNumber}`);
 }
 
 export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: TowerData[], uploadedLogoDataUrl?: string | null): void {
@@ -779,18 +764,6 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
   }
   htmlBodyContent += `</section><footer class="pdf-footer">FireCheck Brazil &copy; ${new Date().getFullYear()} - BRAZIL EXTINTORES</footer>`;
 
-  const fullHtml = `
-    <html>
-      <head>
-        <title>RelatorioFotografico_${clientInfo.inspectionNumber}</title>
-        <style>${PDF_COMMON_STYLES}</style>
-      </head>
-      <body>
-        <div class="pdf-container">${htmlBodyContent}</div>
-        <script>
-          setTimeout(() => { window.print(); }, 1000);
-        </script>
-      </body>
-    </html>`;
-  openHtmlInNewWindow(fullHtml);
+  openHtmlInNewWindow(htmlBodyContent, `RelatorioFotografico_${clientInfo.inspectionNumber}`);
 }
+
