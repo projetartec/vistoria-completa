@@ -314,16 +314,17 @@ export default function FireCheckPage() {
                         break;
                 }
 
-                if (!isExpansionChange &&
+                 if (!isExpansionChange &&
                     categoryStructurallyModifiedForAutoCollapse &&
-                    originalCategory.isExpanded &&
-                    getCategoryOverallStatus(originalCategory) !== 'all-items-selected' && // Was not complete before
-                    getCategoryOverallStatus(mutatedCategory) === 'all-items-selected'      // Is complete now
+                    originalCategory.isExpanded && // Key: Only consider auto-collapse if it was ALREADY open
+                    getCategoryOverallStatus(originalCategory) !== 'all-items-selected' && // And it wasn't complete before
+                    getCategoryOverallStatus(mutatedCategory) === 'all-items-selected'      // And it IS complete now
                    ) {
                     mutatedCategory.isExpanded = false;
                     autoCollapsedCategoryIdHolder.id = originalCategory.id;
                     actualModificationsMadeToCategory = true;
                 }
+
 
                 let finalCategoriesForFloor = [...currentFloorData.categories];
                 if (actualModificationsMadeToCategory) {
@@ -342,7 +343,7 @@ export default function FireCheckPage() {
                     const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
                     if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
                         const nextCatOriginal = finalCategoriesForFloor[collapsedIdx + 1];
-                        if (!nextCatOriginal.isExpanded) {
+                        if (!nextCatOriginal.isExpanded) { // Only expand next if it's currently collapsed
                             const updatedNextCat = { ...nextCatOriginal, isExpanded: true };
                              finalCategoriesForFloor = [
                                 ...finalCategoriesForFloor.slice(0, collapsedIdx + 1),
@@ -441,7 +442,6 @@ export default function FireCheckPage() {
   const handleSaveInspection = useCallback(() => {
     const currentClientInfo = clientInfo;
 
-    // Prepare data for localStorage: strip photoDataUri from subItems
     const towersForLocalStorage = activeTowersData.map(tower => ({
         ...tower,
         floors: tower.floors.map(floor => ({
@@ -462,7 +462,7 @@ export default function FireCheckPage() {
       clientInfo: { ...currentClientInfo },
       towers: towersForLocalStorage,
       timestamp: Date.now(),
-      uploadedLogoDataUrl: uploadedLogoDataUrl // Keep logo for localStorage
+      uploadedLogoDataUrl: uploadedLogoDataUrl
     };
 
     setSavedInspections(prevSaved => {
@@ -499,8 +499,6 @@ export default function FireCheckPage() {
         });
         setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-        // When loading from localStorage, photoDataUri for sub-items will be null.
-        // The structure here ensures all config-defined items are present.
         const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
             ...tower,
             id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
@@ -585,8 +583,6 @@ export default function FireCheckPage() {
       };
       duplicatedInspection.timestamp = Date.now();
       
-      // Photos are already stripped in originalInspection from localStorage.
-      // We just need to ensure IDs are new for the duplicated structure.
       duplicatedInspection.towers = (duplicatedInspection.towers || []).map(tower => ({
         ...tower, id: generateUniqueId(), isTowerContentVisible: false,
         floors: (tower.floors || []).map(floor => ({
@@ -594,7 +590,8 @@ export default function FireCheckPage() {
           categories: (floor.categories || []).map(cat => ({
             ...cat, isExpanded: false,
             subItems: (cat.subItems || []).map(sub => ({
-              ...sub, // photoDataUri will be null here from localStorage copy
+              ...sub, 
+              photoDataUri: null, // Photos are not duplicated from localStorage copies
               id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id,
               registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: `${generateUniqueId()}-extcopy`})),
               registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: `${generateUniqueId()}-hosecopy` }))
@@ -684,36 +681,36 @@ export default function FireCheckPage() {
 
   const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
     setActiveTowersData(prevTowers => {
-      let overallTowersChanged = false;
+      let overallTowersChanged = false; 
 
       const newTowers = prevTowers.map((tower, tIdx) => {
         if (tIdx !== towerIndex) {
-          return tower;
+          return tower; 
         }
 
-        let towerContentChanged = false;
+        let towerContentChanged = false; 
         const newFloors = tower.floors.map((floor, fIdx) => {
           if (fIdx !== floorIndex) {
-            return floor;
+            return floor; 
           }
-
+          
           const originalCategories = floor.categories;
           const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
 
           if (filteredCategories.length < originalCategories.length) {
-            towerContentChanged = true;
-            return { ...floor, categories: filteredCategories };
+            towerContentChanged = true; 
+            return { ...floor, categories: filteredCategories }; 
           }
-          return floor;
+          return floor; 
         });
 
         if (towerContentChanged) {
-          overallTowersChanged = true;
-          return { ...tower, floors: newFloors };
+          overallTowersChanged = true; 
+          return { ...tower, floors: newFloors }; 
         }
-        return tower;
+        return tower; 
       });
-
+      
       if (overallTowersChanged) {
         return newTowers;
       }
@@ -723,11 +720,10 @@ export default function FireCheckPage() {
 
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
-    // Full activeTowersData (with photos) is used for JSON export
     const inspectionToExport: FullInspectionData = {
       id: clientInfo.inspectionNumber || `export-id-${Date.now()}`,
       clientInfo: { ...clientInfo },
-      towers: activeTowersData, // Use activeTowersData directly
+      towers: activeTowersData, 
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl,
     };
@@ -762,11 +758,11 @@ export default function FireCheckPage() {
 
  const handleImportInspectionFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentInput = event.target;
-    const currentFiles = currentInput.files;
+    const currentFiles = currentInput.files; // Capture files at the beginning
     if (!currentFiles || currentFiles.length === 0) {
       toast({ title: "Nenhum arquivo selecionado", variant: "destructive" });
       if (jsonImportFileInputRef.current) {
-        jsonImportFileInputRef.current.value = '';
+        jsonImportFileInputRef.current.value = ''; // Clear input
       }
       return;
     }
@@ -811,13 +807,13 @@ export default function FireCheckPage() {
           } catch (error) {
             console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
             toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}. Verifique o formato.`, variant: "destructive"});
-            reject(error);
+            reject(error); // Reject the promise on error
           }
         };
         reader.onerror = (err) => {
           console.error(`Erro ao ler o arquivo ${file.name}:`, err);
           toast({ title: "Erro de Leitura", description: `Não foi possível ler ${file.name}.`, variant: "destructive"});
-          reject(err);
+          reject(err); // Reject the promise on error
         };
         reader.readAsText(file);
       });
@@ -881,27 +877,77 @@ export default function FireCheckPage() {
     }
 
     if (firstInspectionToLoadToFormWithPhotos) {
-        setClientInfo({ // Set client info directly from the loaded inspection
+        setClientInfo({ 
             clientLocation: firstInspectionToLoadToFormWithPhotos.clientInfo.clientLocation || '',
             clientCode: firstInspectionToLoadToFormWithPhotos.clientInfo.clientCode || '',
-            inspectionNumber: firstInspectionToLoadToFormWithPhotos.id, // Use the ID from the JSON as inspection number
+            inspectionNumber: firstInspectionToLoadToFormWithPhotos.id, 
             inspectionDate: firstInspectionToLoadToFormWithPhotos.clientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
             inspectedBy: firstInspectionToLoadToFormWithPhotos.clientInfo.inspectedBy || '',
         });
         setUploadedLogoDataUrl(firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || null);
 
         const sanitizedTowersForForm = (firstInspectionToLoadToFormWithPhotos.towers || []).map(loadedTower => ({
-            ...loadedTower, // Spread basic tower properties like name, id
+            ...loadedTower, 
             id: (loadedTower.id && typeof loadedTower.id === 'string' && !loadedTower.id.startsWith('server-temp-id-')) ? loadedTower.id : generateUniqueId(),
             isTowerContentVisible: false,
             floors: (loadedTower.floors || []).map(loadedFloor => ({
-                ...loadedFloor, // Spread basic floor properties like name, id
+                ...loadedFloor, 
                 id: (loadedFloor.id && typeof loadedFloor.id === 'string' && !loadedFloor.id.startsWith('server-temp-id-')) ? loadedFloor.id : generateUniqueId(),
                 isFloorContentVisible: false,
                 categories: INSPECTION_CONFIG.map(cfgCategory => {
                     const jsonCategory = (loadedFloor.categories || []).find(cat => cat.id === cfgCategory.id);
-                    const jsonSubItems = jsonCategory?.subItems || [];
+                    let finalSubItems: SubItemState[] = [];
 
+                    if (cfgCategory.type === 'standard') {
+                        const jsonSubItemsFromCategory = jsonCategory?.subItems; // Use subItems from the found jsonCategory
+
+                        if (jsonCategory && Array.isArray(jsonSubItemsFromCategory)) {
+                            const jsonSubItemsMap = new Map(jsonSubItemsFromCategory.map(js => [js.id, js]));
+
+                            finalSubItems = (cfgCategory.subItems || []).map(cfgSub => {
+                                const jsonSub = jsonSubItemsMap.get(cfgSub.id);
+                                return {
+                                    id: cfgSub.id,
+                                    name: jsonSub?.name || cfgSub.name,
+                                    status: jsonSub?.status,
+                                    observation: jsonSub?.observation || '',
+                                    showObservation: jsonSub?.showObservation || false,
+                                    isRegistry: cfgSub.isRegistry || false,
+                                    photoDataUri: jsonSub?.photoDataUri || null,
+                                    photoDescription: jsonSub?.photoDescription || '',
+                                    registeredExtinguishers: (jsonSub?.registeredExtinguishers || (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
+                                    registeredHoses: (jsonSub?.registeredHoses || (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })),
+                                };
+                            });
+
+                            jsonSubItemsFromCategory.forEach(jsonSub => {
+                                if (!(cfgCategory.subItems || []).some(cfgSub => cfgSub.id === jsonSub.id)) { // Check against config subitems
+                                    finalSubItems.push({
+                                        ...jsonSub,
+                                        id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20) ) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-sub-${generateUniqueId()}`,
+                                        photoDataUri: jsonSub.photoDataUri || null,
+                                        photoDescription: jsonSub.photoDescription || '',
+                                    });
+                                }
+                            });
+                        } else {
+                            // Category from config not in JSON for this floor, or jsonCategory has no subItems.
+                            // Populate with default config subItems (photos will be null).
+                            finalSubItems = (cfgCategory.subItems || []).map(cfgSub => ({
+                                id: cfgSub.id,
+                                name: cfgSub.name,
+                                status: undefined,
+                                observation: '',
+                                showObservation: false,
+                                isRegistry: cfgSub.isRegistry || false,
+                                photoDataUri: null,
+                                photoDescription: '',
+                                registeredExtinguishers: (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined),
+                                registeredHoses: (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
+                            }));
+                        }
+                    }
+                    
                     return {
                         id: cfgCategory.id,
                         title: jsonCategory?.title || cfgCategory.title,
@@ -912,29 +958,7 @@ export default function FireCheckPage() {
                         showObservation: jsonCategory?.showObservation || false,
                         pressureValue: jsonCategory?.pressureValue || '',
                         pressureUnit: jsonCategory?.pressureUnit || '',
-                        subItems: cfgCategory.subItems?.map(cfgSubItem => {
-                            const jsonSubItem = jsonSubItems.find(sub => sub.id === cfgSubItem.id);
-                            return {
-                                id: cfgSubItem.id,
-                                name: jsonSubItem?.name || cfgSubItem.name,
-                                status: jsonSubItem?.status,
-                                observation: jsonSubItem?.observation || '',
-                                showObservation: jsonSubItem?.showObservation || false,
-                                isRegistry: cfgSubItem.isRegistry || false,
-                                photoDataUri: jsonSubItem?.photoDataUri || null, // Preserving from JSON
-                                photoDescription: jsonSubItem?.photoDescription || '',
-                                registeredExtinguishers: (jsonSubItem?.registeredExtinguishers || (cfgSubItem.isRegistry && cfgSubItem.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
-                                registeredHoses: (jsonSubItem?.registeredHoses || (cfgSubItem.isRegistry && cfgSubItem.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })),
-                            };
-                        }).concat( // Add custom sub-items from JSON not in INSPECTION_CONFIG
-                           jsonSubItems.filter(jsonSub => !cfgCategory.subItems?.some(cfgSub => cfgSub.id === jsonSub.id))
-                           .map(customSub => ({
-                                ...customSub, // Spread all properties of custom sub-item from JSON
-                                id: (customSub.id && typeof customSub.id === 'string' && !customSub.id.includes('NaN') && !customSub.id.startsWith('server-temp-id-') && (!customSub.id.startsWith('custom-') || customSub.id.length > 20) ) ? customSub.id : customSub.id.startsWith('custom-') ? customSub.id : `loaded-sub-${generateUniqueId()}`,
-                                photoDataUri: customSub.photoDataUri || null, // Ensure these are also handled
-                                photoDescription: customSub.photoDescription || '',
-                            }))
-                        ) || [],
+                        subItems: cfgCategory.type === 'standard' ? finalSubItems : undefined,
                     };
                 }),
             })),
@@ -1127,3 +1151,4 @@ export default function FireCheckPage() {
   );
 }
     
+
