@@ -9,17 +9,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Save, PlusSquare, ListChecks, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText, Image as ImageIcon, Building } from 'lucide-react'; // Added Building
+import { Save, PlusSquare, Printer, Download, Upload, ChevronDown, ChevronUp, FileDown, FileSpreadsheet, AlertTriangle, FileText, Image as ImageIcon, Building, FolderOpen } from 'lucide-react'; // Added Building, FolderOpen
 
 interface ActionButtonsPanelProps {
   onSave: () => void;
   onNewInspection: () => void;
-  onAddNewTower: () => void; // Changed from onNewFloor
-  onToggleSavedInspections: () => void;
-  isSavedInspectionsVisible: boolean;
+  onAddNewTower: () => void;
+  // onToggleSavedInspections: () => void; // Removed
+  // isSavedInspectionsVisible: boolean; // Removed
   onPrint: () => void;
-  onExportJson: () => void;
-  onTriggerImportJson: () => void;
+  onExportJson: () => void; // Kept for traditional export
+  onTriggerImportJson: () => void; // Kept for traditional import
+  onLoadFromFileSystem: () => void; // New prop for File System Access API load
   onGenerateRegisteredItemsReport: () => void;
   onGenerateNCItemsReport: () => void;
   onGeneratePdf: () => void;
@@ -29,12 +30,13 @@ interface ActionButtonsPanelProps {
 export function ActionButtonsPanel({
   onSave,
   onNewInspection,
-  onAddNewTower, // Changed
-  onToggleSavedInspections,
-  isSavedInspectionsVisible,
+  onAddNewTower,
+  // onToggleSavedInspections, // Removed
+  // isSavedInspectionsVisible, // Removed
   onPrint,
   onExportJson,
   onTriggerImportJson,
+  onLoadFromFileSystem, // New prop
   onGenerateRegisteredItemsReport,
   onGenerateNCItemsReport,
   onGeneratePdf,
@@ -64,14 +66,22 @@ export function ActionButtonsPanel({
       </div>
 
       {isActionsContentVisible && (
-        <div id="actions-content-panel" className="grid grid-cols-4 gap-2 sm:gap-4">
-          <Button onClick={onSave} title="Salvar Vistoria" size="sm">
-            <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar</span>
+        <div id="actions-content-panel" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+          <Button onClick={onSave} title="Salvar Vistoria (no dispositivo)" size="sm">
+            <Save className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Salvar Vistoria</span>
           </Button>
           <Button
-            onClick={onAddNewTower} // Changed
+            onClick={onLoadFromFileSystem} // New handler
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+            title="Carregar Vistoria (do dispositivo)"
+            size="sm"
+          >
+            <FolderOpen className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Carregar Vistoria</span>
+          </Button>
+           <Button
+            onClick={onAddNewTower} 
             className="bg-green-500 hover:bg-green-600 text-white"
-            title="Nova Torre" // Changed
+            title="Nova Torre" 
             size="sm"
           >
             <Building className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Nova Torre</span> 
@@ -79,23 +89,16 @@ export function ActionButtonsPanel({
            <Button
             onClick={onPrint}
             variant="secondary"
-            title="Imprimir Vistoria"
+            title="Imprimir Vistoria (via navegador)"
             size="sm"
           >
             <Printer className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Imprimir</span>
           </Button>
-          <Button
-            onClick={onToggleSavedInspections}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black"
-            title={isSavedInspectionsVisible ? 'Ocultar Vistorias Salvas' : 'Ver Vistorias Salvas'}
-            size="sm"
-          >
-            <ListChecks className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">{isSavedInspectionsVisible ? 'Ocultar Salvas' : 'Ver Salvas'}</span>
-          </Button>
+          {/* Removed "Ver/Ocultar Salvas" button */}
            <Button
             onClick={onExportJson}
             className="bg-teal-500 hover:bg-teal-600 text-white"
-            title="Exportar Vistoria para JSON"
+            title="Exportar Vistoria Atual para JSON (download)"
             size="sm"
           >
             <Download className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Exportar JSON</span>
@@ -103,7 +106,7 @@ export function ActionButtonsPanel({
           <Button
             onClick={onTriggerImportJson}
             className="bg-teal-500 hover:bg-teal-600 text-white"
-            title="Importar Vistoria de JSON"
+            title="Importar Vistoria de JSON (via seletor de arquivo)"
             size="sm"
           >
             <Upload className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Importar JSON</span>
@@ -119,7 +122,7 @@ export function ActionButtonsPanel({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" title="Baixar Relatório" className="border-primary text-primary hover:bg-primary/10">
+              <Button variant="outline" size="sm" title="Baixar Relatório PDF (via navegador)" className="border-primary text-primary hover:bg-primary/10">
                 <FileDown className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Baixar Relatório</span>
               </Button>
             </DropdownMenuTrigger>
@@ -151,3 +154,5 @@ export function ActionButtonsPanel({
     </div>
   );
 }
+
+    

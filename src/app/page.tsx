@@ -6,7 +6,7 @@ import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
 import { ActionButtonsPanel } from '@/components/app/action-buttons-panel';
-import { SavedInspectionsList } from '@/components/app/saved-inspections-list';
+// SavedInspectionsList is no longer used
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.co
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Copy, Edit2, FileJson, PlusSquare, Building, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Rows3, Columns3, Building, Plus, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -64,6 +64,7 @@ const calculateNextInspectionNumber = (clientLocation: string): string => {
   return randomNumber.toString();
 };
 
+// This helper remains for the "Exportar JSON" button as a fallback or alternative.
 const initiateFileDownload = (dataToDownload: FullInspectionData | FullInspectionData[], baseFileName: string) => {
   const jsonString = JSON.stringify(dataToDownload, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
@@ -95,12 +96,13 @@ export default function FireCheckPage() {
   const [activeTowersData, setActiveTowersData] = useState<TowerData[]>([createNewTowerEntry()]);
   const [isClientInitialized, setIsClientInitialized] = useState(false);
 
-  const initialSavedFullInspections = useMemo(() => [], []);
-  const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v3-towers', initialSavedFullInspections);
+  // Remove localStorage for full inspections
+  // const initialSavedFullInspections = useMemo(() => [], []);
+  // const [savedInspections, setSavedInspections] = useLocalStorage<FullInspectionData[]>('firecheck-full-inspections-v3-towers', initialSavedFullInspections);
 
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
   const [isChecklistVisible, setIsChecklistVisible] = useState(false);
-  const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
+  // isSavedInspectionsVisible is no longer needed
   const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
 
  useEffect(() => {
@@ -322,7 +324,7 @@ export default function FireCheckPage() {
                    ) {
                     mutatedCategory.isExpanded = false;
                     autoCollapsedCategoryIdHolder.id = originalCategory.id;
-                    actualModificationsMadeToCategory = true; // Ensure this flag is set if auto-collapse happens
+                    actualModificationsMadeToCategory = true; 
                 }
 
 
@@ -343,7 +345,7 @@ export default function FireCheckPage() {
                     const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
                     if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
                         const nextCatOriginal = finalCategoriesForFloor[collapsedIdx + 1];
-                        if (!nextCatOriginal.isExpanded) { // Only expand next if it's currently collapsed
+                        if (!nextCatOriginal.isExpanded) { 
                             const updatedNextCat = { ...nextCatOriginal, isExpanded: true };
                              finalCategoriesForFloor = [
                                 ...finalCategoriesForFloor.slice(0, collapsedIdx + 1),
@@ -439,175 +441,172 @@ export default function FireCheckPage() {
     );
   }, [toast]);
 
-  const handleSaveInspection = useCallback(() => {
-    const currentClientInfo = clientInfo;
+  const handleSaveInspection = useCallback(async () => {
+    if (!window.showSaveFilePicker) {
+      toast({
+        title: "Navegador incompatível",
+        description: "Seu navegador não suporta a API para salvar arquivos diretamente. Use o botão 'Exportar JSON'.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Prepare data for localStorage, preserving photoDataUri and uploadedLogoDataUrl
-    const fullInspectionToSaveForLocalStorage: FullInspectionData = {
+    const currentClientInfo = clientInfo;
+    const inspectionToSave: FullInspectionData = {
       id: currentClientInfo.inspectionNumber || `temp-id-${Date.now()}`,
       clientInfo: { ...currentClientInfo },
-      towers: activeTowersData, // Save activeTowersData directly
+      towers: activeTowersData, // Includes photoDataUri
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl
     };
 
-    setSavedInspections(prevSaved => {
-      let newSavedList = [...prevSaved];
-      const existingIndex = newSavedList.findIndex(insp => insp.id === fullInspectionToSaveForLocalStorage.id && insp.id !== '');
-      if (existingIndex > -1 && fullInspectionToSaveForLocalStorage.id) {
-        newSavedList[existingIndex] = fullInspectionToSaveForLocalStorage;
-      } else {
-        newSavedList.push(fullInspectionToSaveForLocalStorage);
-      }
-      const sortedList = newSavedList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const jsonString = JSON.stringify(inspectionToSave, null, 2);
+    const suggestedName = `vistoria_${(currentClientInfo.inspectionNumber || 'NO-NUM').replace(/\s+/g, '_')}_${(currentClientInfo.clientLocation || 'LOCAL').replace(/[^\w.-]/g, '_')}.json`;
 
-      const hasNamedTowersOrFloors = activeTowersData.some(t => (t.towerName && t.towerName.trim() !== "") || t.floors.some(f => f.floor && f.floor.trim() !== ""));
-
-      if (fullInspectionToSaveForLocalStorage.id && !fullInspectionToSaveForLocalStorage.id.startsWith('temp-id-')) {
-        toast({ title: "Vistoria Salva", description: `Vistoria Nº ${fullInspectionToSaveForLocalStorage.id} salva (incluindo fotos e observações).` });
-      } else if (hasNamedTowersOrFloors) {
-         toast({ title: "Vistoria Salva", description: `Vistoria (ID temporário) salva (incluindo fotos e observações). Preencha o Local para gerar Nº Vistoria.` });
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: suggestedName,
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(jsonString);
+      await writable.close();
+      toast({ title: "Vistoria Salva", description: `Arquivo ${handle.name} salvo com sucesso (incluindo fotos e observações).` });
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Erro ao salvar arquivo:', err);
+        toast({ title: "Erro ao Salvar", description: "Não foi possível salvar o arquivo no seu dispositivo.", variant: "destructive" });
       } else {
-         toast({ title: "Vistoria Salva", description: `Vistoria salva (incluindo fotos e observações). Preencha o Local para gerar Nº Vistoria.`});
+        toast({ title: "Salvamento Cancelado", description: "O salvamento do arquivo foi cancelado.", variant: "default" });
       }
-      return sortedList;
+    }
+  }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast]);
+
+
+  const loadInspectionDataToForm = useCallback((inspectionToLoad: FullInspectionData) => {
+    const loadedClientInfo = inspectionToLoad.clientInfo || {};
+    setClientInfo({
+        clientLocation: loadedClientInfo.clientLocation || '',
+        clientCode: loadedClientInfo.clientCode || '',
+        inspectionNumber: loadedClientInfo.inspectionNumber || '',
+        inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
+        inspectedBy: loadedClientInfo.inspectedBy || '',
     });
-  }, [clientInfo, activeTowersData, setSavedInspections, uploadedLogoDataUrl, toast]);
+    setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-  const handleLoadInspection = (fullInspectionId: string) => {
-    const inspectionToLoad = savedInspections.find(insp => insp.id === fullInspectionId);
-    if (inspectionToLoad) {
-        const loadedClientInfo = inspectionToLoad.clientInfo || {};
-        setClientInfo({
-            clientLocation: loadedClientInfo.clientLocation || '',
-            clientCode: loadedClientInfo.clientCode || '',
-            inspectionNumber: loadedClientInfo.inspectionNumber || '',
-            inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
-            inspectedBy: loadedClientInfo.inspectedBy || '',
-        });
-        setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
-
-        // When loading from localStorage, ensure photos are part of the loaded data structure if they exist
-        const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
-            ...tower,
-            id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
-            isTowerContentVisible: false,
-            floors: (tower.floors || []).map(floor => ({
-                ...floor,
-                id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
-                isFloorContentVisible: false,
-                categories: INSPECTION_CONFIG.map(cfg => {
-                    const loadedCat = (floor.categories || []).find(lc => lc.id === cfg.id);
-                    const loadedSubItems = loadedCat?.subItems || [];
-
-                    return {
-                        id: cfg.id,
-                        title: loadedCat?.title || cfg.title,
-                        type: cfg.type,
-                        isExpanded: false, // Always collapse on load
-                        status: loadedCat?.status,
-                        observation: loadedCat?.observation || '',
-                        showObservation: loadedCat?.showObservation || false,
-                        pressureValue: loadedCat?.pressureValue || '',
-                        pressureUnit: loadedCat?.pressureUnit || '',
-                        subItems: cfg.subItems?.map(sCfg => {
-                            const loadedSubItem = loadedSubItems.find(ls => ls.id === sCfg.id);
-                            return {
-                                id: sCfg.id,
-                                name: loadedSubItem?.name || sCfg.name,
-                                status: loadedSubItem?.status,
-                                observation: loadedSubItem?.observation || '',
-                                showObservation: loadedSubItem?.showObservation || false,
-                                isRegistry: sCfg.isRegistry || false,
-                                photoDataUri: loadedSubItem?.photoDataUri || null, // Keep photoDataUri from localStorage
-                                photoDescription: loadedSubItem?.photoDescription || '',
-                                registeredExtinguishers: loadedSubItem?.registeredExtinguishers?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })) || (sCfg.isRegistry && sCfg.id === 'extintor_cadastro' ? [] : undefined),
-                                registeredHoses: loadedSubItem?.registeredHoses?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })) || (sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
-                            };
-                        }).concat(
-                            loadedSubItems.filter(ls => !cfg.subItems?.some(sCfg => sCfg.id === ls.id))
-                            .map(customSub => ({
-                                ...customSub,
-                                id: (customSub.id && typeof customSub.id === 'string' && !customSub.id.includes('NaN') && !customSub.id.startsWith('server-temp-id-') && (!customSub.id.startsWith('custom-') || customSub.id.length > 20) ) ? customSub.id : customSub.id.startsWith('custom-') ? customSub.id : `loaded-sub-${generateUniqueId()}`,
-                                photoDataUri: customSub.photoDataUri || null, // Keep photoDataUri for custom items
-                                photoDescription: customSub.photoDescription || '',
-                            }))
-                        ) || [],
-                    };
-                }),
-            })),
-        }));
-
-        setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
-        setIsSavedInspectionsVisible(false); setIsChecklistVisible(true);
-        
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada (incluindo fotos e observações salvas).`});
-    }
-  };
-
-
-  const handleDeleteInspection = useCallback((fullInspectionId: string) => {
-    setSavedInspections(prev => prev.filter(insp => insp.id !== fullInspectionId));
-    toast({ title: "Vistoria Excluída", description: `Vistoria Nº ${fullInspectionId} foi excluída.`, variant: "destructive" });
-    if (clientInfo.inspectionNumber === fullInspectionId) resetInspectionForm();
-  }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm, toast]);
-
-  const handleDeleteMultipleInspections = useCallback((inspectionIds: string[]) => {
-    setSavedInspections(prev => prev.filter(insp => !inspectionIds.includes(insp.id)));
-    toast({ title: "Vistorias Excluídas", description: `${inspectionIds.length} vistoria(s) foram excluídas.`, variant: "destructive" });
-    if (clientInfo.inspectionNumber && inspectionIds.includes(clientInfo.inspectionNumber)) resetInspectionForm();
-  }, [setSavedInspections, clientInfo.inspectionNumber, resetInspectionForm, toast]);
-
-  const handleDuplicateInspection = useCallback((originalInspectionId: string) => {
-    const originalInspection = savedInspections.find(insp => insp.id === originalInspectionId);
-    if (originalInspection) {
-      const duplicatedInspection = JSON.parse(JSON.stringify(originalInspection)) as FullInspectionData; // Deep copy
-      const newInspectionNumber = `${(originalInspection.clientInfo.inspectionNumber || 'COPIA')}_CÓPIA_${Date.now().toString().slice(-5)}`;
-      duplicatedInspection.id = newInspectionNumber;
-      duplicatedInspection.clientInfo = {
-        ...(originalInspection.clientInfo || {}),
-        inspectionNumber: newInspectionNumber,
-        inspectionDate: typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '',
-        inspectedBy: clientInfo.inspectedBy || '',
-      };
-      duplicatedInspection.timestamp = Date.now();
-      
-      // Ensure photoDataUri and other details are preserved from the original (which now contains them if saved to localStorage)
-      duplicatedInspection.towers = (duplicatedInspection.towers || []).map(tower => ({
-        ...tower, id: generateUniqueId(), isTowerContentVisible: false,
+    const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
+        ...tower,
+        id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
+        isTowerContentVisible: false,
         floors: (tower.floors || []).map(floor => ({
-          ...floor, id: generateUniqueId(), isFloorContentVisible: false,
-          categories: (floor.categories || []).map(cat => ({
-            ...cat, isExpanded: false,
-            subItems: (cat.subItems || []).map(sub => ({
-              ...sub, 
-              // photoDataUri is already part of 'sub' from JSON.parse(JSON.stringify(originalInspection))
-              id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id,
-              registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: `${generateUniqueId()}-extcopy`})),
-              registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: `${generateUniqueId()}-hosecopy` }))
-            }))
-          }))
-        }))
-      }));
-      setSavedInspections(prev => [duplicatedInspection, ...prev].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
-      
-      toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada (incluindo fotos e observações da original).`});
-    }
-  }, [savedInspections, setSavedInspections, toast, clientInfo.inspectedBy]);
+            ...floor,
+            id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
+            isFloorContentVisible: false,
+            categories: INSPECTION_CONFIG.map(cfgCategory => {
+                const jsonCategory = (floor.categories || []).find(cat => cat.id === cfgCategory.id);
+                let finalSubItems: SubItemState[] = [];
 
-  const handleUpdateClientLocationForSavedInspection = useCallback((inspectionId: string, newClientLocation: string) => {
-    setSavedInspections(prevInspections =>
-      prevInspections.map(insp =>
-        insp.id === inspectionId
-          ? { ...insp, clientInfo: { ...insp.clientInfo, clientLocation: newClientLocation } }
-          : insp
-      ).sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
-    );
-    if (clientInfo.inspectionNumber === inspectionId) {
-      setClientInfo(prev => ({ ...prev, clientLocation: newClientLocation }));
+                if (cfgCategory.type === 'standard') {
+                    const jsonSubItemsFromCategory = jsonCategory?.subItems;
+
+                    if (jsonCategory && Array.isArray(jsonSubItemsFromCategory)) {
+                        const jsonSubItemsMap = new Map(jsonSubItemsFromCategory.map(js => [js.id, js]));
+                        finalSubItems = (cfgCategory.subItems || []).map(cfgSub => {
+                            const jsonSub = jsonSubItemsMap.get(cfgSub.id);
+                            return {
+                                id: cfgSub.id,
+                                name: jsonSub?.name || cfgSub.name,
+                                status: jsonSub?.status,
+                                observation: jsonSub?.observation || '',
+                                showObservation: jsonSub?.showObservation || false,
+                                isRegistry: cfgSub.isRegistry || false,
+                                photoDataUri: jsonSub?.photoDataUri || null,
+                                photoDescription: jsonSub?.photoDescription || '',
+                                registeredExtinguishers: (jsonSub?.registeredExtinguishers || (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
+                                registeredHoses: (jsonSub?.registeredHoses || (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })),
+                            };
+                        });
+
+                        jsonSubItemsFromCategory.forEach(jsonSub => {
+                            if (!(cfgCategory.subItems || []).some(cfgSub => cfgSub.id === jsonSub.id)) {
+                                finalSubItems.push({
+                                    ...jsonSub,
+                                    id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20) ) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-sub-${generateUniqueId()}`,
+                                    photoDataUri: jsonSub.photoDataUri || null,
+                                    photoDescription: jsonSub.photoDescription || '',
+                                });
+                            }
+                        });
+                    } else { // jsonCategory not found or no subItems in json
+                        finalSubItems = (cfgCategory.subItems || []).map(cfgSub => ({
+                            id: cfgSub.id, name: cfgSub.name, status: undefined, observation: '', showObservation: false,
+                            isRegistry: cfgSub.isRegistry || false, photoDataUri: null, photoDescription: '',
+                            registeredExtinguishers: (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined),
+                            registeredHoses: (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
+                        }));
+                    }
+                }
+                
+                return {
+                    id: cfgCategory.id,
+                    title: jsonCategory?.title || cfgCategory.title,
+                    type: cfgCategory.type, isExpanded: false,
+                    status: jsonCategory?.status,
+                    observation: jsonCategory?.observation || '',
+                    showObservation: jsonCategory?.showObservation || false,
+                    pressureValue: jsonCategory?.pressureValue || '',
+                    pressureUnit: jsonCategory?.pressureUnit || '',
+                    subItems: cfgCategory.type === 'standard' ? finalSubItems : undefined,
+                };
+            }),
+        })),
+    }));
+
+    setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
+    setIsChecklistVisible(true);
+  }, [setActiveTowersData, setClientInfo, setUploadedLogoDataUrl]);
+
+
+  const handleLoadFromFileSystem = useCallback(async () => {
+    if (!window.showOpenFilePicker) {
+      toast({
+        title: "Navegador incompatível",
+        description: "Seu navegador não suporta a API para abrir arquivos diretamente. Use o botão 'Importar JSON'.",
+        variant: "destructive",
+      });
+      return;
     }
-    toast({ title: "Local Atualizado", description: `Local da vistoria Nº ${inspectionId} atualizado.`});
-  }, [setSavedInspections, clientInfo.inspectionNumber, toast]);
+    try {
+      const [fileHandle] = await window.showOpenFilePicker({
+        types: [{
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] },
+        }],
+        multiple: false,
+      });
+      const file = await fileHandle.getFile();
+      const contents = await file.text();
+      const inspectionToLoad = JSON.parse(contents) as FullInspectionData;
+
+      if (inspectionToLoad && typeof inspectionToLoad === 'object' && inspectionToLoad.id && inspectionToLoad.clientInfo && inspectionToLoad.towers) {
+        loadInspectionDataToForm(inspectionToLoad);
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada do arquivo ${file.name} (incluindo fotos e observações).`});
+      } else {
+        toast({ title: "Arquivo Inválido", description: "O arquivo selecionado não parece ser uma vistoria válida.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Erro ao abrir arquivo:', err);
+        toast({ title: "Erro ao Abrir", description: "Não foi possível abrir ou processar o arquivo.", variant: "destructive" });
+      } else {
+        toast({ title: "Abertura Cancelada", description: "A seleção de arquivo foi cancelada.", variant: "default" });
+      }
+    }
+  }, [loadInspectionDataToForm, toast]);
+
 
   const handleGeneratePdf = useCallback(async () => {
     await generateInspectionPdf(clientInfo, activeTowersData, uploadedLogoDataUrl);
@@ -627,7 +626,7 @@ export default function FireCheckPage() {
 
 
   const handlePrintPage = useCallback(() => { if (typeof window !== 'undefined') window.print(); }, []);
-  const toggleSavedInspections = () => setIsSavedInspectionsVisible(!isSavedInspectionsVisible);
+  
 
   const handleCollapseAllGlobalCategories = useCallback(() => {
     setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: tower.floors.map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) })) })));
@@ -719,32 +718,10 @@ export default function FireCheckPage() {
     };
     const clientInfoForFilename = { inspectionNumber: inspectionToExport.id, clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria' };
     const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
-    const fileName = initiateFileDownload(inspectionToExport, baseFileName);
+    const fileName = initiateFileDownload(inspectionToExport, baseFileName); // Uses the traditional blob download
     toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (incluindo fotos e observações da vistoria ativa).` });
   }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast]);
 
-  const handleDownloadSelectedInspections = useCallback((inspectionIds: string[]) => {
-    const inspectionsToDownload = savedInspections.filter(insp => inspectionIds.includes(insp.id));
-    if (inspectionsToDownload.length > 0) {
-      const fileName = initiateFileDownload(inspectionsToDownload, 'vistorias_selecionadas');
-      toast({ title: "Download Iniciado", description: `${inspectionsToDownload.length} vistoria(s) salvas em ${fileName} (incluindo fotos e observações).`});
-    } else {
-      toast({ title: "Nenhuma Vistoria Selecionada", description: "Selecione vistorias para baixar.", variant: "default"});
-    }
-  }, [savedInspections, toast]);
-
-  const handleDownloadSingleSavedInspection = useCallback((inspectionId: string) => {
-    const inspectionToDownload = savedInspections.find(insp => insp.id === inspectionId);
-    if (inspectionToDownload) {
-      const clientInfoForFilename = {
-        inspectionNumber: inspectionToDownload.id,
-        clientLocation: inspectionToDownload.clientInfo.clientLocation || 'vistoria_salva'
-      };
-      const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
-      const fileName = initiateFileDownload(inspectionToDownload, baseFileName);
-      toast({ title: "Download Iniciado", description: `Vistoria ${fileName} salva (incluindo fotos e observações).`});
-    }
-  }, [savedInspections, toast]);
 
  const handleImportInspectionFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentInput = event.target;
@@ -758,9 +735,9 @@ export default function FireCheckPage() {
     }
 
     let firstInspectionToLoadToFormWithPhotos: FullInspectionData | null = null;
-    const allInspectionsFromFiles: FullInspectionData[] = [];
+   
 
-    const readFilePromise = (file: File): Promise<FullInspectionData[]> => {
+    const readFilePromise = (file: File): Promise<FullInspectionData | null> => { // Reads a single inspection from a file
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -768,178 +745,57 @@ export default function FireCheckPage() {
             const jsonString = e.target?.result as string;
             if (!jsonString || jsonString.trim() === "") {
                 console.warn(`Conteúdo vazio ou inválido no arquivo ${file.name}`);
-                resolve([]);
+                resolve(null);
                 return;
             }
             const importedData = JSON.parse(jsonString);
 
-            if (typeof importedData !== 'object' || importedData === null) {
-                console.warn(`Conteúdo JSON não é um objeto ou array válido no arquivo ${file.name}:`, JSON.stringify(importedData, null, 2).substring(0,100));
-                resolve([]);
+            if (typeof importedData !== 'object' || importedData === null || Array.isArray(importedData)) { // Expecting a single inspection object
+                console.warn(`Conteúdo JSON não é um objeto de vistoria válido no arquivo ${file.name}:`, JSON.stringify(importedData, null, 2).substring(0,100));
+                resolve(null);
                 return;
             }
-
-            const inspectionsToProcess: FullInspectionData[] = Array.isArray(importedData) ? importedData : [importedData];
-            const validInspectionsFromFile: FullInspectionData[] = [];
-
-            inspectionsToProcess.forEach(inspection => {
-              if (inspection && typeof inspection === 'object' &&
-                  typeof inspection.id === 'string' &&
-                  inspection.clientInfo && typeof inspection.clientInfo === 'object' &&
-                  Array.isArray(inspection.towers) &&
-                  typeof inspection.timestamp === 'number') {
-                validInspectionsFromFile.push(inspection);
-              } else {
-                console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspection, null, 2).substring(0, 500));
-              }
-            });
-            resolve(validInspectionsFromFile);
+            
+            const inspection = importedData as FullInspectionData;
+            if (inspection && typeof inspection === 'object' &&
+                typeof inspection.id === 'string' &&
+                inspection.clientInfo && typeof inspection.clientInfo === 'object' &&
+                Array.isArray(inspection.towers) &&
+                typeof inspection.timestamp === 'number') {
+              resolve(inspection);
+            } else {
+              console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspection, null, 2).substring(0, 500));
+              resolve(null);
+            }
           } catch (error) {
             console.error(`Erro ao parsear JSON do arquivo ${file.name}:`, error);
             toast({ title: "Erro de Parse", description: `Não foi possível parsear ${file.name}. Verifique o formato.`, variant: "destructive"});
-            reject(error);
+            reject(error); // Reject if parsing fails
           }
         };
         reader.onerror = (err) => {
           console.error(`Erro ao ler o arquivo ${file.name}:`, err);
           toast({ title: "Erro de Leitura", description: `Não foi possível ler ${file.name}.`, variant: "destructive"});
-          reject(err);
+          reject(err); // Reject on read error
         };
-        reader.readAsText(file);
+        reader.readAsText(currentFiles[0]); // Process only the first file for this input
       });
     };
 
-    const fileReadResults = await Promise.allSettled(Array.from(currentFiles).map(file => readFilePromise(file)));
-
-    fileReadResults.forEach((result, fileIndex) => {
-      if (result.status === 'fulfilled' && result.value) {
-        result.value.forEach((inspection, inspectionIndexWithinFile) => {
-          allInspectionsFromFiles.push(inspection);
-          if (fileIndex === 0 && inspectionIndexWithinFile === 0 && !firstInspectionToLoadToFormWithPhotos) {
-            firstInspectionToLoadToFormWithPhotos = inspection;
-          }
-        });
-      } else if (result.status === 'rejected') {
-        console.error(`Falha ao processar um dos arquivos:`, result.reason);
-      }
-    });
-
-    let finalImportedCount = 0;
-    let finalUpdatedCount = 0;
-
-    if (allInspectionsFromFiles.length > 0) {
-      setSavedInspections(currentSavedInspections => {
-        let newOrUpdatedInspectionsList = [...currentSavedInspections];
-        let currentImported = 0;
-        let currentUpdated = 0;
-
-        allInspectionsFromFiles.forEach(inspectionToImport => {
-          // Data for localStorage now preserves photos as per the updated handleSaveInspection logic
-          const inspectionForProcessing: FullInspectionData = JSON.parse(JSON.stringify(inspectionToImport));
-          
-          const existingIndex = newOrUpdatedInspectionsList.findIndex(insp => insp.id === inspectionForProcessing.id && insp.id);
-          if (existingIndex > -1) {
-            newOrUpdatedInspectionsList[existingIndex] = inspectionForProcessing; // Update with full data
-            currentUpdated++;
-          } else {
-            newOrUpdatedInspectionsList.push(inspectionForProcessing); // Add new with full data
-            currentImported++;
-          }
-        });
-        finalImportedCount = currentImported;
-        finalUpdatedCount = currentUpdated;
-        return newOrUpdatedInspectionsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      });
-    }
-
-    if (firstInspectionToLoadToFormWithPhotos) {
-        setClientInfo({ 
-            clientLocation: firstInspectionToLoadToFormWithPhotos.clientInfo.clientLocation || '',
-            clientCode: firstInspectionToLoadToFormWithPhotos.clientInfo.clientCode || '',
-            inspectionNumber: firstInspectionToLoadToFormWithPhotos.id, 
-            inspectionDate: firstInspectionToLoadToFormWithPhotos.clientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
-            inspectedBy: firstInspectionToLoadToFormWithPhotos.clientInfo.inspectedBy || '',
-        });
-        setUploadedLogoDataUrl(firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl || null);
-
-        const sanitizedTowersForForm = (firstInspectionToLoadToFormWithPhotos.towers || []).map(loadedTower => ({
-            ...loadedTower, 
-            id: (loadedTower.id && typeof loadedTower.id === 'string' && !loadedTower.id.startsWith('server-temp-id-')) ? loadedTower.id : generateUniqueId(),
-            isTowerContentVisible: false,
-            floors: (loadedTower.floors || []).map(loadedFloor => ({
-                ...loadedFloor, 
-                id: (loadedFloor.id && typeof loadedFloor.id === 'string' && !loadedFloor.id.startsWith('server-temp-id-')) ? loadedFloor.id : generateUniqueId(),
-                isFloorContentVisible: false,
-                categories: INSPECTION_CONFIG.map(cfgCategory => {
-                    const jsonCategory = (loadedFloor.categories || []).find(cat => cat.id === cfgCategory.id);
-                    let finalSubItems: SubItemState[] = [];
-
-                    if (cfgCategory.type === 'standard') {
-                        const jsonSubItemsFromCategory = jsonCategory?.subItems;
-
-                        if (jsonCategory && Array.isArray(jsonSubItemsFromCategory)) {
-                            const jsonSubItemsMap = new Map(jsonSubItemsFromCategory.map(js => [js.id, js]));
-                            finalSubItems = (cfgCategory.subItems || []).map(cfgSub => {
-                                const jsonSub = jsonSubItemsMap.get(cfgSub.id);
-                                return {
-                                    id: cfgSub.id,
-                                    name: jsonSub?.name || cfgSub.name,
-                                    status: jsonSub?.status,
-                                    observation: jsonSub?.observation || '',
-                                    showObservation: jsonSub?.showObservation || false,
-                                    isRegistry: cfgSub.isRegistry || false,
-                                    photoDataUri: jsonSub?.photoDataUri || null, // Load photo URI from JSON
-                                    photoDescription: jsonSub?.photoDescription || '',
-                                    registeredExtinguishers: (jsonSub?.registeredExtinguishers || (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
-                                    registeredHoses: (jsonSub?.registeredHoses || (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` })),
-                                };
-                            });
-
-                            jsonSubItemsFromCategory.forEach(jsonSub => {
-                                if (!(cfgCategory.subItems || []).some(cfgSub => cfgSub.id === jsonSub.id)) {
-                                    finalSubItems.push({
-                                        ...jsonSub, // Load custom sub-item from JSON
-                                        id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20) ) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-sub-${generateUniqueId()}`,
-                                        photoDataUri: jsonSub.photoDataUri || null, // Load photo URI for custom sub-item
-                                        photoDescription: jsonSub.photoDescription || '',
-                                    });
-                                }
-                            });
-                        } else {
-                            finalSubItems = (cfgCategory.subItems || []).map(cfgSub => ({
-                                id: cfgSub.id, name: cfgSub.name, status: undefined, observation: '', showObservation: false,
-                                isRegistry: cfgSub.isRegistry || false, photoDataUri: null, photoDescription: '',
-                                registeredExtinguishers: (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined),
-                                registeredHoses: (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
-                            }));
-                        }
-                    }
-                    
-                    return {
-                        id: cfgCategory.id,
-                        title: jsonCategory?.title || cfgCategory.title,
-                        type: cfgCategory.type, isExpanded: false,
-                        status: jsonCategory?.status,
-                        observation: jsonCategory?.observation || '',
-                        showObservation: jsonCategory?.showObservation || false,
-                        pressureValue: jsonCategory?.pressureValue || '',
-                        pressureUnit: jsonCategory?.pressureUnit || '',
-                        subItems: cfgCategory.type === 'standard' ? finalSubItems : undefined,
-                    };
-                }),
-            })),
-        }));
-        setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
-        setIsSavedInspectionsVisible(false); setIsChecklistVisible(true);
+    try {
+        firstInspectionToLoadToFormWithPhotos = await readFilePromise(currentFiles[0]);
+    } catch (error) {
+        // Error already toasted in readFilePromise
+         if (jsonImportFileInputRef.current) {
+            jsonImportFileInputRef.current.value = '';
+        }
+        return;
     }
 
 
-    let summaryMessage = "";
-    if (finalImportedCount > 0 && finalUpdatedCount > 0) summaryMessage = `${finalImportedCount} nova(s) e ${finalUpdatedCount} atualizada(s) adicionadas/atualizadas no navegador.`;
-    else if (finalImportedCount > 0) summaryMessage = `${finalImportedCount} nova(s) vistoria(s) adicionada(s) ao navegador.`;
-    else if (finalUpdatedCount > 0) summaryMessage = `${finalUpdatedCount} vistoria(s) existente(s) atualizada(s) no navegador.`;
-
     if (firstInspectionToLoadToFormWithPhotos) {
+        loadInspectionDataToForm(firstInspectionToLoadToFormWithPhotos);
+        
         const hasPhotosOrLogo = firstInspectionToLoadToFormWithPhotos.uploadedLogoDataUrl ||
                                (firstInspectionToLoadToFormWithPhotos.towers || []).some(t =>
                                  (t.floors || []).some(f =>
@@ -948,20 +804,15 @@ export default function FireCheckPage() {
                                    )
                                  )
                                );
-        summaryMessage += ` A primeira vistoria válida do arquivo foi carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}. As fotos são mantidas no formulário ativo, em exportações JSON e agora também no armazenamento do navegador.`;
-    } else if (allInspectionsFromFiles.length === 0 && currentFiles.length > 0) {
-        summaryMessage = "Nenhuma vistoria válida encontrada nos arquivos processados.";
-    } else if (allInspectionsFromFiles.length > 0 && !summaryMessage) {
-        summaryMessage = "Vistorias processadas e adicionadas/atualizadas no navegador. Verifique a lista de salvas.";
+        toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${currentFiles[0].name} carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}.`, duration: 7000 });
+    } else {
+         toast({ title: "Importação Falhou", description: `Nenhuma vistoria válida encontrada no arquivo ${currentFiles[0].name}.`, variant: "destructive" });
     }
-
-
-    if (summaryMessage) toast({ title: "Importação Concluída", description: summaryMessage, duration: 7000 });
 
     if (jsonImportFileInputRef.current) {
       jsonImportFileInputRef.current.value = '';
     }
-  }, [toast, setSavedInspections, setActiveTowersData, setClientInfo, setUploadedLogoDataUrl]);
+  }, [toast, loadInspectionDataToForm]);
 
 
   const triggerJsonImport = useCallback(() => { jsonImportFileInputRef.current?.click(); }, []);
@@ -1086,30 +937,18 @@ export default function FireCheckPage() {
           onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
           onAddNewTower={handleAddNewTower}
-          onToggleSavedInspections={toggleSavedInspections}
-          isSavedInspectionsVisible={isSavedInspectionsVisible}
           onPrint={handlePrintPage}
-          onExportJson={handleExportCurrentInspectionToJson}
-          onTriggerImportJson={triggerJsonImport}
+          onExportJson={handleExportCurrentInspectionToJson} // Traditional export
+          onTriggerImportJson={triggerJsonImport} // Traditional import via input
+          onLoadFromFileSystem={handleLoadFromFileSystem} // New File System API Load
           onGenerateRegisteredItemsReport={handleGenerateRegisteredItemsReport}
           onGenerateNCItemsReport={handleGenerateNCItemsReport}
           onGeneratePdf={handleGeneratePdf}
           onGeneratePhotoReportPdf={handleGeneratePhotoReportPdf}
         />
-         <input type="file" ref={jsonImportFileInputRef} accept=".json,application/json" onChange={handleImportInspectionFromJson} className="hidden" id="json-import-input" multiple />
+         <input type="file" ref={jsonImportFileInputRef} accept=".json,application/json" onChange={handleImportInspectionFromJson} className="hidden" id="json-import-input" />
 
-        {isSavedInspectionsVisible && (
-          <SavedInspectionsList
-            savedInspections={savedInspections}
-            onLoadInspection={handleLoadInspection}
-            onDeleteInspection={handleDeleteInspection}
-            onDeleteMultipleInspections={handleDeleteMultipleInspections}
-            onDuplicateInspection={handleDuplicateInspection}
-            onUpdateClientLocation={handleUpdateClientLocationForSavedInspection}
-            onDownloadSelected={handleDownloadSelectedInspections}
-            onDownloadSingleInspection={handleDownloadSingleSavedInspection}
-          />
-        )}
+        {/* SavedInspectionsList is removed */}
 
         <footer className="text-center text-sm text-muted-foreground mt-12 pb-8">FireCheck Brazil &copy; {new Date().getFullYear()} - BRAZIL EXTINTORES</footer>
       </div>
@@ -1118,3 +957,4 @@ export default function FireCheckPage() {
 }
     
 
+    
