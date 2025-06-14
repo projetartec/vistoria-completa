@@ -119,7 +119,7 @@ export default function FireCheckPage() {
       }
     }
     setIsClientInitialized(true);
-  }, []);
+  }, [clientInfo.inspectionDate]);
 
 
   const handleLogoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,7 +189,7 @@ export default function FireCheckPage() {
                 const originalCategory = currentFloorData.categories.find(cat => cat.id === categoryId);
                 if (!originalCategory) return currentFloorData;
 
-                let mutatedCategory = { ...originalCategory }; // Create a new instance of the category
+                let mutatedCategory = { ...originalCategory }; 
                 let actualModificationsMadeToCategory = false;
                 let categoryStructurallyModifiedForAutoCollapse = false;
                 const isExpansionChange = update.field === 'isExpanded';
@@ -226,7 +226,7 @@ export default function FireCheckPage() {
                                 if (update.field === 'subItemStatus' && newSubState.status !== (update.value as StatusOption | undefined)) { newSubState.status = update.value as StatusOption | undefined; subItemChanged = true; }
                                 else if (update.field === 'subItemObservation' && newSubState.observation !== (update.value as string)) { newSubState.observation = update.value as string; subItemChanged = true; }
                                 else if (update.field === 'subItemShowObservation' && newSubState.showObservation !== (update.value as boolean)) { newSubState.showObservation = update.value as boolean; subItemChanged = true; }
-                                else if (update.field === 'renameSubItemName' && newSubState.name !== update.newName) { newSubState.name = update.newName as string; subItemChanged = true; }
+                                else if (update.field === 'renameSubItemName' && update.newName && newSubState.name !== update.newName) { newSubState.name = update.newName as string; subItemChanged = true; }
                                 else if (update.field === 'subItemPhotoDataUri' && newSubState.photoDataUri !== (update.value as string | null)) { newSubState.photoDataUri = update.value as string | null; if (!update.value) newSubState.photoDescription = ''; subItemChanged = true; }
                                 else if (update.field === 'subItemPhotoDescription' && newSubState.photoDescription !== (update.value as string)) { newSubState.photoDescription = update.value as string; subItemChanged = true; }
                                 else if (update.field === 'removeSubItemPhoto') { newSubState.photoDataUri = null; newSubState.photoDescription = ''; subItemChanged = true; }
@@ -238,7 +238,7 @@ export default function FireCheckPage() {
                                 return subItemChanged ? newSubState : sub;
                             });
                             if (actualModificationsMadeToCategory && mutatedCategory.subItems !== oldSubItemsRef) {
-                                mutatedCategory.subItems = [...mutatedCategory.subItems]; // Ensure new array if content changed
+                                mutatedCategory.subItems = [...mutatedCategory.subItems]; 
                             }
                         }
                         break;
@@ -253,12 +253,12 @@ export default function FireCheckPage() {
                             }
                         }
                         break;
-                    default: // Handles observation, showObservation, pressureValue, pressureUnit for the category itself
+                    default: 
                         if (update.field === 'observation' && mutatedCategory.observation !== update.value) { mutatedCategory.observation = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
                         else if (update.field === 'showObservation' && mutatedCategory.showObservation !== update.value) { mutatedCategory.showObservation = update.value as boolean; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
                         else if (update.field === 'pressureValue' && mutatedCategory.pressureValue !== update.value) { mutatedCategory.pressureValue = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
                         else if (update.field === 'pressureUnit' && mutatedCategory.pressureUnit !== update.value) { mutatedCategory.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
-                        else if (update.field === 'renameCategoryTitle' && mutatedCategory.title !== update.newTitle) { mutatedCategory.title = update.newTitle as string; actualModificationsMadeToCategory = true; }
+                        else if (update.field === 'renameCategoryTitle' && update.newTitle && mutatedCategory.title !== update.newTitle) { mutatedCategory.title = update.newTitle as string; actualModificationsMadeToCategory = true; }
                         else if (update.field === 'addRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.value) {
                             const newExt: RegisteredExtinguisher = { ...(update.value as Omit<RegisteredExtinguisher, 'id'>), id: `ext-${generateUniqueId()}` };
                             mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub =>
@@ -314,51 +314,45 @@ export default function FireCheckPage() {
                         break;
                 }
 
-                // Auto-collapse logic
-                if (!isExpansionChange && categoryStructurallyModifiedForAutoCollapse) {
-                    let shouldAutoCollapse = false;
-                    if (mutatedCategory.type === 'standard' && mutatedCategory.subItems) {
-                        const relevantSubItems = mutatedCategory.subItems.filter(sub => !sub.isRegistry);
-                        if (relevantSubItems.length > 0 && relevantSubItems.every(sub => sub.status !== undefined)) { shouldAutoCollapse = true; }
-                        else if (relevantSubItems.length === 0 && originalCategory.subItems?.filter(s=>!s.isRegistry).length ?? 0 > 0) {shouldAutoCollapse = true;} // If all relevant items were removed
-                    } else if (mutatedCategory.type === 'special' || mutatedCategory.type === 'pressure') {
-                        if (mutatedCategory.status !== undefined) shouldAutoCollapse = true;
-                    }
+                // Refined Auto-collapse logic
+                if (!isExpansionChange && categoryStructurallyModifiedForAutoCollapse && originalCategory.isExpanded) {
+                    const wasPreviouslyComplete = getCategoryOverallStatus(originalCategory) === 'all-items-selected';
+                    const isNowComplete = getCategoryOverallStatus(mutatedCategory) === 'all-items-selected';
 
-                    if (shouldAutoCollapse && mutatedCategory.isExpanded) {
+                    if (isNowComplete && !wasPreviouslyComplete) {
+                        // This category just transitioned to complete
+                        // mutatedCategory.isExpanded would still be true here from originalCategory.isExpanded
                         mutatedCategory.isExpanded = false;
-                        autoCollapsedCategoryIdHolder.id = originalCategory.id;
-                        actualModificationsMadeToCategory = true;
+                        autoCollapsedCategoryIdHolder.id = originalCategory.id; // Mark for next one to expand
+                        actualModificationsMadeToCategory = true; // isExpanded changed
                     }
                 }
                 
-                // If any modification occurred, update the floor's state
                 let finalCategoriesForFloor = [...currentFloorData.categories];
                 if (actualModificationsMadeToCategory) {
                     floorOverallStateChanged = true;
                     const categoryModifiedIndex = finalCategoriesForFloor.findIndex(c => c.id === originalCategory.id);
                     if (categoryModifiedIndex !== -1) {
-                        finalCategoriesForFloor = [ // Create new array for categories
+                        finalCategoriesForFloor = [ 
                             ...finalCategoriesForFloor.slice(0, categoryModifiedIndex),
-                            mutatedCategory, // Use the new mutatedCategory instance
+                            mutatedCategory, 
                             ...finalCategoriesForFloor.slice(categoryModifiedIndex + 1)
                         ];
                     }
                 }
 
-                // Auto-expand next category if one was auto-collapsed
-                if (autoCollapsedCategoryIdHolder.id) {
+                if (autoCollapsedCategoryIdHolder.id && autoCollapsedCategoryIdHolder.id === originalCategory.id) {
                     const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
                     if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
-                        const nextCat = finalCategoriesForFloor[collapsedIdx + 1];
-                        if (!nextCat.isExpanded) { // Only expand if it's not already expanded
-                            const updatedNextCat = { ...nextCat, isExpanded: true };
-                             finalCategoriesForFloor = [ // Create new array for categories if next one is expanded
+                        const nextCatOriginal = finalCategoriesForFloor[collapsedIdx + 1];
+                        if (!nextCatOriginal.isExpanded) { 
+                            const updatedNextCat = { ...nextCatOriginal, isExpanded: true };
+                             finalCategoriesForFloor = [ 
                                 ...finalCategoriesForFloor.slice(0, collapsedIdx + 1),
                                 updatedNextCat,
                                 ...finalCategoriesForFloor.slice(collapsedIdx + 2)
                             ];
-                            floorOverallStateChanged = true; // Ensure this change is propagated
+                            floorOverallStateChanged = true; 
                         }
                     }
                 }
@@ -366,10 +360,9 @@ export default function FireCheckPage() {
                 return floorOverallStateChanged ? { ...currentFloorData, categories: finalCategoriesForFloor } : currentFloorData;
             });
 
-            // If any floor's content changed, return a new tower object
-            return (updatedFloors.some((floor, idx) => floor !== currentTower.floors[idx])) // Check if any floor instance is new
-                ? { ...currentTower, floors: updatedFloors } // New tower object with new floors array
-                : currentTower; // Return original tower if no floors changed
+            return (updatedFloors.some((floor, idx) => floor !== currentTower.floors[idx])) 
+                ? { ...currentTower, floors: updatedFloors } 
+                : currentTower; 
         });
     });
   }, []);
@@ -448,10 +441,9 @@ export default function FireCheckPage() {
     );
   }, [toast]);
 
-const handleSaveInspection = useCallback(() => {
+  const handleSaveInspection = useCallback(() => {
     const currentClientInfo = clientInfo;
 
-    // Create a deep copy and strip photoDataUri for localStorage
     const towersForLocalStorage = JSON.parse(JSON.stringify(activeTowersData)).map((tower: TowerData) => ({
         ...tower,
         floors: tower.floors.map((floor: FloorData) => ({
@@ -460,8 +452,8 @@ const handleSaveInspection = useCallback(() => {
                 ...category,
                 subItems: category.subItems ? category.subItems.map((subItem: SubItemState) => {
                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    const { photoDataUri, ...restOfSubItem } = subItem; // Destructure to remove photoDataUri for LS
-                    return { ...restOfSubItem, photoDataUri: null }; // Explicitly set to null for LS
+                    const { photoDataUri, ...restOfSubItem } = subItem; 
+                    return { ...restOfSubItem, photoDataUri: null }; 
                 }) : undefined,
             })),
         })),
@@ -470,9 +462,9 @@ const handleSaveInspection = useCallback(() => {
     const fullInspectionToSaveForLocalStorage: FullInspectionData = {
       id: currentClientInfo.inspectionNumber || `temp-id-${Date.now()}`,
       clientInfo: { ...currentClientInfo },
-      towers: towersForLocalStorage, // Use the version with photos stripped for LS
+      towers: towersForLocalStorage, 
       timestamp: Date.now(),
-      uploadedLogoDataUrl: uploadedLogoDataUrl // Logo is kept
+      uploadedLogoDataUrl: uploadedLogoDataUrl 
     };
 
     setSavedInspections(prevSaved => {
@@ -507,10 +499,8 @@ const handleSaveInspection = useCallback(() => {
             inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
             inspectedBy: loadedClientInfo.inspectedBy || '',
         });
-        setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null); // Load logo
+        setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
-        // When loading, photoDataUri will be null from localStorage data, descriptions will be present
-        // If loading from a JSON import that had photos, they will be present here if `inspectionToLoad` came from there.
         const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
             ...tower,
             id: (tower.id && typeof tower.id === 'string' && !tower.id.startsWith('server-temp-id-')) ? tower.id : generateUniqueId(),
@@ -519,12 +509,12 @@ const handleSaveInspection = useCallback(() => {
             ...floor,
             id: (floor.id && typeof floor.id === 'string' && !floor.id.startsWith('server-temp-id-')) ? floor.id : generateUniqueId(),
             isFloorContentVisible: false,
-            categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ // Default category structure if missing
+            categories: (floor.categories || INSPECTION_CONFIG.map(cfg => ({ 
                 id: cfg.id, title: cfg.title, type: cfg.type, isExpanded: false,
                 ...(cfg.type === 'standard' && { subItems: cfg.subItems?.map(sCfg => ({
                     id: sCfg.id, name: sCfg.name,
                     isRegistry: sCfg.isRegistry || false,
-                    photoDataUri: null, // Default to null, will be overridden by actual data if present (e.g. from JSON import)
+                    photoDataUri: null, 
                     photoDescription: '',
                     ...(sCfg.isRegistry && sCfg.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
                     ...(sCfg.isRegistry && sCfg.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] })
@@ -536,7 +526,7 @@ const handleSaveInspection = useCallback(() => {
                 subItems: (cat.subItems || []).map(sub => ({
                 ...sub,
                 id: (sub.id && typeof sub.id === 'string' && !sub.id.includes('NaN') && !sub.id.startsWith('server-temp-id-') && (!sub.id.startsWith('custom-') || sub.id.length > 20) ) ? sub.id : sub.id.startsWith('custom-') ? sub.id : `loaded-sub-${generateUniqueId()}`,
-                photoDataUri: sub.photoDataUri || null, // Preserve photo if from JSON, will be null if from LS
+                photoDataUri: sub.photoDataUri || null, 
                 photoDescription: sub.photoDescription || '',
                 registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `${generateUniqueId()}-ext` })),
                 registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `${generateUniqueId()}-hose` }))
@@ -547,7 +537,7 @@ const handleSaveInspection = useCallback(() => {
 
         setActiveTowersData(sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()]);
         setIsSavedInspectionsVisible(false); setIsChecklistVisible(true);
-        // Check if the loaded inspection likely came from localStorage (photos null) or JSON (photos might exist)
+        
         const loadedFromLsOrHadNoPhotos = (inspectionToLoad.towers || []).every(tower =>
             (tower.floors || []).every(floor =>
                 (floor.categories || []).every(cat =>
@@ -555,10 +545,10 @@ const handleSaveInspection = useCallback(() => {
                 )
             )
         );
-        if (loadedFromLsOrHadNoPhotos) {
+        if (loadedFromLsOrHadNoPhotos || !inspectionToLoad.uploadedLogoDataUrl) { // Also check logo
             toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada (observações restauradas; fotos de vistorias salvas no navegador não são armazenadas).`});
         } else {
-             toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada do arquivo (incluindo fotos e observações).`});
+             toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${fullInspectionId} carregada do arquivo (incluindo logo/fotos e observações).`});
         }
     }
   };
@@ -590,11 +580,6 @@ const handleSaveInspection = useCallback(() => {
       };
       duplicatedInspection.timestamp = Date.now();
       
-      // Logic for photoDataUri in duplicated items:
-      // If originalInspection came from localStorage, its photoDataUri will be null.
-      // If it came from an active form or JSON with photos, they'll be in originalInspection.
-      // JSON.parse(JSON.stringify()) preserves this.
-      // When this duplicated form is later *saved* by handleSaveInspection, photos will be stripped for LS.
       duplicatedInspection.towers = (duplicatedInspection.towers || []).map(tower => ({
         ...tower, id: generateUniqueId(), isTowerContentVisible: false,
         floors: (tower.floors || []).map(floor => ({
@@ -604,7 +589,8 @@ const handleSaveInspection = useCallback(() => {
             subItems: (cat.subItems || []).map(sub => ({
               ...sub,
               id: sub.id.startsWith('custom-') || sub.isRegistry ? `${sub.id.split('-')[0]}-${generateUniqueId()}-copy` : sub.id,
-              // photoDataUri is already correctly copied by JSON.parse(JSON.stringify(originalInspection))
+              // photoDataUri from localStorage will be null. If original was from active form/JSON with photo, it's copied.
+              // When this duplicated form is saved by handleSaveInspection, new photoDataUri in LS will be null.
               registeredExtinguishers: (sub.registeredExtinguishers || []).map(ext => ({ ...ext, id: `${generateUniqueId()}-extcopy`})),
               registeredHoses: (sub.registeredHoses || []).map(hose => ({ ...hose, id: `${generateUniqueId()}-hosecopy` }))
             }))
@@ -613,11 +599,11 @@ const handleSaveInspection = useCallback(() => {
       }));
       setSavedInspections(prev => [duplicatedInspection, ...prev].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
       
-      const originalHadPhotos = (originalInspection.towers || []).some(t => (t.floors || []).some(f => (f.categories || []).some(c => (c.subItems || []).some(s => s.photoDataUri))));
-      if (originalHadPhotos) {
-        toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada (incluindo fotos e observações da original). Fotos não serão salvas no navegador se esta for salva.`});
+      const originalHadContentForLS = (originalInspection.towers || []).some(t => (t.floors || []).some(f => (f.categories || []).some(c => (c.subItems || []).some(s => s.photoDescription) || c.observation))); // Check for descriptions/obs
+      if (originalHadContentForLS || originalInspection.uploadedLogoDataUrl) {
+        toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada. Observações e logo copiados. Fotos não são duplicadas para armazenamento no navegador.`});
       } else {
-        toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada (observações e logo da original; fotos não são duplicadas para armazenamento no navegador).`});
+        toast({ title: "Vistoria Duplicada", description: `Nova Vistoria Nº ${newInspectionNumber} criada. (Vistoria original parecia vazia ou sem dados para localStorage).`});
       }
     }
   }, [savedInspections, setSavedInspections, toast, clientInfo.inspectedBy]);
@@ -694,23 +680,6 @@ const handleSaveInspection = useCallback(() => {
     setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: tower.floors.map((floor, fIdx) => fIdx === floorIndex ? { ...floor, isFloorContentVisible: !(floor.isFloorContentVisible !== undefined ? floor.isFloorContentVisible : true) } : floor) } : tower));
   }, []);
 
-  // const handleMoveCategoryItem = useCallback((towerIndex: number, floorIndex: number, categoryId: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
-  //   setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => {
-  //     if (tIdx !== towerIndex) return tower;
-  //     return { ...tower, floors: tower.floors.map((floor, fIdx) => {
-  //       if (fIdx !== floorIndex) return floor;
-  //       const categories = [...floor.categories]; const itemIndex = categories.findIndex(cat => cat.id === categoryId);
-  //       if (itemIndex === -1) return floor;
-  //       const itemToMove = categories[itemIndex];
-  //       if (direction === 'up' && itemIndex > 0) { categories.splice(itemIndex, 1); categories.splice(itemIndex - 1, 0, itemToMove); }
-  //       else if (direction === 'down' && itemIndex < categories.length - 1) { categories.splice(itemIndex, 1); categories.splice(itemIndex + 1, 0, itemToMove); }
-  //       else if (direction === 'top' && itemIndex > 0) { categories.splice(itemIndex, 1); categories.unshift(itemToMove); }
-  //       else if (direction === 'bottom' && itemIndex < categories.length - 1) { categories.splice(itemIndex, 1); categories.push(itemToMove); }
-  //       else return floor; // No change if conditions aren't met
-  //       return { ...floor, categories }; // Return new floor object with modified categories
-  //     })};
-  //   }));
-  // }, []);
 
   const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
     setActiveTowersData(prevTowers => {
@@ -753,11 +722,10 @@ const handleSaveInspection = useCallback(() => {
 
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
-    // For export, we use the activeTowersData which includes photos if present in the current form
     const inspectionToExport: FullInspectionData = {
       id: clientInfo.inspectionNumber || `export-id-${Date.now()}`,
       clientInfo: { ...clientInfo },
-      towers: activeTowersData, // This includes full photo data if present in the active form
+      towers: activeTowersData, 
       timestamp: Date.now(),
       uploadedLogoDataUrl: uploadedLogoDataUrl,
     };
@@ -769,7 +737,6 @@ const handleSaveInspection = useCallback(() => {
 
   const handleDownloadSelectedInspections = useCallback((inspectionIds: string[]) => {
     const inspectionsToDownload = savedInspections.filter(insp => inspectionIds.includes(insp.id));
-    // Data from savedInspections will have photoDataUri: null due to handleSaveInspection logic
     if (inspectionsToDownload.length > 0) {
       const fileName = initiateFileDownload(inspectionsToDownload, 'vistorias_selecionadas');
       toast({ title: "Download Iniciado", description: `${inspectionsToDownload.length} vistoria(s) salvas em ${fileName} (fotos não inclusas no JSON do navegador).`});
@@ -780,7 +747,6 @@ const handleSaveInspection = useCallback(() => {
 
   const handleDownloadSingleSavedInspection = useCallback((inspectionId: string) => {
     const inspectionToDownload = savedInspections.find(insp => insp.id === inspectionId);
-    // Data from savedInspections will have photoDataUri: null
     if (inspectionToDownload) {
       const clientInfoForFilename = {
         inspectionNumber: inspectionToDownload.id,
@@ -811,19 +777,19 @@ const handleSaveInspection = useCallback(() => {
         reader.onload = (e) => {
           try {
             const jsonString = e.target?.result as string;
-            if (!jsonString) {
-              console.warn(`Conteúdo vazio ou inválido no arquivo ${file.name}`);
-              resolve([]); 
-              return;
+            if (!jsonString || jsonString.trim() === "") {
+                console.warn(`Conteúdo vazio ou inválido no arquivo ${file.name}`);
+                resolve([]); 
+                return;
             }
             const importedData = JSON.parse(jsonString);
 
             if (typeof importedData !== 'object' || importedData === null) {
-                console.warn(`Conteúdo JSON não é um objeto ou array no arquivo ${file.name}:`, importedData);
+                console.warn(`Conteúdo JSON não é um objeto ou array válido no arquivo ${file.name}:`, importedData);
                 resolve([]); 
                 return;
             }
-
+            
             const inspectionsToProcess: FullInspectionData[] = Array.isArray(importedData) ? importedData : [importedData];
             const validInspectionsFromFile: FullInspectionData[] = [];
 
@@ -879,7 +845,6 @@ const handleSaveInspection = useCallback(() => {
         let currentUpdated = 0;
 
         allInspectionsFromFiles.forEach(inspectionToImport => {
-          // Prepare data for localStorage (strip photos)
           const inspectionForLocalStorageProcessing: FullInspectionData = JSON.parse(JSON.stringify(inspectionToImport));
            inspectionForLocalStorageProcessing.towers = inspectionForLocalStorageProcessing.towers.map(tower => ({
               ...tower,
@@ -1088,10 +1053,6 @@ const handleSaveInspection = useCallback(() => {
                                         overallStatus={overallStatus}
                                         onCategoryItemUpdate={(catId, update) => handleCategoryItemUpdateForFloor(towerIndex, floorIndex, catId, update)}
                                         isMobile={isMobile}
-                                        // onMoveCategoryItem={(catId, dir) => handleMoveCategoryItem(towerIndex, floorIndex, catId, dir)}
-                                        // onRemoveCategory={(catId) => handleRemoveCategoryFromFloor(towerIndex, floorIndex, catId)}
-                                        // categoryIndex={catIndex}
-                                        // totalCategoriesInFloor={floorData.categories.length}
                                       />
                                     );
                                   })}
@@ -1144,3 +1105,4 @@ const handleSaveInspection = useCallback(() => {
   );
 }
     
+
