@@ -17,7 +17,7 @@ import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.co
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Upload, Layers, PanelTopClose } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Upload, Layers, PanelTopClose, Library, Archive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { saveInspectionToDB, getAllInspectionsFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { format } from 'date-fns';
@@ -803,6 +803,32 @@ export default function FireCheckPage() {
     }
   }, [areAnyFloorsGloballyHidden, _showAllFloorContentGlobally, _hideAllFloorContentGlobally]);
 
+  const _showAllTowerContentGlobally = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({
+      ...tower,
+      isTowerContentVisible: true,
+    })));
+  }, []);
+
+  const _hideAllTowerContentGlobally = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({
+      ...tower,
+      isTowerContentVisible: false,
+    })));
+  }, []);
+
+  const areAnyTowersGloballyHidden = useMemo(() => {
+    return activeTowersData.some(tower => !tower.isTowerContentVisible);
+  }, [activeTowersData]);
+
+  const handleToggleAllTowersGlobally = useCallback(() => {
+    if (areAnyTowersGloballyHidden) {
+      _showAllTowerContentGlobally();
+    } else {
+      _hideAllTowerContentGlobally();
+    }
+  }, [areAnyTowersGloballyHidden, _showAllTowerContentGlobally, _hideAllTowerContentGlobally]);
+
 
   const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
     setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
@@ -900,6 +926,12 @@ export default function FireCheckPage() {
                   {areAnyFloorsGloballyHidden ? <Layers className="mr-1 h-4 w-4 sm:mr-2" /> : <PanelTopClose className="mr-1 h-4 w-4 sm:mr-2" />}
                   <span className="hidden sm:inline">
                     {areAnyFloorsGloballyHidden ? "Mostrar Andares" : "Ocultar Andares"}
+                  </span>
+                </Button>
+                <Button onClick={handleToggleAllTowersGlobally} variant="outline" size="sm" title={areAnyTowersGloballyHidden ? "Mostrar Conteúdo de Todas as Torres" : "Ocultar Conteúdo de Todas as Torres"}>
+                  {areAnyTowersGloballyHidden ? <Library className="mr-1 h-4 w-4 sm:mr-2" /> : <Archive className="mr-1 h-4 w-4 sm:mr-2" />}
+                  <span className="hidden sm:inline">
+                    {areAnyTowersGloballyHidden ? "Mostrar Torres" : "Ocultar Torres"}
                   </span>
                 </Button>
               </div>
@@ -1062,3 +1094,4 @@ export default function FireCheckPage() {
 
 
     
+
