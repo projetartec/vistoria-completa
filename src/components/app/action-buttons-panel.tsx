@@ -1,14 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
-  DropdownMenuTrigger, // Added missing import
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { 
@@ -17,7 +14,7 @@ import {
   Eye, 
   EyeOff,
   Building, 
-  FileDown, 
+  FileDown, // Still used as a generic download/export icon if needed elsewhere
   Printer, 
   Download, 
   Upload, 
@@ -25,24 +22,24 @@ import {
   FileSpreadsheet, 
   AlertTriangle, 
   ImageIcon, 
-  FileText 
+  FileText,
+  X // For the close icon on the main FAB
 } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 interface ActionButtonsPanelProps {
-  onSave: () => void;
-  onNewInspection: () => void;
-  onAddNewTower: () => void;
-  onToggleSavedInspections: () => void;
-  isSavedInspectionsVisible: boolean;
-  onPrint: () => void;
-  onExportJson: () => void;
-  onTriggerImportJson: () => void;
-  onGenerateRegisteredItemsReport: () => void;
-  onGenerateNCItemsReport: () => void;
-  onGeneratePdf: () => void;
-  onGeneratePhotoReportPdf: () => void;
+  onSave?: () => void;
+  onNewInspection?: () => void;
+  onAddNewTower?: () => void;
+  onToggleSavedInspections?: () => void;
+  isSavedInspectionsVisible?: boolean;
+  onPrint?: () => void;
+  onExportJson?: () => void;
+  onTriggerImportJson?: () => void;
+  onGenerateRegisteredItemsReport?: () => void;
+  onGenerateNCItemsReport?: () => void;
+  onGeneratePdf?: () => void;
+  onGeneratePhotoReportPdf?: () => void;
 }
 
 export function ActionButtonsPanel({
@@ -59,109 +56,167 @@ export function ActionButtonsPanel({
   onGeneratePdf,
   onGeneratePhotoReportPdf,
 }: ActionButtonsPanelProps) {
-  const isMobile = useIsMobile();
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
-  const iconSize = "h-5 w-5"; 
+  const handleFabAction = (action: (() => void) | undefined) => {
+    if (action) {
+      action();
+    }
+    setIsFabMenuOpen(false);
+  };
 
-  const listItemBaseStyle = "flex items-center gap-2 rounded-lg p-2.5 my-1 shadow-md border transition-all duration-150 ease-in-out hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background";
+  const handleReportAction = (reportAction: (() => void) | undefined) => {
+    if (reportAction) {
+      reportAction();
+    }
+    setIsFabMenuOpen(false); // Close the main FAB menu when a report is generated
+  };
 
-  const defaultListItemStyle = cn(listItemBaseStyle, "bg-card text-card-foreground border-input hover:bg-accent hover:text-accent-foreground");
-  const primaryListItemStyle = cn(listItemBaseStyle, "bg-primary/20 text-primary border-primary/50 hover:bg-primary/30");
-  const destructiveListItemStyle = cn(listItemBaseStyle, "bg-destructive text-destructive-foreground border-destructive/70 hover:bg-destructive/90");
-  const ncReportListItemStyle = cn(listItemBaseStyle, "bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200");
-  const accentListItemStyle = cn(listItemBaseStyle, "bg-accent/60 text-accent-foreground border-accent/50 hover:bg-accent/80");
+  const fabBaseClasses = "h-12 w-12 rounded-full p-0 shadow-md flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
+  
+  const iconSize = "h-5 w-5"; // For icons inside report dropdown items
+
+  // Base style for items inside the reports dropdown
+  const reportItemStyle = "flex items-center gap-2 rounded-lg p-2.5 my-1 text-sm shadow-md border border-input bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer";
+  const ncReportItemStyle = "flex items-center gap-2 rounded-lg p-2.5 my-1 text-sm shadow-md border border-orange-300 bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer";
+  const accentReportItemStyle = "flex items-center gap-2 rounded-lg p-2.5 my-1 text-sm shadow-md border border-accent text-accent-foreground bg-accent/60 hover:bg-accent/80 cursor-pointer";
+  const primaryReportItemStyle = "flex items-center gap-2 rounded-lg p-2.5 my-1 text-sm shadow-md border border-primary/50 bg-primary/20 text-primary hover:bg-primary/30 cursor-pointer";
 
 
   return (
-    <div className={cn(
-        "fixed right-6 z-50",
-        isMobile ? "bottom-[5.5rem]" : "bottom-6" 
-      )}>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="default"
-            size="icon"
-            className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground"
-            title="Ações da Vistoria"
-          >
-            <Settings2 className="h-6 w-6" />
-            <span className="sr-only">Abrir Menu de Ações</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuContent 
-            align="end" 
-            sideOffset={10} 
-            className="p-2 w-auto bg-background/95 backdrop-blur-sm shadow-xl rounded-xl border space-y-1"
-          >
-            <DropdownMenuItem onClick={onSave} className={defaultListItemStyle} title="Salvar Vistoria">
-              <Save className={iconSize} />
-              {!isMobile && <span>Salvar Vistoria</span>}
-            </DropdownMenuItem>
+    <>
+      {isFabMenuOpen && (
+        <div 
+          className="fixed right-6 bottom-[calc(3.5rem+1rem)] z-40 flex flex-col-reverse items-center space-y-3 space-y-reverse"
+          onClick={(e) => e.stopPropagation()} 
+        >
+          {/* Reports Dropdown FAB Trigger */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                title="Gerar Relatórios PDF"
+                className={cn(fabBaseClasses, "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300")}
+              >
+                <FileText className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuContent 
+                align="center" // Align center of content with center of trigger
+                side="left" 
+                sideOffset={16} // Increased offset
+                className="p-2 w-auto bg-background/95 backdrop-blur-sm shadow-xl rounded-xl border space-y-1 min-w-[260px]"
+              >
+                <DropdownMenuItem onClick={() => handleReportAction(onGenerateRegisteredItemsReport)} className={reportItemStyle}>
+                  <FileSpreadsheet className={iconSize} />
+                  <span>Itens Cadastrados</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleReportAction(onGenerateNCItemsReport)} className={ncReportItemStyle}>
+                  <AlertTriangle className={iconSize} />
+                  <span>Itens N/C</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleReportAction(onGeneratePhotoReportPdf)} className={accentReportItemStyle}>
+                  <ImageIcon className={iconSize} />
+                  <span>Somente Fotos</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleReportAction(onGeneratePdf)} className={primaryReportItemStyle}>
+                  <FileText className={iconSize} />
+                  <span>Relatório Completo</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenu>
 
-            <DropdownMenuItem onClick={onToggleSavedInspections} className={defaultListItemStyle} title={isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}>
-              {isSavedInspectionsVisible ? <EyeOff className={iconSize} /> : <Eye className={iconSize} />}
-              {!isMobile && <span>{isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}</span>}
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem onClick={onAddNewTower} className={defaultListItemStyle} title="Nova Torre">
-              <Building className={iconSize} />
-              {!isMobile && <span>Nova Torre</span>}
-            </DropdownMenuItem>
-            
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className={cn(defaultListItemStyle, "justify-between")} title="Baixar Relatórios PDF">
-                <div className="flex items-center gap-2">
-                  <FileDown className={iconSize} />
-                  {(isMobile) ? <span>PDFs</span> : <span>Baixar PDF</span>}
-                </div>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="p-2 w-auto bg-background/95 backdrop-blur-sm shadow-lg rounded-lg border space-y-1">
-                  <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className={defaultListItemStyle} title="Relatório de Itens Cadastrados">
-                    <FileSpreadsheet className={iconSize} />
-                    <span>Itens Cadastrados</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGenerateNCItemsReport} className={ncReportListItemStyle} title="Relatório de Itens N/C">
-                    <AlertTriangle className={iconSize} />
-                    <span>Itens N/C</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGeneratePhotoReportPdf} className={accentListItemStyle} title="Relatório Somente Fotos">
-                    <ImageIcon className={iconSize} />
-                    <span>Somente Fotos</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGeneratePdf} className={primaryListItemStyle} title="Relatório Completo">
-                    <FileText className={iconSize} />
-                    <span>Relatório Completo</span>
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            
-            <DropdownMenuItem onClick={onPrint} className={defaultListItemStyle} title="Imprimir">
-              <Printer className={iconSize} />
-              {!isMobile && <span>Imprimir</span>}
-            </DropdownMenuItem>
+          {/* Importar JSON */}
+          {onTriggerImportJson && (
+            <Button
+              title="Importar Vistoria de Arquivo JSON"
+              onClick={() => handleFabAction(onTriggerImportJson)}
+              className={cn(fabBaseClasses, "bg-indigo-500 hover:bg-indigo-600 text-white")}
+            >
+              <Upload className="h-5 w-5" />
+            </Button>
+          )}
 
-            <DropdownMenuItem onClick={onExportJson} className={defaultListItemStyle} title="Exportar JSON">
-              <Download className={iconSize} />
-              {!isMobile && <span>Exportar JSON</span>}
-            </DropdownMenuItem>
+          {/* Exportar JSON */}
+          {onExportJson && (
+            <Button
+              title="Exportar Vistoria Atual para JSON"
+              onClick={() => handleFabAction(onExportJson)}
+              className={cn(fabBaseClasses, "bg-purple-500 hover:bg-purple-600 text-white")}
+            >
+              <Download className="h-5 w-5" />
+            </Button>
+          )}
+          
+          {/* Imprimir */}
+          {onPrint && (
+            <Button
+              title="Imprimir Página (Navegador)"
+              onClick={() => handleFabAction(onPrint)}
+              className={cn(fabBaseClasses, "bg-slate-500 hover:bg-slate-600 text-white")}
+            >
+              <Printer className="h-5 w-5" />
+            </Button>
+          )}
 
-            <DropdownMenuItem onClick={onTriggerImportJson} className={defaultListItemStyle} title="Importar JSON">
-              <Upload className={iconSize} />
-              {!isMobile && <span>Importar JSON</span>}
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem onClick={onNewInspection} className={destructiveListItemStyle} title="Nova Vistoria">
-              <PlusSquare className={iconSize} />
-              {!isMobile && <span>Nova Vistoria</span>}
-            </DropdownMenuItem>
+          {/* Ver/Ocultar Salvas */}
+          {onToggleSavedInspections && (
+            <Button
+              title={isSavedInspectionsVisible ? "Ocultar Vistorias Salvas" : "Ver Vistorias Salvas"}
+              onClick={() => handleFabAction(onToggleSavedInspections)}
+              className={cn(fabBaseClasses, "bg-sky-500 hover:bg-sky-600 text-white")}
+            >
+              {isSavedInspectionsVisible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </Button>
+          )}
 
-          </DropdownMenuContent>
-        </DropdownMenuPortal>
-      </DropdownMenu>
-    </div>
+          {/* Nova Torre */}
+          {onAddNewTower && (
+            <Button
+              title="Adicionar Nova Torre"
+              onClick={() => handleFabAction(onAddNewTower)}
+              className={cn(fabBaseClasses, "bg-green-500 hover:bg-green-600 text-white")}
+            >
+              <Building className="h-5 w-5" />
+            </Button>
+          )}
+          
+          {/* Nova Vistoria */}
+          {onNewInspection && (
+            <Button
+              title="Nova Vistoria (Limpar Formulário)"
+              onClick={() => handleFabAction(onNewInspection)}
+              className={cn(fabBaseClasses, "bg-destructive hover:bg-destructive/90 text-destructive-foreground")}
+            >
+              <PlusSquare className="h-5 w-5" />
+            </Button>
+          )}
+
+          {/* Salvar Vistoria */}
+          {onSave && (
+            <Button
+              title="Salvar Vistoria"
+              onClick={() => handleFabAction(onSave)}
+              className={cn(fabBaseClasses, "bg-primary hover:bg-primary/90 text-primary-foreground")}
+            >
+              <Save className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      <Button
+        variant="default"
+        size="icon"
+        className="fixed right-6 bottom-6 z-50 rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground"
+        title="Ações da Vistoria"
+        onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
+        aria-expanded={isFabMenuOpen}
+        aria-controls="fab-menu-actions" // Assuming the above div would get this id if needed
+      >
+        {isFabMenuOpen ? <X className="h-6 w-6" /> : <Settings2 className="h-6 w-6" />}
+      </Button>
+    </>
   );
 }
