@@ -30,7 +30,7 @@ const createNewFloorEntry = (): FloorData => {
     ...JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA)), // Deep copy
     floor: '', // Floor name will be set by user
     categories: JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false})),
-    isFloorContentVisible: true,
+    isFloorContentVisible: false, // Start hidden
   };
 };
 
@@ -39,7 +39,7 @@ const createNewTowerEntry = (): TowerData => {
     id: generateUniqueId(),
     towerName: '',
     floors: [createNewFloorEntry()],
-    isTowerContentVisible: true,
+    isTowerContentVisible: false, // Start hidden
   };
 };
 
@@ -951,7 +951,7 @@ export default function FireCheckPage() {
         <ActionButtonsPanel
           onSave={handleSaveInspectionToDB}
           onNewInspection={resetInspectionForm}
-          onAddNewTower={handleAddNewTower} // Passed to ActionButtonsPanel for desktop/alternative access
+          onAddNewTower={handleAddNewTower} 
           onToggleSavedInspections={handleToggleSavedInspections}
           isSavedInspectionsVisible={isSavedInspectionsVisible}
           onPrint={handlePrintPage}
@@ -1002,4 +1002,5 @@ export default function FireCheckPage() {
 
 
     
+
 
