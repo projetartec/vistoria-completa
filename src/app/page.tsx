@@ -970,8 +970,6 @@ export default function FireCheckPage() {
                         placeholder={`Nome da Torre ${towerIndex + 1}`}
                         className="text-lg font-semibold min-w-[150px]"
                       />
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                        <Button 
                         onClick={() => handleToggleTowerContent(towerIndex)} 
                         size="icon"
@@ -985,6 +983,8 @@ export default function FireCheckPage() {
                        >
                          {tower.isTowerContentVisible ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
                        </Button>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                        <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="border-green-500 text-green-600 hover:bg-green-500/10">
                          <Plus className="mr-1 h-4 w-4" /> Adicionar Andar
                        </Button>
@@ -1131,4 +1131,5 @@ export default function FireCheckPage() {
 
 
     
+
 
