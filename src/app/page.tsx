@@ -949,18 +949,16 @@ export default function FireCheckPage() {
         </div>
 
         {isMobile && (
-          <div className="fixed bottom-6 right-6 z-50"> {/* Position updated for Add Tower FAB */}
-            <Button
-              variant="default"
-              size="icon"
-              className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90"
-              onClick={handleAddNewTower}
-              title="Adicionar Nova Torre"
-            >
-              <Building className="h-6 w-6" />
-              <span className="sr-only">Adicionar Nova Torre</span>
-            </Button>
-          </div>
+          <Button
+            variant="default"
+            size="icon"
+            className="fixed bottom-6 right-6 z-50 rounded-full w-14 h-14 shadow-lg bg-green-500 hover:bg-green-600 text-white"
+            onClick={handleAddNewTower}
+            title="Adicionar Nova Torre"
+          >
+            <Building className="h-6 w-6" />
+            <span className="sr-only">Adicionar Nova Torre</span>
+          </Button>
         )}
 
         <ActionButtonsPanel
