@@ -6,7 +6,7 @@ import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
 import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
 import { ActionButtonsPanel } from '@/components/app/action-buttons-panel';
-import { SavedInspectionsList } from '@/components/app/saved-inspections-list'; // Re-enabled
+import { SavedInspectionsList } from '@/components/app/saved-inspections-list';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -948,12 +948,27 @@ export default function FireCheckPage() {
           )}
         </div>
 
+        {isMobile && (
+          <div className="fixed bottom-20 left-6 z-50"> {/* Position adjusted to avoid overlap with main FAB */}
+            <Button
+              variant="default"
+              size="icon"
+              className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90"
+              onClick={handleAddNewTower}
+              title="Adicionar Nova Torre"
+            >
+              <Building className="h-6 w-6" />
+              <span className="sr-only">Adicionar Nova Torre</span>
+            </Button>
+          </div>
+        )}
+
         <ActionButtonsPanel
-          onSave={handleSaveInspectionToDB} // Updated to save to IndexedDB
+          onSave={handleSaveInspectionToDB}
           onNewInspection={resetInspectionForm}
           onAddNewTower={handleAddNewTower}
-          onToggleSavedInspections={handleToggleSavedInspections} // Re-added
-          isSavedInspectionsVisible={isSavedInspectionsVisible} // Re-added
+          onToggleSavedInspections={handleToggleSavedInspections}
+          isSavedInspectionsVisible={isSavedInspectionsVisible}
           onPrint={handlePrintPage}
           onExportJson={handleExportCurrentInspectionToJson}
           onTriggerImportJson={triggerJsonImport}
@@ -982,5 +997,6 @@ export default function FireCheckPage() {
     
 
     
+
 
 
