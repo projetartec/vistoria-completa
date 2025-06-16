@@ -948,6 +948,21 @@ export default function FireCheckPage() {
           )}
         </div>
 
+        <ActionButtonsPanel
+          onSave={handleSaveInspectionToDB}
+          onNewInspection={resetInspectionForm}
+          onAddNewTower={handleAddNewTower} // Passed to ActionButtonsPanel for desktop/alternative access
+          onToggleSavedInspections={handleToggleSavedInspections}
+          isSavedInspectionsVisible={isSavedInspectionsVisible}
+          onPrint={handlePrintPage}
+          onExportJson={handleExportCurrentInspectionToJson}
+          onTriggerImportJson={triggerJsonImport}
+          onGenerateRegisteredItemsReport={handleGenerateRegisteredItemsReport}
+          onGenerateNCItemsReport={handleGenerateNCItemsReport}
+          onGeneratePdf={handleGeneratePdf}
+          onGeneratePhotoReportPdf={handleGeneratePhotoReportPdf}
+        />
+        
         {isMobile && (
           <Button
             variant="default"
@@ -961,20 +976,6 @@ export default function FireCheckPage() {
           </Button>
         )}
 
-        <ActionButtonsPanel
-          onSave={handleSaveInspectionToDB}
-          onNewInspection={resetInspectionForm}
-          onAddNewTower={handleAddNewTower}
-          onToggleSavedInspections={handleToggleSavedInspections}
-          isSavedInspectionsVisible={isSavedInspectionsVisible}
-          onPrint={handlePrintPage}
-          onExportJson={handleExportCurrentInspectionToJson}
-          onTriggerImportJson={triggerJsonImport}
-          onGenerateRegisteredItemsReport={handleGenerateRegisteredItemsReport}
-          onGenerateNCItemsReport={handleGenerateNCItemsReport}
-          onGeneratePdf={handleGeneratePdf}
-          onGeneratePhotoReportPdf={handleGeneratePhotoReportPdf}
-        />
          <input type="file" ref={jsonImportFileInputRef} accept=".json,application/json" onChange={handleImportInspectionFromJson} className="hidden" id="json-import-input" />
 
         {isSavedInspectionsVisible && (
@@ -1001,3 +1002,4 @@ export default function FireCheckPage() {
 
 
     
+
