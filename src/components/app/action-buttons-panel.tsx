@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   Settings2, 
-  Database, // Changed from Save
+  Database, 
   PlusSquare, 
   Printer, 
   Download, 
@@ -64,7 +64,7 @@ export function ActionButtonsPanel({
   const isMobile = useIsMobile();
 
   const itemBaseStyle = "cursor-pointer p-2 border rounded-md shadow-sm my-1 flex items-center";
-  const iconBaseStyle = "h-5 w-5"; // Increased icon size
+  const iconBaseStyle = "h-5 w-5"; 
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -84,7 +84,7 @@ export function ActionButtonsPanel({
           <DropdownMenuContent 
             align="end" 
             sideOffset={10} 
-            className={cn("p-1 w-auto", isMobile ? "min-w-[58px]" : "min-w-[260px]")} // Adjusted min-width for mobile
+            className={cn("p-1 w-auto", isMobile ? "min-w-[58px]" : "min-w-[260px]")}
           >
             {!isMobile && <DropdownMenuLabel className="px-2 py-1.5">Ações da Vistoria</DropdownMenuLabel>}
             {!isMobile && <DropdownMenuSeparator className="-mx-1 my-1" />}
@@ -112,13 +112,12 @@ export function ActionButtonsPanel({
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className={cn(itemBaseStyle, "justify-between")}>
                 <div className="flex items-center">
-                  <FileDown className={cn(iconBaseStyle, "mr-2")} />
-                  <span>Baixar Relatório PDF</span>
+                  <FileDown className={cn(iconBaseStyle, !isMobile && "mr-2")} />
+                  {/* Text "Baixar Relatório PDF" removed */}
                 </div>
-                 {/* ChevronRight is added by DropdownMenuSubTrigger automatically if not using asChild, but we need our styling */}
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
-                <DropdownMenuSubContent className={cn("p-1 w-auto", isMobile ? "min-w-[58px]" : "min-w-[220px]")}>
+                <DropdownMenuSubContent className={cn("p-1 w-auto", isMobile ? "min-w-[220px]" : "min-w-[220px]")}>
                   {!isMobile && <DropdownMenuLabel className="px-2 py-1.5">Tipos de Relatório PDF</DropdownMenuLabel>}
                   {!isMobile && <DropdownMenuSeparator className="-mx-1 my-1" />}
                   <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className={cn(itemBaseStyle)}>
