@@ -968,7 +968,7 @@ export default function FireCheckPage() {
                         value={tower.towerName}
                         onChange={(e) => handleTowerNameChange(towerIndex, e.target.value)}
                         placeholder={`Nome da Torre ${towerIndex + 1}`}
-                        className="text-lg font-semibold flex-grow min-w-[150px]"
+                        className="text-lg font-semibold min-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
@@ -1131,3 +1131,4 @@ export default function FireCheckPage() {
 
 
     
+
