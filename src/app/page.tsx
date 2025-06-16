@@ -753,6 +753,22 @@ export default function FireCheckPage() {
     setActiveTowersData(prevTowers => prevTowers.map(tower => ({ ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map(floor => ({ ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) })) })));
   }, []);
   
+  const areAnyGlobalCategoriesExpanded = useMemo(() => {
+    return activeTowersData.some(tower =>
+      (Array.isArray(tower.floors) ? tower.floors : []).some(floor =>
+        floor.categories.some(cat => cat.isExpanded)
+      )
+    );
+  }, [activeTowersData]);
+
+  const handleToggleAllGlobalCategories = useCallback(() => {
+    if (areAnyGlobalCategoriesExpanded) {
+      handleCollapseAllGlobalCategories();
+    } else {
+      handleExpandAllGlobalCategories();
+    }
+  }, [areAnyGlobalCategoriesExpanded, handleCollapseAllGlobalCategories, handleExpandAllGlobalCategories]);
+
 
   const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
     setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
@@ -840,8 +856,12 @@ export default function FireCheckPage() {
           {isChecklistVisible && (
             <>
               <div className="flex flex-wrap gap-2 mb-4">
-                <Button onClick={handleExpandAllGlobalCategories} variant="outline" size="sm" title="Expandir Todas as Categorias (Global)"><Eye className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Expandir Categorias</span></Button>
-                <Button onClick={handleCollapseAllGlobalCategories} variant="outline" size="sm" title="Recolher Todas as Categorias (Global)"><EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Recolher Categorias</span></Button>
+                <Button onClick={handleToggleAllGlobalCategories} variant="outline" size="sm" title={areAnyGlobalCategoriesExpanded ? "Recolher Todas as Categorias (Global)" : "Expandir Todas as Categorias (Global)"}>
+                  {areAnyGlobalCategoriesExpanded ? <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> : <Eye className="mr-1 h-4 w-4 sm:mr-2" />}
+                  <span className="hidden sm:inline">
+                    {areAnyGlobalCategoriesExpanded ? "Recolher Categorias" : "Expandir Categorias"}
+                  </span>
+                </Button>
               </div>
 
               {activeTowersData.map((tower, towerIndex) => {
