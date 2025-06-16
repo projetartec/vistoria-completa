@@ -21,6 +21,7 @@ import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Upload, La
 import { useToast } from '@/hooks/use-toast';
 import { saveInspectionToDB, getAllInspectionsFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -916,11 +917,19 @@ export default function FireCheckPage() {
           {isChecklistVisible && (
             <>
               <div className="flex flex-wrap gap-2 mb-4">
-                <Button onClick={handleToggleAllGlobalCategories} variant="outline" size="sm" title={areAnyGlobalCategoriesExpanded ? "Recolher Todas as Categorias (Global)" : "Expandir Todas as Categorias (Global)"}>
-                  {areAnyGlobalCategoriesExpanded ? <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> : <Eye className="mr-1 h-4 w-4 sm:mr-2" />}
-                  <span className="hidden sm:inline">
-                    {areAnyGlobalCategoriesExpanded ? "Recolher Categorias" : "Expandir Categorias"}
-                  </span>
+                <Button
+                  onClick={handleToggleAllGlobalCategories}
+                  variant="default"
+                  size="icon"
+                  className={cn(
+                    "rounded-full",
+                    areAnyGlobalCategoriesExpanded
+                      ? "bg-red-500 hover:bg-red-600 text-white"
+                      : "bg-green-500 hover:bg-green-600 text-white"
+                  )}
+                  title={areAnyGlobalCategoriesExpanded ? "Recolher Todas as Categorias (Global)" : "Expandir Todas as Categorias (Global)"}
+                >
+                  {areAnyGlobalCategoriesExpanded ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </Button>
                 <Button onClick={handleToggleAllFloorsGlobally} variant="outline" size="sm" title={areAnyFloorsGloballyHidden ? "Mostrar Conteúdo de Todos os Andares" : "Ocultar Conteúdo de Todos os Andares"}>
                   {areAnyFloorsGloballyHidden ? <Layers className="mr-1 h-4 w-4 sm:mr-2" /> : <PanelTopClose className="mr-1 h-4 w-4 sm:mr-2" />}
@@ -937,6 +946,7 @@ export default function FireCheckPage() {
               </div>
 
               {activeTowersData.map((tower, towerIndex) => {
+                const areAnyFloorsInThisTowerVisible = (Array.isArray(tower.floors) ? tower.floors : []).some(f => f.isFloorContentVisible !== false);
                 return (
                 <Card key={tower.id} className="mb-8 shadow-md border-primary/50">
                   <CardHeader className="bg-primary/5 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -1094,4 +1104,5 @@ export default function FireCheckPage() {
 
 
     
+
 
