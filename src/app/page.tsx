@@ -949,7 +949,7 @@ export default function FireCheckPage() {
         </div>
 
         {isMobile && (
-          <div className="fixed bottom-20 left-6 z-50"> {/* Position adjusted to avoid overlap with main FAB */}
+          <div className="fixed bottom-6 right-6 z-50"> {/* Position updated for Add Tower FAB */}
             <Button
               variant="default"
               size="icon"
@@ -1000,3 +1000,6 @@ export default function FireCheckPage() {
 
 
 
+
+
+    

@@ -67,7 +67,10 @@ export function ActionButtonsPanel({
   const iconBaseStyle = "h-5 w-5"; 
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className={cn(
+        "fixed right-6 z-50",
+        isMobile ? "bottom-[5.5rem]" : "bottom-6" // 1.5rem (lower FAB bottom) + 3.5rem (lower FAB height) + 0.5rem (spacing) = 5.5rem
+      )}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -113,13 +116,13 @@ export function ActionButtonsPanel({
               <DropdownMenuSubTrigger className={cn(itemBaseStyle, "justify-between")}>
                 <div className="flex items-center">
                   <FileDown className={cn(iconBaseStyle, !isMobile && "mr-2")} />
-                  {/* Text "Baixar Relatório PDF" removed */}
+                  {/* Text "Baixar Relatório PDF" removed from here, but names of sub-items remain */}
                 </div>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className={cn("p-1 w-auto", isMobile ? "min-w-[220px]" : "min-w-[220px]")}>
-                  {!isMobile && <DropdownMenuLabel className="px-2 py-1.5">Tipos de Relatório PDF</DropdownMenuLabel>}
-                  {!isMobile && <DropdownMenuSeparator className="-mx-1 my-1" />}
+                  {(!isMobile || isMobile /* Keep label on mobile for this sub-menu */) && <DropdownMenuLabel className="px-2 py-1.5">Tipos de Relatório PDF</DropdownMenuLabel>}
+                  {(!isMobile || isMobile) && <DropdownMenuSeparator className="-mx-1 my-1" />}
                   <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className={cn(itemBaseStyle)}>
                     <FileSpreadsheet className={cn(iconBaseStyle, "mr-2")} />
                     <span>Itens Cadastrados</span>
@@ -132,7 +135,7 @@ export function ActionButtonsPanel({
                     <ImageIcon className={cn(iconBaseStyle, "mr-2")} />
                     <span>Somente Fotos</span>
                   </DropdownMenuItem>
-                  {!isMobile && <DropdownMenuSeparator className="-mx-1 my-1" />}
+                  {(!isMobile || isMobile) && <DropdownMenuSeparator className="-mx-1 my-1" />}
                   <DropdownMenuItem onClick={onGeneratePdf} className={cn(itemBaseStyle)}>
                     <FileText className={cn(iconBaseStyle, "mr-2")} />
                     <span>Relatório Completo</span>
@@ -171,3 +174,5 @@ export function ActionButtonsPanel({
     </div>
   );
 }
+
+    
