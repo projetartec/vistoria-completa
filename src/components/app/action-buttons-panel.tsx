@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   Settings2, 
-  Save, 
+  Database, // Changed from Save
   PlusSquare, 
   Printer, 
   Download, 
@@ -26,7 +26,6 @@ import {
   FileText, 
   Image as ImageIcon, 
   Building, 
-  Database, 
   Eye, 
   EyeOff 
 } from 'lucide-react';
@@ -64,6 +63,9 @@ export function ActionButtonsPanel({
 }: ActionButtonsPanelProps) {
   const isMobile = useIsMobile();
 
+  const itemBaseStyle = "cursor-pointer p-2 border rounded-md shadow-sm my-1 flex items-center";
+  const iconBaseStyle = "h-5 w-5"; // Increased icon size
+
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <DropdownMenu>
@@ -79,81 +81,88 @@ export function ActionButtonsPanel({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuPortal>
-          <DropdownMenuContent align="end" sideOffset={10} className={cn("w-auto min-w-[56px]", !isMobile && "w-64")}>
-            <DropdownMenuLabel className={cn(isMobile && "hidden")}>Ações da Vistoria</DropdownMenuLabel>
-            {!isMobile && <DropdownMenuSeparator />}
+          <DropdownMenuContent 
+            align="end" 
+            sideOffset={10} 
+            className={cn("p-1 w-auto", isMobile ? "min-w-[58px]" : "min-w-[260px]")} // Adjusted min-width for mobile
+          >
+            {!isMobile && <DropdownMenuLabel className="px-2 py-1.5">Ações da Vistoria</DropdownMenuLabel>}
+            {!isMobile && <DropdownMenuSeparator className="-mx-1 my-1" />}
 
-            <DropdownMenuItem onClick={onSave} className="cursor-pointer">
-              <Database className={cn("h-4 w-4", !isMobile && "mr-2")} />
+            <DropdownMenuItem onClick={onSave} className={cn(itemBaseStyle)}>
+              <Database className={cn(iconBaseStyle, !isMobile && "mr-2")} />
               {!isMobile && <span>Salvar Vistoria</span>}
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={onToggleSavedInspections} className="cursor-pointer">
+            <DropdownMenuItem onClick={onToggleSavedInspections} className={cn(itemBaseStyle)}>
               {isSavedInspectionsVisible ? 
-                <EyeOff className={cn("h-4 w-4", !isMobile && "mr-2")} /> : 
-                <Eye className={cn("h-4 w-4", !isMobile && "mr-2")} />
+                <EyeOff className={cn(iconBaseStyle, !isMobile && "mr-2")} /> : 
+                <Eye className={cn(iconBaseStyle, !isMobile && "mr-2")} />
               }
               {!isMobile && <span>{isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}</span>}
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={onAddNewTower} className="cursor-pointer">
-              <Building className={cn("h-4 w-4", !isMobile && "mr-2")} />
+            <DropdownMenuItem onClick={onAddNewTower} className={cn(itemBaseStyle)}>
+              <Building className={cn(iconBaseStyle, !isMobile && "mr-2")} />
               {!isMobile && <span>Nova Torre</span>}
             </DropdownMenuItem>
             
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="-mx-1 my-1" />
 
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <FileDown className={cn("h-4 w-4", !isMobile && "mr-2")} />
-                {!isMobile && <span>Baixar Relatório PDF</span>}
+              <DropdownMenuSubTrigger className={cn(itemBaseStyle, "justify-between")}>
+                <div className="flex items-center">
+                  <FileDown className={cn(iconBaseStyle, "mr-2")} />
+                  <span>Baixar Relatório PDF</span>
+                </div>
+                 {/* ChevronRight is added by DropdownMenuSubTrigger automatically if not using asChild, but we need our styling */}
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
-                <DropdownMenuSubContent className={cn("w-auto min-w-[56px]", !isMobile && "w-56")}>
-                  <DropdownMenuLabel className={cn(isMobile && "hidden")}>Tipos de Relatório PDF</DropdownMenuLabel>
-                  {!isMobile && <DropdownMenuSeparator />}
-                  <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className="cursor-pointer">
-                    <FileSpreadsheet className={cn("h-4 w-4", !isMobile && "mr-2")} />
-                    {!isMobile && <span>Itens Cadastrados</span>}
+                <DropdownMenuSubContent className={cn("p-1 w-auto", isMobile ? "min-w-[58px]" : "min-w-[220px]")}>
+                  {!isMobile && <DropdownMenuLabel className="px-2 py-1.5">Tipos de Relatório PDF</DropdownMenuLabel>}
+                  {!isMobile && <DropdownMenuSeparator className="-mx-1 my-1" />}
+                  <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className={cn(itemBaseStyle)}>
+                    <FileSpreadsheet className={cn(iconBaseStyle, "mr-2")} />
+                    <span>Itens Cadastrados</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGenerateNCItemsReport} className="cursor-pointer text-orange-600 focus:text-orange-700">
-                    <AlertTriangle className={cn("h-4 w-4", !isMobile && "mr-2")} />
-                    {!isMobile && <span>Itens N/C</span>}
+                  <DropdownMenuItem onClick={onGenerateNCItemsReport} className={cn(itemBaseStyle, "text-orange-600 hover:text-orange-700 focus:text-orange-700 hover:bg-orange-500/10 focus:bg-orange-500/10 border-orange-500/50")}>
+                    <AlertTriangle className={cn(iconBaseStyle, "mr-2")} />
+                    <span>Itens N/C</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGeneratePhotoReportPdf} className="cursor-pointer">
-                    <ImageIcon className={cn("h-4 w-4", !isMobile && "mr-2")} />
-                    {!isMobile && <span>Somente Fotos</span>}
+                  <DropdownMenuItem onClick={onGeneratePhotoReportPdf} className={cn(itemBaseStyle)}>
+                    <ImageIcon className={cn(iconBaseStyle, "mr-2")} />
+                    <span>Somente Fotos</span>
                   </DropdownMenuItem>
-                  {!isMobile && <DropdownMenuSeparator />}
-                  <DropdownMenuItem onClick={onGeneratePdf} className="cursor-pointer">
-                    <FileText className={cn("h-4 w-4", !isMobile && "mr-2")} />
-                    {!isMobile && <span>Relatório Completo</span>}
+                  {!isMobile && <DropdownMenuSeparator className="-mx-1 my-1" />}
+                  <DropdownMenuItem onClick={onGeneratePdf} className={cn(itemBaseStyle)}>
+                    <FileText className={cn(iconBaseStyle, "mr-2")} />
+                    <span>Relatório Completo</span>
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
             
-            <DropdownMenuItem onClick={onPrint} className="cursor-pointer">
-              <Printer className={cn("h-4 w-4", !isMobile && "mr-2")} />
+            <DropdownMenuItem onClick={onPrint} className={cn(itemBaseStyle)}>
+              <Printer className={cn(iconBaseStyle, !isMobile && "mr-2")} />
               {!isMobile && <span>Imprimir (Navegador)</span>}
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="-mx-1 my-1" />
 
-            <DropdownMenuItem onClick={onExportJson} className="cursor-pointer">
-              <Download className={cn("h-4 w-4", !isMobile && "mr-2")} />
+            <DropdownMenuItem onClick={onExportJson} className={cn(itemBaseStyle)}>
+              <Download className={cn(iconBaseStyle, !isMobile && "mr-2")} />
               {!isMobile && <span>Exportar JSON</span>}
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={onTriggerImportJson} className="cursor-pointer">
-              <Upload className={cn("h-4 w-4", !isMobile && "mr-2")} />
+            <DropdownMenuItem onClick={onTriggerImportJson} className={cn(itemBaseStyle)}>
+              <Upload className={cn(iconBaseStyle, !isMobile && "mr-2")} />
               {!isMobile && <span>Importar JSON</span>}
             </DropdownMenuItem>
             
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="-mx-1 my-1" />
 
-            <DropdownMenuItem onClick={onNewInspection} className="cursor-pointer text-destructive focus:text-destructive">
-              <PlusSquare className={cn("h-4 w-4", !isMobile && "mr-2")} />
+            <DropdownMenuItem onClick={onNewInspection} className={cn(itemBaseStyle, "text-destructive hover:bg-destructive/10 focus:bg-destructive/10 border-destructive/50 hover:text-destructive focus:text-destructive")}>
+              <PlusSquare className={cn(iconBaseStyle, !isMobile && "mr-2")} />
               {!isMobile && <span>Nova Vistoria (Limpar)</span>}
             </DropdownMenuItem>
 
