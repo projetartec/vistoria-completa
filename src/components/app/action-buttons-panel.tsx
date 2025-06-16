@@ -5,8 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator, // Kept for potential future use, but not used with current FAB item layout
-  DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
@@ -14,20 +12,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   Settings2, 
-  Database, 
-  PlusSquare, 
+  Save,
+  Eye, 
+  EyeOff,
+  Building, 
+  FileDown, 
   Printer, 
   Download, 
   Upload, 
-  FileDown, 
+  PlusSquare, 
   FileSpreadsheet, 
   AlertTriangle, 
-  FileText, 
   ImageIcon, 
-  Building, 
-  Eye, 
-  EyeOff,
-  Save // Added Save icon from example
+  FileText 
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -63,18 +60,17 @@ export function ActionButtonsPanel({
 }: ActionButtonsPanelProps) {
   const isMobile = useIsMobile();
 
-  const fabItemIconSize = "h-6 w-6"; // Slightly larger icons for larger buttons
+  const iconSize = "h-5 w-5"; // Standard icon size
 
-  // Base style for circular FAB-like items inside the dropdown
-  const circularFabItemStyle = "h-12 w-12 rounded-full p-0 shadow-lg flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-transform hover:scale-105 active:scale-95";
+  // Base style for each list item that looks like a floating button
+  const listItemBaseStyle = "flex items-center gap-2 rounded-lg p-2.5 my-1 shadow-md border transition-all duration-150 ease-in-out hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background";
 
   // Specific styles for different actions
-  const primaryFabStyle = cn(circularFabItemStyle, "bg-primary text-primary-foreground hover:bg-primary/90");
-  const secondaryFabStyle = cn(circularFabItemStyle, "bg-secondary text-secondary-foreground hover:bg-secondary/80");
-  const destructiveFabStyle = cn(circularFabItemStyle, "bg-destructive text-destructive-foreground hover:bg-destructive/90");
-  const ncReportFabStyle = cn(circularFabItemStyle, "bg-orange-500 text-white hover:bg-orange-600"); // Using a direct orange for N/C report
-  const accentFabStyle = cn(circularFabItemStyle, "bg-accent text-accent-foreground hover:bg-accent/90");
-  const mutedFabStyle = cn(circularFabItemStyle, "bg-muted text-muted-foreground hover:bg-muted/90");
+  const defaultListItemStyle = cn(listItemBaseStyle, "bg-card text-card-foreground border-input hover:bg-accent hover:text-accent-foreground");
+  const primaryListItemStyle = cn(listItemBaseStyle, "bg-primary/20 text-primary border-primary/50 hover:bg-primary/30");
+  const destructiveListItemStyle = cn(listItemBaseStyle, "bg-destructive text-destructive-foreground border-destructive/70 hover:bg-destructive/90");
+  const ncReportListItemStyle = cn(listItemBaseStyle, "bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200");
+  const accentListItemStyle = cn(listItemBaseStyle, "bg-accent/60 text-accent-foreground border-accent/50 hover:bg-accent/80");
 
 
   return (
@@ -87,7 +83,7 @@ export function ActionButtonsPanel({
           <Button
             variant="default"
             size="icon"
-            className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90"
+            className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground"
             title="Ações da Vistoria"
           >
             <Settings2 className="h-6 w-6" />
@@ -98,69 +94,72 @@ export function ActionButtonsPanel({
           <DropdownMenuContent 
             align="end" 
             sideOffset={10} 
-            className="p-4 w-auto max-w-xs bg-background/95 backdrop-blur-sm shadow-xl rounded-xl border flex flex-wrap justify-center gap-3"
+            className="p-2 w-auto bg-background/95 backdrop-blur-sm shadow-xl rounded-xl border space-y-1"
           >
-            {/* Action Items as Circular FABs */}
-            <DropdownMenuItem onClick={onSave} className={primaryFabStyle} title="Salvar Vistoria">
-              <Save className={fabItemIconSize} />
-              <span className="sr-only">Salvar Vistoria</span>
+            {/* Action Items as styled list items */}
+            <DropdownMenuItem onClick={onSave} className={defaultListItemStyle} title="Salvar Vistoria">
+              <Save className={iconSize} />
+              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Salvar Vistoria</span>}
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={onToggleSavedInspections} className={secondaryFabStyle} title={isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}>
-              {isSavedInspectionsVisible ? <EyeOff className={fabItemIconSize} /> : <Eye className={fabItemIconSize} />}
-              <span className="sr-only">{isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}</span>
+            <DropdownMenuItem onClick={onToggleSavedInspections} className={defaultListItemStyle} title={isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}>
+              {isSavedInspectionsVisible ? <EyeOff className={iconSize} /> : <Eye className={iconSize} />}
+              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>{isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}</span>}
             </DropdownMenuItem>
             
-            <DropdownMenuItem onClick={onAddNewTower} className={primaryFabStyle} title="Nova Torre">
-              <Building className={fabItemIconSize} />
-              <span className="sr-only">Nova Torre</span>
+            <DropdownMenuItem onClick={onAddNewTower} className={defaultListItemStyle} title="Nova Torre">
+              <Building className={iconSize} />
+              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Nova Torre</span>}
             </DropdownMenuItem>
             
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className={cn(secondaryFabStyle, "focus:bg-secondary/90 data-[state=open]:bg-secondary/90")} title="Baixar Relatórios PDF">
-                <FileDown className={fabItemIconSize} />
-                <span className="sr-only">Baixar Relatórios PDF</span>
+              <DropdownMenuSubTrigger className={cn(defaultListItemStyle, "justify-between")} title="Baixar Relatórios PDF">
+                <div className="flex items-center gap-2">
+                  <FileDown className={iconSize} />
+                  <span>{isMobile ? "PDFs" : "Baixar PDF"}</span>
+                </div>
+                {/* Chevron is automatically added by DropdownMenuSubTrigger */}
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
-                <DropdownMenuSubContent className="p-3 w-auto max-w-xs bg-background/95 backdrop-blur-sm shadow-lg rounded-lg border flex flex-wrap justify-center gap-2">
-                  <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className={secondaryFabStyle} title="Relatório de Itens Cadastrados">
-                    <FileSpreadsheet className={fabItemIconSize} />
-                    <span className="sr-only">Relatório de Itens Cadastrados</span>
+                <DropdownMenuSubContent className="p-2 w-auto bg-background/95 backdrop-blur-sm shadow-lg rounded-lg border space-y-1">
+                  <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className={defaultListItemStyle} title="Relatório de Itens Cadastrados">
+                    <FileSpreadsheet className={iconSize} />
+                    <span>Itens Cadastrados</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGenerateNCItemsReport} className={ncReportFabStyle} title="Relatório de Itens N/C">
-                    <AlertTriangle className={fabItemIconSize} />
-                    <span className="sr-only">Relatório de Itens N/C</span>
+                  <DropdownMenuItem onClick={onGenerateNCItemsReport} className={ncReportListItemStyle} title="Relatório de Itens N/C">
+                    <AlertTriangle className={iconSize} />
+                    <span>Itens N/C</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGeneratePhotoReportPdf} className={accentFabStyle} title="Relatório Somente Fotos">
-                    <ImageIcon className={fabItemIconSize} />
-                    <span className="sr-only">Relatório Somente Fotos</span>
+                  <DropdownMenuItem onClick={onGeneratePhotoReportPdf} className={accentListItemStyle} title="Relatório Somente Fotos">
+                    <ImageIcon className={iconSize} />
+                    <span>Somente Fotos</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onGeneratePdf} className={primaryFabStyle} title="Relatório Completo">
-                    <FileText className={fabItemIconSize} />
-                    <span className="sr-only">Relatório Completo</span>
+                  <DropdownMenuItem onClick={onGeneratePdf} className={primaryListItemStyle} title="Relatório Completo">
+                    <FileText className={iconSize} />
+                    <span>Relatório Completo</span>
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
             
-            <DropdownMenuItem onClick={onPrint} className={mutedFabStyle} title="Imprimir">
-              <Printer className={fabItemIconSize} />
-              <span className="sr-only">Imprimir</span>
+            <DropdownMenuItem onClick={onPrint} className={defaultListItemStyle} title="Imprimir">
+              <Printer className={iconSize} />
+              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Imprimir</span>}
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={onExportJson} className={secondaryFabStyle} title="Exportar JSON">
-              <Download className={fabItemIconSize} />
-              <span className="sr-only">Exportar JSON</span>
+            <DropdownMenuItem onClick={onExportJson} className={defaultListItemStyle} title="Exportar JSON">
+              <Download className={iconSize} />
+              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Exportar JSON</span>}
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={onTriggerImportJson} className={secondaryFabStyle} title="Importar JSON">
-              <Upload className={fabItemIconSize} />
-              <span className="sr-only">Importar JSON</span>
+            <DropdownMenuItem onClick={onTriggerImportJson} className={defaultListItemStyle} title="Importar JSON">
+              <Upload className={iconSize} />
+              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Importar JSON</span>}
             </DropdownMenuItem>
             
-            <DropdownMenuItem onClick={onNewInspection} className={destructiveFabStyle} title="Nova Vistoria">
-              <PlusSquare className={fabItemIconSize} />
-              <span className="sr-only">Nova Vistoria</span>
+            <DropdownMenuItem onClick={onNewInspection} className={destructiveListItemStyle} title="Nova Vistoria">
+              <PlusSquare className={iconSize} />
+              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Nova Vistoria</span>}
             </DropdownMenuItem>
 
           </DropdownMenuContent>
