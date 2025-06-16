@@ -769,6 +769,40 @@ export default function FireCheckPage() {
     }
   }, [areAnyGlobalCategoriesExpanded, handleCollapseAllGlobalCategories, handleExpandAllGlobalCategories]);
 
+  const _showAllFloorContentGlobally = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({
+      ...tower,
+      floors: (Array.isArray(tower.floors) ? tower.floors : []).map(floor => ({
+        ...floor,
+        isFloorContentVisible: true,
+      }))
+    })));
+  }, []);
+
+  const _hideAllFloorContentGlobally = useCallback(() => {
+    setActiveTowersData(prevTowers => prevTowers.map(tower => ({
+      ...tower,
+      floors: (Array.isArray(tower.floors) ? tower.floors : []).map(floor => ({
+        ...floor,
+        isFloorContentVisible: false,
+      }))
+    })));
+  }, []);
+
+  const areAnyFloorsGloballyHidden = useMemo(() => {
+    return activeTowersData.some(tower =>
+      (Array.isArray(tower.floors) ? tower.floors : []).some(floor => !floor.isFloorContentVisible)
+    );
+  }, [activeTowersData]);
+
+  const handleToggleAllFloorsGlobally = useCallback(() => {
+    if (areAnyFloorsGloballyHidden) {
+      _showAllFloorContentGlobally();
+    } else {
+      _hideAllFloorContentGlobally();
+    }
+  }, [areAnyFloorsGloballyHidden, _showAllFloorContentGlobally, _hideAllFloorContentGlobally]);
+
 
   const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
     setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
@@ -860,6 +894,12 @@ export default function FireCheckPage() {
                   {areAnyGlobalCategoriesExpanded ? <EyeOff className="mr-1 h-4 w-4 sm:mr-2" /> : <Eye className="mr-1 h-4 w-4 sm:mr-2" />}
                   <span className="hidden sm:inline">
                     {areAnyGlobalCategoriesExpanded ? "Recolher Categorias" : "Expandir Categorias"}
+                  </span>
+                </Button>
+                <Button onClick={handleToggleAllFloorsGlobally} variant="outline" size="sm" title={areAnyFloorsGloballyHidden ? "Mostrar Conteúdo de Todos os Andares" : "Ocultar Conteúdo de Todos os Andares"}>
+                  {areAnyFloorsGloballyHidden ? <Eye className="mr-1 h-4 w-4 sm:mr-2" /> : <EyeOff className="mr-1 h-4 w-4 sm:mr-2" />}
+                  <span className="hidden sm:inline">
+                    {areAnyFloorsGloballyHidden ? "Mostrar Andares" : "Ocultar Andares"}
                   </span>
                 </Button>
               </div>
@@ -1018,3 +1058,4 @@ export default function FireCheckPage() {
     
 
     
+
