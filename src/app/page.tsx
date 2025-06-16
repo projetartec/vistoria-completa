@@ -943,11 +943,18 @@ export default function FireCheckPage() {
                 >
                   {areAnyFloorsGloballyHidden ? <Layers className="h-5 w-5" /> : <PanelTopClose className="h-5 w-5" />}
                 </Button>
-                <Button onClick={handleToggleAllTowersGlobally} variant="outline" size="sm" title={areAnyTowersGloballyHidden ? "Mostrar Conteúdo de Todas as Torres" : "Ocultar Conteúdo de Todas as Torres"}>
-                  {areAnyTowersGloballyHidden ? <Library className="mr-1 h-4 w-4 sm:mr-2" /> : <Archive className="mr-1 h-4 w-4 sm:mr-2" />}
-                  <span className="hidden sm:inline">
-                    {areAnyTowersGloballyHidden ? "Mostrar Torres" : "Ocultar Torres"}
-                  </span>
+                <Button 
+                  onClick={handleToggleAllTowersGlobally} 
+                  size="icon" 
+                  className={cn(
+                    "rounded-full",
+                    areAnyTowersGloballyHidden
+                      ? "bg-green-500 hover:bg-green-600 text-white"
+                      : "bg-red-500 hover:bg-red-600 text-white"
+                  )}
+                  title={areAnyTowersGloballyHidden ? "Mostrar Conteúdo de Todas as Torres" : "Ocultar Conteúdo de Todas as Torres"}
+                >
+                  {areAnyTowersGloballyHidden ? <Library className="h-5 w-5" /> : <Archive className="h-5 w-5" />}
                 </Button>
               </div>
 
@@ -1113,3 +1120,6 @@ export default function FireCheckPage() {
 
 
 
+
+
+    
