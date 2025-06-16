@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuTrigger, // Added missing import
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSub,
@@ -60,12 +61,10 @@ export function ActionButtonsPanel({
 }: ActionButtonsPanelProps) {
   const isMobile = useIsMobile();
 
-  const iconSize = "h-5 w-5"; // Standard icon size
+  const iconSize = "h-5 w-5"; 
 
-  // Base style for each list item that looks like a floating button
   const listItemBaseStyle = "flex items-center gap-2 rounded-lg p-2.5 my-1 shadow-md border transition-all duration-150 ease-in-out hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background";
 
-  // Specific styles for different actions
   const defaultListItemStyle = cn(listItemBaseStyle, "bg-card text-card-foreground border-input hover:bg-accent hover:text-accent-foreground");
   const primaryListItemStyle = cn(listItemBaseStyle, "bg-primary/20 text-primary border-primary/50 hover:bg-primary/30");
   const destructiveListItemStyle = cn(listItemBaseStyle, "bg-destructive text-destructive-foreground border-destructive/70 hover:bg-destructive/90");
@@ -96,29 +95,27 @@ export function ActionButtonsPanel({
             sideOffset={10} 
             className="p-2 w-auto bg-background/95 backdrop-blur-sm shadow-xl rounded-xl border space-y-1"
           >
-            {/* Action Items as styled list items */}
             <DropdownMenuItem onClick={onSave} className={defaultListItemStyle} title="Salvar Vistoria">
               <Save className={iconSize} />
-              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Salvar Vistoria</span>}
+              {!isMobile && <span>Salvar Vistoria</span>}
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={onToggleSavedInspections} className={defaultListItemStyle} title={isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}>
               {isSavedInspectionsVisible ? <EyeOff className={iconSize} /> : <Eye className={iconSize} />}
-              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>{isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}</span>}
+              {!isMobile && <span>{isSavedInspectionsVisible ? "Ocultar Salvas" : "Ver Salvas"}</span>}
             </DropdownMenuItem>
             
             <DropdownMenuItem onClick={onAddNewTower} className={defaultListItemStyle} title="Nova Torre">
               <Building className={iconSize} />
-              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Nova Torre</span>}
+              {!isMobile && <span>Nova Torre</span>}
             </DropdownMenuItem>
             
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className={cn(defaultListItemStyle, "justify-between")} title="Baixar Relatórios PDF">
                 <div className="flex items-center gap-2">
                   <FileDown className={iconSize} />
-                  <span>{isMobile ? "PDFs" : "Baixar PDF"}</span>
+                  {(isMobile) ? <span>PDFs</span> : <span>Baixar PDF</span>}
                 </div>
-                {/* Chevron is automatically added by DropdownMenuSubTrigger */}
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="p-2 w-auto bg-background/95 backdrop-blur-sm shadow-lg rounded-lg border space-y-1">
@@ -144,22 +141,22 @@ export function ActionButtonsPanel({
             
             <DropdownMenuItem onClick={onPrint} className={defaultListItemStyle} title="Imprimir">
               <Printer className={iconSize} />
-              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Imprimir</span>}
+              {!isMobile && <span>Imprimir</span>}
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={onExportJson} className={defaultListItemStyle} title="Exportar JSON">
               <Download className={iconSize} />
-              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Exportar JSON</span>}
+              {!isMobile && <span>Exportar JSON</span>}
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={onTriggerImportJson} className={defaultListItemStyle} title="Importar JSON">
               <Upload className={iconSize} />
-              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Importar JSON</span>}
+              {!isMobile && <span>Importar JSON</span>}
             </DropdownMenuItem>
             
             <DropdownMenuItem onClick={onNewInspection} className={destructiveListItemStyle} title="Nova Vistoria">
               <PlusSquare className={iconSize} />
-              {(!isMobile || isMobile) && <span className={cn(isMobile && "sr-only")}>Nova Vistoria</span>}
+              {!isMobile && <span>Nova Vistoria</span>}
             </DropdownMenuItem>
 
           </DropdownMenuContent>
