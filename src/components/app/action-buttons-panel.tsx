@@ -67,10 +67,10 @@ export function ActionButtonsPanel({
   const iconStyle = "h-5 w-5"; // Consistent icon size
 
   // Base style for pill-shaped floating buttons inside the dropdown
-  const pillItemBaseStyle = "cursor-pointer h-10 px-3 py-1.5 rounded-full border shadow-sm my-1 flex items-center gap-2 text-sm font-medium";
+  const pillItemBaseStyle = "cursor-pointer h-10 px-3 py-1.5 rounded-full border shadow-md my-1 flex items-center gap-2 text-sm font-medium";
 
   // Style for default pill items
-  const defaultPillStyle = cn(pillItemBaseStyle, "bg-background border-input hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground");
+  const defaultPillStyle = cn(pillItemBaseStyle, "bg-card border-input hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground");
   
   // Style for destructive pill items
   const destructivePillStyle = cn(pillItemBaseStyle, "bg-destructive border-destructive/80 text-destructive-foreground hover:bg-destructive/90 focus:bg-destructive/90");
@@ -100,7 +100,7 @@ export function ActionButtonsPanel({
           <DropdownMenuContent 
             align="end" 
             sideOffset={10} 
-            className={cn("p-2 w-auto bg-background/95 backdrop-blur-sm shadow-xl rounded-xl border", isMobile ? "min-w-[60px]" : "min-w-[280px]")} // Adjusted min-width for mobile consistency
+            className={cn("p-2 w-auto bg-background/95 backdrop-blur-sm shadow-xl rounded-xl border", isMobile ? "min-w-[60px]" : "min-w-[280px]")}
           >
             {!isMobile && <DropdownMenuLabel className="px-2 py-1.5 text-xs text-muted-foreground">AÇÕES DA VISTORIA</DropdownMenuLabel>}
             
@@ -128,29 +128,29 @@ export function ActionButtonsPanel({
               <DropdownMenuSubTrigger className={cn(defaultPillStyle, "justify-between w-full")}>
                 <div className="flex items-center gap-2"> {/* Group icon and text */}
                   <FileDown className={iconStyle} />
-                  {(isMobile && !isMobile /* This condition ensures text is shown on mobile for this specific trigger */) || !isMobile ? <span>Baixar PDF</span> : null}
-                  {isMobile && <span>PDFs</span>}
+                  {(!isMobile) && <span>Baixar PDF</span>}
+                  {(isMobile) && <span>PDFs</span>}
                 </div>
-                {/* Chevron is automatically added by DropdownMenuSubTrigger and placed with ml-auto */}
+                {/* Chevron is automatically added by DropdownMenuSubTrigger and placed with ml-auto on desktop */}
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className={cn("p-2 w-auto bg-background/95 backdrop-blur-sm shadow-lg rounded-lg border", isMobile ? "min-w-[230px]" : "min-w-[230px]")}>
-                  <DropdownMenuLabel className={cn("px-2 py-1.5 text-xs text-muted-foreground", isMobile && "text-center")}>RELATÓRIOS PDF</DropdownMenuLabel>
+                  {(!isMobile || isMobile) && <DropdownMenuLabel className={cn("px-2 py-1.5 text-xs text-muted-foreground", isMobile && "text-center")}>RELATÓRIOS PDF</DropdownMenuLabel>}
                   <DropdownMenuItem onClick={onGenerateRegisteredItemsReport} className={defaultPillStyle}>
-                    <FileSpreadsheet className={iconStyle} />
+                    <FileSpreadsheet className={cn(iconStyle, (isMobile || !isMobile) && "mr-0")} /> {/* Adjusted margin for consistency */}
                     <span>Itens Cadastrados</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onGenerateNCItemsReport} className={ncReportPillStyle}>
-                    <AlertTriangle className={iconStyle} />
+                    <AlertTriangle className={cn(iconStyle, (isMobile || !isMobile) && "mr-0")} />
                     <span>Itens N/C</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onGeneratePhotoReportPdf} className={defaultPillStyle}>
-                    <ImageIcon className={iconStyle} />
+                    <ImageIcon className={cn(iconStyle, (isMobile || !isMobile) && "mr-0")} />
                     <span>Somente Fotos</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="-mx-1 my-1" />
-                  <DropdownMenuItem onClick={onGeneratePdf} className={cn(defaultPillStyle, "bg-primary/10 border-primary/30 hover:bg-primary/20 text-primary-foregrounds")}>
-                    <FileText className={iconStyle} />
+                  <DropdownMenuItem onClick={onGeneratePdf} className={cn(defaultPillStyle, "bg-primary/20 border-primary/50 text-primary hover:bg-primary/30 focus:bg-primary/30")}>
+                    <FileText className={cn(iconStyle, (isMobile || !isMobile) && "mr-0")} />
                     <span>Relatório Completo</span>
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
