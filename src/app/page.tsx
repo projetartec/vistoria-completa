@@ -919,7 +919,6 @@ export default function FireCheckPage() {
               <div className="flex flex-wrap gap-2 mb-4">
                 <Button
                   onClick={handleToggleAllGlobalCategories}
-                  variant="default"
                   size="icon"
                   className={cn(
                     "rounded-full",
@@ -931,11 +930,18 @@ export default function FireCheckPage() {
                 >
                   {areAnyGlobalCategoriesExpanded ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </Button>
-                <Button onClick={handleToggleAllFloorsGlobally} variant="outline" size="sm" title={areAnyFloorsGloballyHidden ? "Mostrar Conteúdo de Todos os Andares" : "Ocultar Conteúdo de Todos os Andares"}>
-                  {areAnyFloorsGloballyHidden ? <Layers className="mr-1 h-4 w-4 sm:mr-2" /> : <PanelTopClose className="mr-1 h-4 w-4 sm:mr-2" />}
-                  <span className="hidden sm:inline">
-                    {areAnyFloorsGloballyHidden ? "Mostrar Andares" : "Ocultar Andares"}
-                  </span>
+                <Button
+                  onClick={handleToggleAllFloorsGlobally}
+                  size="icon"
+                  className={cn(
+                    "rounded-full",
+                    areAnyFloorsGloballyHidden
+                      ? "bg-green-500 hover:bg-green-600 text-white" 
+                      : "bg-red-500 hover:bg-red-600 text-white"
+                  )}
+                  title={areAnyFloorsGloballyHidden ? "Mostrar Conteúdo de Todos os Andares" : "Ocultar Conteúdo de Todos os Andares"}
+                >
+                  {areAnyFloorsGloballyHidden ? <Layers className="h-5 w-5" /> : <PanelTopClose className="h-5 w-5" />}
                 </Button>
                 <Button onClick={handleToggleAllTowersGlobally} variant="outline" size="sm" title={areAnyTowersGloballyHidden ? "Mostrar Conteúdo de Todas as Torres" : "Ocultar Conteúdo de Todas as Torres"}>
                   {areAnyTowersGloballyHidden ? <Library className="mr-1 h-4 w-4 sm:mr-2" /> : <Archive className="mr-1 h-4 w-4 sm:mr-2" />}
@@ -1104,5 +1110,6 @@ export default function FireCheckPage() {
 
 
     
+
 
 
