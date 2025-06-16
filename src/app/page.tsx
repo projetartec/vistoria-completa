@@ -959,7 +959,6 @@ export default function FireCheckPage() {
               </div>
 
               {activeTowersData.map((tower, towerIndex) => {
-                const areAnyFloorsInThisTowerVisible = (Array.isArray(tower.floors) ? tower.floors : []).some(f => f.isFloorContentVisible !== false);
                 return (
                 <Card key={tower.id} className="mb-8 shadow-md border-primary/50">
                   <CardHeader className="bg-primary/5 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -973,9 +972,18 @@ export default function FireCheckPage() {
                       />
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                       <Button onClick={() => handleToggleTowerContent(towerIndex)} variant="outline" size="sm" title={tower.isTowerContentVisible ? "Ocultar Conteúdo da Torre" : "Mostrar Conteúdo da Torre"}>
-                         {tower.isTowerContentVisible ? <ChevronUp className="mr-1 h-4 w-4"/> : <ChevronDown className="mr-1 h-4 w-4"/>}
-                         <span className="hidden sm:inline">{tower.isTowerContentVisible ? "Ocultar Torre" : "Mostrar Torre"}</span>
+                       <Button 
+                        onClick={() => handleToggleTowerContent(towerIndex)} 
+                        size="icon"
+                        className={cn(
+                          "rounded-full h-9 w-9",
+                          tower.isTowerContentVisible
+                            ? "bg-red-500 hover:bg-red-600 text-white"
+                            : "bg-green-500 hover:bg-green-600 text-white"
+                        )}
+                        title={tower.isTowerContentVisible ? "Ocultar Conteúdo da Torre" : "Mostrar Conteúdo da Torre"}
+                       >
+                         {tower.isTowerContentVisible ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
                        </Button>
                        <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="border-green-500 text-green-600 hover:bg-green-500/10">
                          <Plus className="mr-1 h-4 w-4" /> Adicionar Andar
