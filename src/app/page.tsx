@@ -17,7 +17,7 @@ import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.co
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Upload, Layers, PanelClose } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Upload, Layers, PanelTopClose } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { saveInspectionToDB, getAllInspectionsFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { format } from 'date-fns';
@@ -897,7 +897,7 @@ export default function FireCheckPage() {
                   </span>
                 </Button>
                 <Button onClick={handleToggleAllFloorsGlobally} variant="outline" size="sm" title={areAnyFloorsGloballyHidden ? "Mostrar Conteúdo de Todos os Andares" : "Ocultar Conteúdo de Todos os Andares"}>
-                  {areAnyFloorsGloballyHidden ? <Layers className="mr-1 h-4 w-4 sm:mr-2" /> : <PanelClose className="mr-1 h-4 w-4 sm:mr-2" />}
+                  {areAnyFloorsGloballyHidden ? <Layers className="mr-1 h-4 w-4 sm:mr-2" /> : <PanelTopClose className="mr-1 h-4 w-4 sm:mr-2" />}
                   <span className="hidden sm:inline">
                     {areAnyFloorsGloballyHidden ? "Mostrar Andares" : "Ocultar Andares"}
                   </span>
