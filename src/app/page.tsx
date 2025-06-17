@@ -1013,9 +1013,18 @@ export default function FireCheckPage() {
                                   />
                                 </div>
                                 <div className="flex flex-row items-center gap-x-2 md:ml-auto">
-                                  <Button onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)} variant="outline" size="xs" title={areAnyCategoriesExpanded ? "Recolher itens do andar" : "Expandir itens do andar"}>
-                                    {areAnyCategoriesExpanded ? <EyeOff className="mr-1 h-3 w-3"/> : <Eye className="mr-1 h-3 w-3"/>}
-                                    <span className="hidden sm:inline">{areAnyCategoriesExpanded ? "Recolher" : "Expandir"}</span>
+                                  <Button 
+                                    onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
+                                    size="icon"
+                                    title={areAnyCategoriesExpanded ? "Recolher itens do andar" : "Expandir itens do andar"}
+                                    className={cn(
+                                      "rounded-full h-9 w-9", // Ensure consistent size if needed, or adjust h-5 w-5 for icon
+                                      areAnyCategoriesExpanded
+                                        ? "bg-red-500 hover:bg-red-600 text-white"
+                                        : "bg-green-500 hover:bg-green-600 text-white"
+                                    )}
+                                  >
+                                    {areAnyCategoriesExpanded ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
                                   </Button>
                                   <Button onClick={() => handleToggleFloorContent(towerIndex, floorIndex)} variant="outline" size="xs" title={floorData.isFloorContentVisible ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}>
                                     {floorData.isFloorContentVisible ? <ChevronUp className="mr-1 h-3 w-3"/> : <ChevronDown className="mr-1 h-3 w-3"/>}
