@@ -418,11 +418,13 @@ export default function FireCheckPage() {
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => {
         const updatedPrevTowers = prevTowers.map((tower, index) => {
+            // Collapse the currently last tower if it exists
             if (index === prevTowers.length - 1 && prevTowers.length > 0) {
                 return { ...tower, isTowerContentVisible: false }; 
             }
             return tower;
         });
+        // New tower starts expanded
         const newTower = { ...createNewTowerEntry(), isTowerContentVisible: true };
         return [...updatedPrevTowers, newTower];
     });
@@ -443,6 +445,7 @@ export default function FireCheckPage() {
           const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
           
           const updatedCurrentFloors = currentFloors.map((f, i) => {
+             // Collapse the previously last floor
             if (i === currentFloors.length - 1 && currentFloors.length > 0) { 
               return { ...f, isFloorContentVisible: false }; 
             }
@@ -466,6 +469,7 @@ export default function FireCheckPage() {
             newFloorCategories = JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false}));
           }
           
+          // New floor starts with its content visible
           const newFloorEntry = { 
             ...createNewFloorEntry(), 
             categories: newFloorCategories,
@@ -1060,8 +1064,8 @@ export default function FireCheckPage() {
                                   className={cn(
                                     "rounded-full h-9 w-9",
                                     floorData.isFloorContentVisible
-                                      ? "bg-red-500 hover:bg-red-600 text-white"
-                                      : "bg-green-500 hover:bg-green-600 text-white"
+                                      ? "border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700"
+                                      : "border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700"
                                   )}
                                 >
                                   {floorData.isFloorContentVisible ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
