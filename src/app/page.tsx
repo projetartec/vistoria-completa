@@ -968,7 +968,7 @@ export default function FireCheckPage() {
                         value={tower.towerName}
                         onChange={(e) => handleTowerNameChange(towerIndex, e.target.value)}
                         placeholder={`Nome da Torre ${towerIndex + 1}`}
-                        className="text-lg font-semibold min-w-[150px]"
+                        className="text-lg font-semibold w-[150px]"
                       />
                        <Button 
                         onClick={() => handleToggleTowerContent(towerIndex)} 
@@ -1000,7 +1000,7 @@ export default function FireCheckPage() {
                           <Card key={floorData.id} className="mb-6 shadow-sm">
                             <CardContent className="p-3 space-y-2">
                               <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-x-2 gap-y-2 mb-2">
-                                <div className="flex flex-row items-center gap-x-2 flex-grow md:flex-grow-0">
+                                <div className="flex flex-row items-center gap-x-2">
                                   <Label htmlFor={`floorName-${floorData.id}`} className="text-sm font-medium whitespace-nowrap">
                                     ANDAR:
                                   </Label>
