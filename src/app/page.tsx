@@ -234,6 +234,10 @@ export default function FireCheckPage() {
                             actualModificationsMadeToCategory = true;
                             if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                         }
+                        if (mutatedCategory.status === 'N/C' && !mutatedCategory.showObservation) {
+                            mutatedCategory.showObservation = true;
+                            actualModificationsMadeToCategory = true;
+                        }
                         break;
                     case 'subItemStatus':
                     case 'subItemObservation':
@@ -246,21 +250,58 @@ export default function FireCheckPage() {
                             const oldSubItemsRef = mutatedCategory.subItems;
                             mutatedCategory.subItems = mutatedCategory.subItems.map(sub => {
                                 if (sub.id !== update.subItemId) return sub;
+                                
                                 let newSubState = { ...sub };
-                                let subItemChanged = false;
-                                if (update.field === 'subItemStatus' && newSubState.status !== (update.value as StatusOption | undefined)) { newSubState.status = update.value as StatusOption | undefined; subItemChanged = true; }
-                                else if (update.field === 'subItemObservation' && newSubState.observation !== (update.value as string)) { newSubState.observation = update.value as string; subItemChanged = true; }
-                                else if (update.field === 'subItemShowObservation' && newSubState.showObservation !== (update.value as boolean)) { newSubState.showObservation = update.value as boolean; subItemChanged = true; }
-                                else if (update.field === 'renameSubItemName' && update.newName && newSubState.name !== update.newName) { newSubState.name = update.newName as string; subItemChanged = true; }
-                                else if (update.field === 'subItemPhotoDataUri' && newSubState.photoDataUri !== (update.value as string | null)) { newSubState.photoDataUri = update.value as string | null; if (!update.value) newSubState.photoDescription = ''; subItemChanged = true; }
-                                else if (update.field === 'subItemPhotoDescription' && newSubState.photoDescription !== (update.value as string)) { newSubState.photoDescription = update.value as string; subItemChanged = true; }
-                                else if (update.field === 'removeSubItemPhoto') { newSubState.photoDataUri = null; newSubState.photoDescription = ''; subItemChanged = true; }
+                                let individualSubItemAltered = false;
 
-                                if (subItemChanged) {
+                                if (update.field === 'subItemStatus') {
+                                    if (newSubState.status !== (update.value as StatusOption | undefined)) {
+                                        newSubState.status = update.value as StatusOption | undefined;
+                                        individualSubItemAltered = true;
+                                    }
+                                    if (newSubState.status === 'N/C' && !newSubState.showObservation) {
+                                        newSubState.showObservation = true;
+                                        individualSubItemAltered = true;
+                                    }
+                                } else if (update.field === 'subItemObservation') {
+                                     if (newSubState.observation !== (update.value as string)) {
+                                        newSubState.observation = update.value as string;
+                                        individualSubItemAltered = true;
+                                    }
+                                } else if (update.field === 'subItemShowObservation') {
+                                    if (newSubState.showObservation !== (update.value as boolean)) {
+                                        newSubState.showObservation = update.value as boolean;
+                                        individualSubItemAltered = true;
+                                    }
+                                } else if (update.field === 'renameSubItemName' && update.newName) {
+                                    if (newSubState.name !== update.newName) {
+                                        newSubState.name = update.newName as string;
+                                        individualSubItemAltered = true;
+                                    }
+                                } else if (update.field === 'subItemPhotoDataUri') {
+                                    if (newSubState.photoDataUri !== (update.value as string | null)) {
+                                        newSubState.photoDataUri = update.value as string | null;
+                                        if (!update.value) newSubState.photoDescription = '';
+                                        individualSubItemAltered = true;
+                                    }
+                                } else if (update.field === 'subItemPhotoDescription') {
+                                    if (newSubState.photoDescription !== (update.value as string)) {
+                                        newSubState.photoDescription = update.value as string;
+                                        individualSubItemAltered = true;
+                                    }
+                                } else if (update.field === 'removeSubItemPhoto') {
+                                    if (newSubState.photoDataUri !== null) {
+                                        newSubState.photoDataUri = null;
+                                        newSubState.photoDescription = '';
+                                        individualSubItemAltered = true;
+                                    }
+                                }
+                                
+                                if (individualSubItemAltered) {
                                     actualModificationsMadeToCategory = true;
                                     if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                                 }
-                                return subItemChanged ? newSubState : sub;
+                                return individualSubItemAltered ? newSubState : sub;
                             });
                             if (actualModificationsMadeToCategory && mutatedCategory.subItems !== oldSubItemsRef) {
                                 mutatedCategory.subItems = [...mutatedCategory.subItems];
@@ -1002,7 +1043,7 @@ export default function FireCheckPage() {
                         className="text-lg font-semibold w-[150px]"
                       />
                        <Button
-                        variant="outline" 
+                        variant="outline"
                         onClick={() => handleToggleTowerContent(towerIndex)} 
                         size="icon"
                         className={cn(
