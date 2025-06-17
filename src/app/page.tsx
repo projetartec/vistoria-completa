@@ -423,8 +423,18 @@ export default function FireCheckPage() {
     setActiveTowersData(prevTowers =>
       prevTowers.map((tower, index) => {
         if (index === towerIndex) {
-          let newFloorCategories: InspectionCategoryState[];
           const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
+          
+          // Collapse the previously last floor if it exists
+          const updatedCurrentFloors = currentFloors.map((f, i) => {
+            if (i === currentFloors.length - 1) { // If this is the last floor in the current list
+              return { ...f, isFloorContentVisible: false }; // Collapse it
+            }
+            return f;
+          });
+
+          let newFloorCategories: InspectionCategoryState[];
+          // Source for categories should be the original last floor, or initial if no floors yet
           const sourceFloorForCategories = currentFloors.length > 0 ? currentFloors[currentFloors.length - 1] : null;
 
           if (sourceFloorForCategories) {
@@ -440,10 +450,16 @@ export default function FireCheckPage() {
           } else {
             newFloorCategories = JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false}));
           }
+          
+          const newFloorEntry = { 
+            ...createNewFloorEntry(), // This sets isFloorContentVisible: false by default
+            categories: newFloorCategories,
+            isFloorContentVisible: true // Ensure the new floor is visible
+          };
 
           return {
             ...tower,
-            floors: [...currentFloors, { ...createNewFloorEntry(), categories: newFloorCategories }],
+            floors: [...updatedCurrentFloors, newFloorEntry],
           };
         }
         return tower;
