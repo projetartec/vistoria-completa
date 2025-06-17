@@ -251,7 +251,7 @@ const InspectionCategoryItemComponent = ({
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
     if (field === 'markAllSubItemsNA') payload = { field };
-    else if (field === 'markAllSubItemsOK') payload = { field }; // Added
+    else if (field === 'markAllSubItemsOK') payload = { field }; 
     else if (field === 'addSubItem') payload = { field, categoryId: category.id, value: value as string };
     else if (field === 'removeSubItem' && subItemId) payload = { field, categoryId: category.id, subItemId };
     else if (field === 'renameCategoryTitle') payload = { field, newTitle: value as string };
@@ -358,7 +358,6 @@ const InspectionCategoryItemComponent = ({
             </AccordionTrigger>
           )}
           
-          {/* Buttons for moving and deleting category removed */}
         </div>
         
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
@@ -371,14 +370,6 @@ const InspectionCategoryItemComponent = ({
                 className="rounded-full text-green-600 border-green-500 hover:bg-green-500/10 hover:text-green-700"
               >
                 <CheckSquare className="mr-2 h-4 w-4" /> Marcar Todos OK
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleUpdate('markAllSubItemsNA')} 
-                className="rounded-full text-yellow-600 border-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-700"
-              >
-                <ListX className="mr-2 h-4 w-4" /> Marcar Todos N/A
               </Button>
             </div>
           )}
@@ -444,3 +435,4 @@ const InspectionCategoryItemComponent = ({
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
+
