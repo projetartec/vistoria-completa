@@ -411,7 +411,7 @@ const InspectionCategoryItemComponent = ({
                       <Textarea value={subItem.photoDescription || ''} onChange={(e) => handleUpdate('subItemPhotoDescription', e.target.value, subItem.id)} placeholder="Obs. da foto..." className="w-full text-sm" rows={2}/>
                       <Button onClick={() => handleRemovePhoto(subItem.id)} variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 border-destructive/50"><Trash2 className="mr-1 h-4 w-4" /> Remover Foto</Button>
                     </div>
-                  ) : ( <> <input type="file" accept="image/*" capture="environment" ref={el => fileInputRefs.current[subItem.id] = el} onChange={(e) => handlePhotoChange(e, subItem.id)} className="hidden" id={`photo-input-${subItem.id}`}/> <Button onClick={() => fileInputRefs.current[subItem.id]?.click()} variant="outline" size="sm"><Camera className="mr-2 h-4 w-4" /> Adicionar Foto</Button> </> )}
+                  ) : ( <> <input type="file" accept="image/*" capture="environment" ref={el => fileInputRefs.current[subItem.id] = el} onChange={(e) => handlePhotoChange(e, subItem.id)} className="hidden" id={`photo-input-${subItem.id}`}/> <Button onClick={() => fileInputRefs.current[subItem.id]?.click()} variant="outline" size="icon" className="rounded-full" title="Adicionar Foto"><Camera className="h-4 w-4" /></Button> </> )}
                 </div>
               </div>
             );
