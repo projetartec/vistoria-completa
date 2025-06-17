@@ -408,7 +408,16 @@ export default function FireCheckPage() {
   }, [clientInfo.clientLocation]);
 
   const handleAddNewTower = useCallback(() => {
-    setActiveTowersData(prevTowers => [...prevTowers, createNewTowerEntry()]);
+    setActiveTowersData(prevTowers => {
+        const updatedPrevTowers = prevTowers.map((tower, index) => {
+            if (index === prevTowers.length - 1) { // If this is the last tower
+                return { ...tower, isTowerContentVisible: false }; // Collapse it
+            }
+            return tower;
+        });
+        const newTower = { ...createNewTowerEntry(), isTowerContentVisible: true }; // New tower starts visible
+        return [...updatedPrevTowers, newTower];
+    });
   }, []);
 
   const handleRemoveTower = useCallback((towerIndex: number) => {
