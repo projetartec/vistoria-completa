@@ -376,7 +376,6 @@ const InspectionCategoryItemComponent = ({
           )}
 
           {category.type === 'standard' && category.subItems?.map((subItem) => {
-            const subItemFileInputRef = React.createRef<HTMLInputElement>();
             if (subItem.isRegistry) {
               if (subItem.id === 'extintor_cadastro') return <ExtinguisherRegistrySubItem key={subItem.id} subItem={subItem} onUpdate={handleSubItemRegistryUpdate} />;
               else if (subItem.id === 'hidrantes_cadastro_mangueiras') return <HoseRegistrySubItem key={subItem.id} subItem={subItem} onUpdate={handleSubItemRegistryUpdate} />;
@@ -400,19 +399,41 @@ const InspectionCategoryItemComponent = ({
                     </RadioGroup>
                     <Button variant="ghost" size="icon" onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)} className="h-9 w-9 text-muted-foreground hover:text-foreground" title={subItem.showObservation ? 'Esconder Obs.' : 'Mostrar Obs.'}>{subItem.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
                     <Button variant="ghost" size="icon" onClick={() => handleUpdate('removeSubItem', undefined, subItem.id)} className="h-9 w-9 text-destructive hover:bg-destructive/10" title="Remover subitem"><Trash2 className="h-5 w-5" /></Button>
+                    {!subItem.photoDataUri && (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          ref={el => fileInputRefs.current[subItem.id] = el}
+                          onChange={(e) => handlePhotoChange(e, subItem.id)}
+                          className="hidden"
+                          id={`photo-input-${subItem.id}`}
+                        />
+                        <Button
+                          onClick={() => fileInputRefs.current[subItem.id]?.click()}
+                          variant="outline"
+                          size="icon"
+                          className="rounded-full h-9 w-9"
+                          title="Adicionar Foto"
+                        >
+                          <Camera className="h-5 w-5" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {subItem.showObservation && ( <div className="mt-1"><Textarea value={subItem.observation} onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)} placeholder="Observações..." className="w-full text-sm"/></div> )}
-                <div className="mt-2 space-y-2 p-2 border rounded-md bg-muted/20">
-                  {subItem.photoDataUri ? (
+                {subItem.photoDataUri && (
+                  <div className="mt-2 space-y-2 p-2 border rounded-md bg-muted/20">
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Foto:</Label>
                       <Image src={subItem.photoDataUri} alt={`Foto de ${subItem.name}`} width={150} height={150} className="rounded-md object-contain max-h-[150px] w-auto border" />
                       <Textarea value={subItem.photoDescription || ''} onChange={(e) => handleUpdate('subItemPhotoDescription', e.target.value, subItem.id)} placeholder="Obs. da foto..." className="w-full text-sm" rows={2}/>
                       <Button onClick={() => handleRemovePhoto(subItem.id)} variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 border-destructive/50"><Trash2 className="mr-1 h-4 w-4" /> Remover Foto</Button>
                     </div>
-                  ) : ( <> <input type="file" accept="image/*" capture="environment" ref={el => fileInputRefs.current[subItem.id] = el} onChange={(e) => handlePhotoChange(e, subItem.id)} className="hidden" id={`photo-input-${subItem.id}`}/> <Button onClick={() => fileInputRefs.current[subItem.id]?.click()} variant="outline" size="icon" className="rounded-full" title="Adicionar Foto"><Camera className="h-4 w-4" /></Button> </> )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}
