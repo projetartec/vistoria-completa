@@ -1011,8 +1011,6 @@ export default function FireCheckPage() {
                                     placeholder="Ex: Térreo, 1A"
                                     className="flex-grow max-w-xs min-w-[100px] h-9 text-sm"
                                   />
-                                </div>
-                                <div className="flex flex-row items-center gap-x-2 md:ml-auto">
                                   <Button 
                                     onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
                                     size="icon"
@@ -1039,6 +1037,8 @@ export default function FireCheckPage() {
                                   >
                                     {floorData.isFloorContentVisible ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
                                   </Button>
+                                </div>
+                                <div className="flex flex-row items-center gap-x-2 md:ml-auto">
                                   {(Array.isArray(tower.floors) ? tower.floors : []).length > 1 && (
                                     <Button variant="ghost" size="icon" onClick={() => handleRemoveFloorFromTower(towerIndex, floorIndex)} className="text-destructive hover:bg-destructive/10 h-8 w-8" title="Remover este andar">
                                       <Trash2 className="h-4 w-4" />
