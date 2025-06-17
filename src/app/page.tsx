@@ -443,7 +443,7 @@ export default function FireCheckPage() {
           const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
           
           const updatedCurrentFloors = currentFloors.map((f, i) => {
-            if (i === currentFloors.length - 1 && currentFloors.length > 0) { // Collapse only the last floor if it exists
+            if (i === currentFloors.length - 1 && currentFloors.length > 0) { 
               return { ...f, isFloorContentVisible: false }; 
             }
             return f;
@@ -469,7 +469,7 @@ export default function FireCheckPage() {
           const newFloorEntry = { 
             ...createNewFloorEntry(), 
             categories: newFloorCategories,
-            isFloorContentVisible: true // New floor starts visible
+            isFloorContentVisible: true 
           };
 
           return {
@@ -1040,21 +1040,22 @@ export default function FireCheckPage() {
                                   className="w-[150px] h-9 text-sm"
                                 />
                                 <Button
-                                  onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
+                                  variant="outline"
                                   size="icon"
+                                  onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
                                   title={areAnyCategoriesExpanded ? "Recolher itens do andar" : "Expandir itens do andar"}
                                   className={cn(
                                     "rounded-full h-9 w-9", 
                                     areAnyCategoriesExpanded
-                                      ? "bg-red-500 hover:bg-red-600 text-white"
-                                      : "bg-green-500 hover:bg-green-600 text-white"
+                                      ? "border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700"
+                                      : "border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700"
                                   )}
                                 >
                                   {areAnyCategoriesExpanded ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
                                 </Button>
                                 <Button 
-                                  onClick={() => handleToggleFloorContent(towerIndex, floorIndex)} 
                                   size="icon" 
+                                  onClick={() => handleToggleFloorContent(towerIndex, floorIndex)} 
                                   title={floorData.isFloorContentVisible ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
                                   className={cn(
                                     "rounded-full h-9 w-9",
