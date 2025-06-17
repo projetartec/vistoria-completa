@@ -1048,8 +1048,8 @@ export default function FireCheckPage() {
                           </Card>
                         );
                       })}
-                       <div className="mt-4">
-                        <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="border-green-500 text-green-600 hover:bg-green-500/10">
+                       <div className="mt-4 flex justify-end">
+                        <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="rounded-full border-green-500 text-green-600 hover:bg-green-500/10">
                           <Plus className="mr-1 h-4 w-4" /> Adicionar Andar
                         </Button>
                       </div>
@@ -1107,30 +1107,4 @@ export default function FireCheckPage() {
   );
 }
     
-
     
-
-
-
-
-
-    
-
-
-
-
-
-    
-
-    
-
-
-
-    
-
-
-
-
-
-    
-
