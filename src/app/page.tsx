@@ -410,7 +410,7 @@ export default function FireCheckPage() {
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => {
         const updatedPrevTowers = prevTowers.map((tower, index) => {
-            if (index === prevTowers.length - 1) { // If this is the last tower
+            if (index === prevTowers.length - 1 && prevTowers.length > 0) { // If this is the last tower and there are towers
                 return { ...tower, isTowerContentVisible: false }; // Collapse it
             }
             return tower;
@@ -434,10 +434,9 @@ export default function FireCheckPage() {
         if (index === towerIndex) {
           const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
           
-          // Collapse the previously last floor if it exists and is visible
           const updatedCurrentFloors = currentFloors.map((f, i) => {
-            if (i === currentFloors.length - 1 && f.isFloorContentVisible) { // If this is the last floor and it's visible
-              return { ...f, isFloorContentVisible: false }; // Collapse it
+            if (i === currentFloors.length - 1 && f.isFloorContentVisible && currentFloors.length > 0) {
+              return { ...f, isFloorContentVisible: false }; 
             }
             return f;
           });
@@ -462,7 +461,7 @@ export default function FireCheckPage() {
           const newFloorEntry = { 
             ...createNewFloorEntry(), 
             categories: newFloorCategories,
-            isFloorContentVisible: true // Ensure the new floor is visible
+            isFloorContentVisible: true 
           };
 
           return {
@@ -1007,8 +1006,6 @@ export default function FireCheckPage() {
                        >
                          {tower.isTowerContentVisible ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
                        </Button>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                        {activeTowersData.length > 1 && (
                          <Button variant="ghost" size="icon" onClick={() => handleRemoveTower(towerIndex)} className="text-destructive hover:bg-destructive/10 h-9 w-9" title="Remover esta torre">
                            <Trash2 className="h-5 w-5" />
