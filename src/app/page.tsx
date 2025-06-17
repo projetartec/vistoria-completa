@@ -425,16 +425,15 @@ export default function FireCheckPage() {
         if (index === towerIndex) {
           const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
           
-          // Collapse the previously last floor if it exists
+          // Collapse the previously last floor if it exists and is visible
           const updatedCurrentFloors = currentFloors.map((f, i) => {
-            if (i === currentFloors.length - 1) { // If this is the last floor in the current list
+            if (i === currentFloors.length - 1 && f.isFloorContentVisible) { // If this is the last floor and it's visible
               return { ...f, isFloorContentVisible: false }; // Collapse it
             }
             return f;
           });
 
           let newFloorCategories: InspectionCategoryState[];
-          // Source for categories should be the original last floor, or initial if no floors yet
           const sourceFloorForCategories = currentFloors.length > 0 ? currentFloors[currentFloors.length - 1] : null;
 
           if (sourceFloorForCategories) {
@@ -452,7 +451,7 @@ export default function FireCheckPage() {
           }
           
           const newFloorEntry = { 
-            ...createNewFloorEntry(), // This sets isFloorContentVisible: false by default
+            ...createNewFloorEntry(), 
             categories: newFloorCategories,
             isFloorContentVisible: true // Ensure the new floor is visible
           };
@@ -1027,7 +1026,7 @@ export default function FireCheckPage() {
                                     placeholder="Ex: Térreo, 1A"
                                     className="w-[150px] h-9 text-sm"
                                   />
-                                  <Button 
+                                  <Button
                                     onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
                                     size="icon"
                                     title={areAnyCategoriesExpanded ? "Recolher itens do andar" : "Expandir itens do andar"}
@@ -1053,8 +1052,6 @@ export default function FireCheckPage() {
                                   >
                                     {floorData.isFloorContentVisible ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
                                   </Button>
-                                </div>
-                                <div className="flex flex-row items-center gap-x-2 md:ml-auto">
                                   {(Array.isArray(tower.floors) ? tower.floors : []).length > 1 && (
                                     <Button variant="ghost" size="icon" onClick={() => handleRemoveFloorFromTower(towerIndex, floorIndex)} className="text-destructive hover:bg-destructive/10 h-8 w-8" title="Remover este andar">
                                       <Trash2 className="h-4 w-4" />
