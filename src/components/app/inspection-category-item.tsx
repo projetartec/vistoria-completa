@@ -365,11 +365,12 @@ const InspectionCategoryItemComponent = ({
              <div className="mb-3 mt-1 flex flex-wrap gap-2 justify-start">
               <Button 
                 variant="outline" 
-                size="sm" 
+                size="icon" 
                 onClick={() => handleUpdate('markAllSubItemsOK')} 
-                className="rounded-full text-green-600 border-green-500 hover:bg-green-500/10 hover:text-green-700"
+                className="rounded-full text-green-600 border-green-500 hover:bg-green-500/10 hover:text-green-700 w-10 h-10"
+                title="Marcar Todos OK"
               >
-                <CheckSquare className="mr-2 h-4 w-4" /> Marcar Todos OK
+                OK
               </Button>
             </div>
           )}
