@@ -1018,7 +1018,7 @@ export default function FireCheckPage() {
                                     size="icon"
                                     title={areAnyCategoriesExpanded ? "Recolher itens do andar" : "Expandir itens do andar"}
                                     className={cn(
-                                      "rounded-full h-9 w-9", // Ensure consistent size if needed, or adjust h-5 w-5 for icon
+                                      "rounded-full h-9 w-9", 
                                       areAnyCategoriesExpanded
                                         ? "bg-red-500 hover:bg-red-600 text-white"
                                         : "bg-green-500 hover:bg-green-600 text-white"
@@ -1026,9 +1026,18 @@ export default function FireCheckPage() {
                                   >
                                     {areAnyCategoriesExpanded ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
                                   </Button>
-                                  <Button onClick={() => handleToggleFloorContent(towerIndex, floorIndex)} variant="outline" size="xs" title={floorData.isFloorContentVisible ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}>
-                                    {floorData.isFloorContentVisible ? <ChevronUp className="mr-1 h-3 w-3"/> : <ChevronDown className="mr-1 h-3 w-3"/>}
-                                    <span className="hidden sm:inline">{floorData.isFloorContentVisible ? "Ocultar" : "Mostrar"}</span>
+                                  <Button 
+                                    onClick={() => handleToggleFloorContent(towerIndex, floorIndex)} 
+                                    size="icon" 
+                                    title={floorData.isFloorContentVisible ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
+                                    className={cn(
+                                      "rounded-full h-9 w-9",
+                                      floorData.isFloorContentVisible
+                                        ? "bg-red-500 hover:bg-red-600 text-white"
+                                        : "bg-green-500 hover:bg-green-600 text-white"
+                                    )}
+                                  >
+                                    {floorData.isFloorContentVisible ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
                                   </Button>
                                   {(Array.isArray(tower.floors) ? tower.floors : []).length > 1 && (
                                     <Button variant="ghost" size="icon" onClick={() => handleRemoveFloorFromTower(towerIndex, floorIndex)} className="text-destructive hover:bg-destructive/10 h-8 w-8" title="Remover este andar">
