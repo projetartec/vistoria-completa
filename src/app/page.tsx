@@ -1009,7 +1009,7 @@ export default function FireCheckPage() {
                                     value={floorData.floor}
                                     onChange={(e) => handleFloorSpecificFieldChange(towerIndex, floorIndex, 'floor', e.target.value)}
                                     placeholder="Ex: Térreo, 1A"
-                                    className="flex-grow max-w-xs min-w-[100px] h-9 text-sm"
+                                    className="w-[150px] h-9 text-sm"
                                   />
                                   <Button 
                                     onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
