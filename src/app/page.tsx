@@ -985,9 +985,6 @@ export default function FireCheckPage() {
                        </Button>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                       <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="border-green-500 text-green-600 hover:bg-green-500/10">
-                         <Plus className="mr-1 h-4 w-4" /> Adicionar Andar
-                       </Button>
                        {activeTowersData.length > 1 && (
                          <Button variant="ghost" size="icon" onClick={() => handleRemoveTower(towerIndex)} className="text-destructive hover:bg-destructive/10 h-9 w-9" title="Remover esta torre">
                            <Trash2 className="h-5 w-5" />
@@ -1051,6 +1048,11 @@ export default function FireCheckPage() {
                           </Card>
                         );
                       })}
+                       <div className="mt-4">
+                        <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="border-green-500 text-green-600 hover:bg-green-500/10">
+                          <Plus className="mr-1 h-4 w-4" /> Adicionar Andar
+                        </Button>
+                      </div>
                     </CardContent>
                   )}
                 </Card>
@@ -1131,5 +1133,4 @@ export default function FireCheckPage() {
 
 
     
-
 
