@@ -1001,14 +1001,15 @@ export default function FireCheckPage() {
                         placeholder={`Nome da Torre ${towerIndex + 1}`}
                         className="text-lg font-semibold w-[150px]"
                       />
-                       <Button 
+                       <Button
+                        variant="outline" 
                         onClick={() => handleToggleTowerContent(towerIndex)} 
                         size="icon"
                         className={cn(
                           "rounded-full h-9 w-9",
                           tower.isTowerContentVisible
-                            ? "bg-red-500 hover:bg-red-600 text-white"
-                            : "bg-green-500 hover:bg-green-600 text-white"
+                            ? "border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700"
+                            : "border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700"
                         )}
                         title={tower.isTowerContentVisible ? "Ocultar Conteúdo da Torre" : "Mostrar Conteúdo da Torre"}
                        >
