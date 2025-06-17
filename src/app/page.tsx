@@ -330,7 +330,7 @@ export default function FireCheckPage() {
                             });
                             if (markedAny) { actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
                         }
-                         else if (update.field === 'markAllSubItemsOK' && mutatedCategory.subItems && mutatedCategory.type === 'standard') { // New logic
+                         else if (update.field === 'markAllSubItemsOK' && mutatedCategory.subItems && mutatedCategory.type === 'standard') { 
                             let markedAny = false;
                             mutatedCategory.subItems = (mutatedCategory.subItems || []).map(sub => {
                                 if (!sub.isRegistry && sub.status !== 'OK') { markedAny = true; return { ...sub, status: 'OK' as StatusOption }; }
@@ -418,13 +418,11 @@ export default function FireCheckPage() {
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => {
         const updatedPrevTowers = prevTowers.map((tower, index) => {
-            // Collapse the currently last tower if it exists
             if (index === prevTowers.length - 1 && prevTowers.length > 0) {
                 return { ...tower, isTowerContentVisible: false }; 
             }
             return tower;
         });
-        // New tower starts expanded
         const newTower = { ...createNewTowerEntry(), isTowerContentVisible: true };
         return [...updatedPrevTowers, newTower];
     });
@@ -445,7 +443,6 @@ export default function FireCheckPage() {
           const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
           
           const updatedCurrentFloors = currentFloors.map((f, i) => {
-             // Collapse the previously last floor
             if (i === currentFloors.length - 1 && currentFloors.length > 0) { 
               return { ...f, isFloorContentVisible: false }; 
             }
@@ -469,7 +466,6 @@ export default function FireCheckPage() {
             newFloorCategories = JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false}));
           }
           
-          // New floor starts with its content visible
           const newFloorEntry = { 
             ...createNewFloorEntry(), 
             categories: newFloorCategories,
@@ -1058,6 +1054,7 @@ export default function FireCheckPage() {
                                   {areAnyCategoriesExpanded ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
                                 </Button>
                                 <Button 
+                                  variant="outline"
                                   size="icon" 
                                   onClick={() => handleToggleFloorContent(towerIndex, floorIndex)} 
                                   title={floorData.isFloorContentVisible ? "Ocultar conteúdo do andar" : "Mostrar conteúdo do andar"}
