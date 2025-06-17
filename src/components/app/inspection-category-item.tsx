@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, Save, X, Camera } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, Save, X, Camera, CheckSquare } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
@@ -251,6 +251,7 @@ const InspectionCategoryItemComponent = ({
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
     if (field === 'markAllSubItemsNA') payload = { field };
+    else if (field === 'markAllSubItemsOK') payload = { field }; // Added
     else if (field === 'addSubItem') payload = { field, categoryId: category.id, value: value as string };
     else if (field === 'removeSubItem' && subItemId) payload = { field, categoryId: category.id, subItemId };
     else if (field === 'renameCategoryTitle') payload = { field, newTitle: value as string };
@@ -362,8 +363,23 @@ const InspectionCategoryItemComponent = ({
         
         <AccordionContent className="px-4 pt-0 pb-4 space-y-1">
           {category.type === 'standard' && hasNonRegistrySubItems && (
-            <div className="mb-3 mt-1 flex justify-start">
-              <Button variant="outline" size="sm" onClick={() => handleUpdate('markAllSubItemsNA')} className="text-yellow-600 border-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-700"><ListX className="mr-2 h-4 w-4" /> Marcar Todos N/A</Button>
+             <div className="mb-3 mt-1 flex flex-wrap gap-2 justify-start">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleUpdate('markAllSubItemsOK')} 
+                className="rounded-full text-green-600 border-green-500 hover:bg-green-500/10 hover:text-green-700"
+              >
+                <CheckSquare className="mr-2 h-4 w-4" /> Marcar Todos OK
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleUpdate('markAllSubItemsNA')} 
+                className="rounded-full text-yellow-600 border-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-700"
+              >
+                <ListX className="mr-2 h-4 w-4" /> Marcar Todos N/A
+              </Button>
             </div>
           )}
 
