@@ -87,7 +87,7 @@ export default function FireCheckPage() {
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
   const [isLoadingDbInspections, setIsLoadingDbInspections] = useState(true);
   
-  const [modalTowerState, setModalTowerState] = useState<{ tower: TowerData; index: number } | null>(null);
+  const [modalTowerIndex, setModalTowerIndex] = useState<number | null>(null);
 
 
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
@@ -850,7 +850,7 @@ export default function FireCheckPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setModalTowerState({ tower, index: towerIndex })}
+                          onClick={() => setModalTowerIndex(towerIndex)}
                           title="Gerenciar andares desta torre"
                         >
                           <Layers className="mr-2 h-4 w-4" />
@@ -899,22 +899,22 @@ export default function FireCheckPage() {
 
          <input type="file" ref={jsonImportFileInputRef} accept=".json,application/json" onChange={handleImportInspectionFromJson} className="hidden" id="json-import-input" />
         
-        {modalTowerState && (
+        {modalTowerIndex !== null && activeTowersData[modalTowerIndex] && (
           <FloorsDialog
-            key={modalTowerState.tower.id}
-            tower={modalTowerState.tower}
-            towerIndex={modalTowerState.index}
+            key={activeTowersData[modalTowerIndex].id}
+            tower={activeTowersData[modalTowerIndex]}
+            towerIndex={modalTowerIndex}
             onOpenChange={(isOpen) => {
               if (!isOpen) {
-                setModalTowerState(null);
+                setModalTowerIndex(null);
               }
             }}
             onFloorChange={handleFloorSpecificFieldChange}
             onCategoryUpdate={handleCategoryItemUpdateForFloor}
-            onAddFloor={() => handleAddFloorToTower(modalTowerState.index)}
-            onRemoveFloor={(floorIndex) => handleRemoveFloorFromTower(modalTowerState.index, floorIndex)}
-            onToggleFloorCategories={(floorIndex) => handleToggleAllCategoriesForFloor(modalTowerState.index, floorIndex)}
-            onToggleFloorContent={(floorIndex) => handleToggleFloorContent(modalTowerState.index, floorIndex)}
+            onAddFloor={() => handleAddFloorToTower(modalTowerIndex)}
+            onRemoveFloor={(floorIndex) => handleRemoveFloorFromTower(modalTowerIndex, floorIndex)}
+            onToggleFloorCategories={(floorIndex) => handleToggleAllCategoriesForFloor(modalTowerIndex, floorIndex)}
+            onToggleFloorContent={(floorIndex) => handleToggleFloorContent(modalTowerIndex, floorIndex)}
             isMobile={isMobile}
           />
         )}
