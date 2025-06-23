@@ -37,30 +37,6 @@ export function AppHeader({ clientInfoData, onClientInfoChange }: AppHeaderProps
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Logo and Upload Section */}
         <div className="flex flex-col items-center gap-2">
-          {clientInfoData.logoUrl ? (
-            <div className="relative group">
-              <Image
-                src={clientInfoData.logoUrl}
-                alt="Company Logo"
-                width={150}
-                height={150}
-                className="object-contain h-24 w-auto rounded-md border p-1"
-              />
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={removeLogo}
-                title="Remover Logo"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="h-24 w-40 flex items-center justify-center border-2 border-dashed rounded-md bg-muted/50">
-              <span className="text-sm text-muted-foreground">Logo</span>
-            </div>
-          )}
           <input
             type="file"
             ref={logoInputRef}
@@ -68,10 +44,40 @@ export function AppHeader({ clientInfoData, onClientInfoChange }: AppHeaderProps
             accept="image/*"
             className="hidden"
           />
-          <Button onClick={triggerLogoUpload} variant="outline" size="sm">
-            <Upload className="mr-2 h-4 w-4" />
-            Carregar Logo
-          </Button>
+           {clientInfoData.logoUrl ? (
+            <div className="relative group">
+              <Image
+                src={clientInfoData.logoUrl}
+                alt="Company Logo"
+                width={150}
+                height={150}
+                className="object-contain h-24 w-auto rounded-md border p-1 cursor-pointer"
+                onClick={triggerLogoUpload}
+              />
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeLogo();
+                }}
+                title="Remover Logo"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div 
+              className="h-24 w-40 flex items-center justify-center border-2 border-dashed rounded-md bg-muted/50 hover:bg-muted/75 transition-colors cursor-pointer"
+              onClick={triggerLogoUpload}
+            >
+              <div className="text-center text-muted-foreground">
+                <Upload className="mx-auto h-6 w-6 mb-1"/>
+                <span className="text-sm">Carregar Logo</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Company Details Section */}
