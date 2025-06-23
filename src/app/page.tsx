@@ -34,7 +34,6 @@ const createNewFloorEntry = (): FloorData => {
     floor: '', // Floor name will be set by user
     categories: JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false})),
     isFloorContentVisible: true, // New floors start visible
-    isTowerContentVisible: true,
   };
 };
 
@@ -43,7 +42,6 @@ const createNewTowerEntry = (): TowerData => {
     id: generateUniqueId(),
     towerName: '',
     floors: [createNewFloorEntry()],
-    isTowerContentVisible: true,
   };
 };
 
@@ -770,18 +768,6 @@ export default function FireCheckPage() {
     }
   }, [areAnyGlobalCategoriesExpanded, handleCollapseAllGlobalCategories, handleExpandAllGlobalCategories]);
 
-  const handleToggleAllFloorsGlobally = useCallback(() => {
-    setActiveTowersData(prevTowers => {
-        const anyHidden = prevTowers.some(tower => !tower.isTowerContentVisible);
-        return prevTowers.map(tower => ({ ...tower, isTowerContentVisible: !anyHidden }));
-    });
-  }, []);
-
-  const areAnyTowersGloballyHidden = useMemo(() => {
-      return activeTowersData.some(tower => !tower.isTowerContentVisible);
-  }, [activeTowersData]);
-
-
   const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
     setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
   }, []);
@@ -810,38 +796,6 @@ export default function FireCheckPage() {
         return tower;
       })
     );
-  }, []);
-
-  const handleToggleTowerContent = useCallback((towerIndex: number) => {
-    setActiveTowersData(prev => prev.map((tower, index) => 
-      index === towerIndex ? { ...tower, isTowerContentVisible: !tower.isTowerContentVisible } : tower
-    ));
-  }, []);
-
-
-  const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
-    setActiveTowersData(prevTowers => {
-      let overallTowersChanged = false;
-      const newTowers = prevTowers.map((tower, tIdx) => {
-        if (tIdx !== towerIndex) { return tower; }
-        let towerContentChanged = false;
-        const currentFloors = Array.isArray(tower.floors) ? tower.floors : [];
-        const newFloors = currentFloors.map((floor, fIdx) => {
-          if (fIdx !== floorIndex) { return floor; }
-          const originalCategories = floor.categories;
-          const filteredCategories = originalCategories.filter(cat => cat.id !== categoryIdToRemove);
-          if (filteredCategories.length < originalCategories.length) {
-            towerContentChanged = true;
-            return { ...floor, categories: filteredCategories };
-          }
-          return floor;
-        });
-        if (towerContentChanged) { overallTowersChanged = true; return { ...tower, floors: newFloors }; }
-        return tower;
-      });
-      if (overallTowersChanged) { return newTowers; }
-      return prevTowers;
-    });
   }, []);
 
   const handleGeneratePdf = useCallback(async () => { await generateInspectionPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
@@ -877,20 +831,9 @@ export default function FireCheckPage() {
                     {areAnyGlobalCategoriesExpanded ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                     Categorias
                   </Button>
-                  <Button
-                    onClick={handleToggleAllFloorsGlobally}
-                    size="sm"
-                    variant="outline"
-                    className={cn(areAnyTowersGloballyHidden ? "text-green-600 border-green-500 hover:bg-green-500/10 hover:text-green-700" : "text-red-600 border-red-500 hover:bg-red-500/10 hover:text-red-700")}
-                    title={areAnyTowersGloballyHidden ? "Mostrar Conteúdo de Todas as Torres" : "Ocultar Conteúdo de Todas as Torres"}
-                  >
-                    {areAnyTowersGloballyHidden ? <Layers className="mr-2 h-4 w-4" /> : <PanelTopClose className="mr-2 h-4 w-4" />}
-                    Torres
-                  </Button>
               </div>
 
               {activeTowersData.map((tower, towerIndex) => {
-                const areAnyCategoriesInTowerExpanded = tower.floors.some(f => f.categories.some(c => c.isExpanded));
                 return (
                 <Card key={tower.id} className="mb-8 shadow-md border-primary/50">
                   <CardHeader className="bg-primary/5 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -906,17 +849,12 @@ export default function FireCheckPage() {
                      <div className="flex items-center gap-2 flex-shrink-0">
                         <Button
                           variant="outline"
-                          size="icon"
-                          onClick={() => handleToggleTowerContent(towerIndex)}
-                          title={tower.isTowerContentVisible ? "Ocultar Conteúdo da Torre" : "Mostrar Conteúdo da Torre"}
-                          className={cn(
-                            'rounded-full h-9 w-9',
-                            tower.isTowerContentVisible
-                              ? 'border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700'
-                              : 'border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700'
-                          )}
+                          size="sm"
+                          onClick={() => setModalTowerState({ tower, index: towerIndex })}
+                          title="Gerenciar andares desta torre"
                         >
-                          {tower.isTowerContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                          <Layers className="mr-2 h-4 w-4" />
+                          Gerenciar Andares
                         </Button>
                        {activeTowersData.length > 1 && (
                          <Button variant="ghost" size="icon" onClick={() => handleRemoveTower(towerIndex)} className="text-destructive hover:bg-destructive/10 h-9 w-9" title="Remover esta torre">
@@ -925,92 +863,6 @@ export default function FireCheckPage() {
                        )}
                      </div>
                   </CardHeader>
-                  {tower.isTowerContentVisible && (
-                     <CardContent className="p-3 space-y-4">
-                       {(Array.isArray(tower.floors) ? tower.floors : []).map((floorData, floorIndex) => {
-                          const areAnyCategoriesExpanded = floorData.categories.some((cat) => cat.isExpanded);
-                          return (
-                            <Card key={floorData.id} className="mb-2 shadow-sm border">
-                              <CardContent className="p-3 space-y-2">
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                                  <div className="flex items-center gap-x-2 flex-grow">
-                                    <Label htmlFor={`floorName-${floorData.id}`} className="text-sm font-medium whitespace-nowrap">
-                                      ANDAR:
-                                    </Label>
-                                    <Input
-                                      id={`floorName-${floorData.id}`}
-                                      value={floorData.floor}
-                                      onChange={(e) => handleFloorSpecificFieldChange(towerIndex, floorIndex, 'floor', e.target.value)}
-                                      placeholder="Ex: Térreo, 1A"
-                                      className="w-[150px] h-9 text-sm"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-x-2 flex-shrink-0">
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
-                                      title={areAnyCategoriesExpanded ? 'Recolher itens do andar' : 'Expandir itens do andar'}
-                                      className={cn(
-                                        'rounded-full h-9 w-9',
-                                        areAnyCategoriesExpanded
-                                          ? 'border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700'
-                                          : 'border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700'
-                                      )}
-                                    >
-                                      {areAnyCategoriesExpanded ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={() => handleToggleFloorContent(towerIndex, floorIndex)}
-                                      title={floorData.isFloorContentVisible ? 'Ocultar conteúdo do andar' : 'Mostrar conteúdo do andar'}
-                                      className={cn(
-                                        'rounded-full h-9 w-9',
-                                        floorData.isFloorContentVisible
-                                          ? 'border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700'
-                                          : 'border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700'
-                                      )}
-                                    >
-                                      {floorData.isFloorContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                                    </Button>
-                                    {(Array.isArray(tower.floors) ? tower.floors : []).length > 1 && (
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleRemoveFloorFromTower(towerIndex, floorIndex)}
-                                        className="text-destructive hover:bg-destructive/10 h-9 w-9"
-                                        title="Remover este andar"
-                                      >
-                                        <Trash2 className="h-5 w-5" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                                {floorData.isFloorContentVisible && (
-                                  <>
-                                    {floorData.categories.map((category) => {
-                                      const overallStatus = getCategoryOverallStatus(category);
-                                      return (
-                                        <InspectionCategoryItem
-                                          key={`${floorData.id}-${category.id}`}
-                                          category={category}
-                                          overallStatus={overallStatus}
-                                          onCategoryItemUpdate={(catId, update) => handleCategoryItemUpdateForFloor(towerIndex, floorIndex, catId, update)}
-                                          isMobile={isMobile}
-                                        />
-                                      );
-                                    })}
-                                  </>
-                                )}
-                              </CardContent>
-                            </Card>
-                          )})}
-                           <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="w-full mt-2 border-dashed">
-                            <Plus className="mr-2 h-4 w-4" /> Adicionar Andar
-                          </Button>
-                     </CardContent>
-                  )}
                 </Card>
               )})}
             </>
@@ -1054,12 +906,6 @@ export default function FireCheckPage() {
             towerIndex={modalTowerState.index}
             onOpenChange={(isOpen) => {
               if (!isOpen) {
-                const currentTower = activeTowersData[modalTowerState.index];
-                if (JSON.stringify(currentTower) !== JSON.stringify(modalTowerState.tower)) {
-                    // This is a simple way to check for changes. A more robust way would be a deep-diff library.
-                    // Or, the dialog could directly call setActiveTowersData.
-                    // For now, let's assume the handlers passed to it are sufficient.
-                }
                 setModalTowerState(null);
               }
             }}
@@ -1094,5 +940,7 @@ export default function FireCheckPage() {
     
 
 
+
+    
 
     
