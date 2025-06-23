@@ -1,70 +1,16 @@
 
-import Image from 'next/image';
-import React, { useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { UploadCloud } from 'lucide-react';
+import React from 'react';
 
-interface AppHeaderProps {
-  uploadedLogoDataUrl: string | null;
-  onLogoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-}
+// No props are needed anymore as the logo is no longer customizable.
+interface AppHeaderProps {}
 
-export function AppHeader({ uploadedLogoDataUrl, onLogoUpload }: AppHeaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
+export function AppHeader({}: AppHeaderProps) {
   return (
     <header className="bg-card p-4 shadow-md rounded-lg mb-6">
-      <div className="container mx-auto flex flex-row items-center justify-between gap-x-4 md:gap-x-6">
-        {/* Logo Upload and Display Section */}
-        <div className="order-1">
-          {uploadedLogoDataUrl ? (
-            <div
-              onClick={triggerFileInput}
-              className="cursor-pointer border rounded-md p-1 hover:border-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') triggerFileInput(); }}
-              aria-label="Alterar logo"
-              title="Clique para alterar o logo"
-            >
-              <Image
-                src={uploadedLogoDataUrl}
-                alt="Logo Carregado"
-                width={224}
-                height={112}
-                className="max-h-28 w-auto object-contain"
-                data-ai-hint="company logo"
-              />
-            </div>
-          ) : (
-            <div
-              onClick={triggerFileInput}
-              className="h-28 w-56 border border-dashed rounded-md flex items-center justify-center text-muted-foreground text-sm cursor-pointer hover:border-primary hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              data-ai-hint="logo placeholder"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') triggerFileInput(); }}
-              aria-label="Carregar logo"
-              title="Clique para carregar o logo"
-            >
-              Carregar Logo
-            </div>
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/png, image/jpeg, image/svg+xml, image/webp"
-            onChange={onLogoUpload}
-            className="hidden"
-          />
-        </div>
-
+      {/* Centering the company details since the logo upload is removed */}
+      <div className="container mx-auto flex flex-row items-center justify-center gap-x-4 md:gap-x-6">
         {/* Company Details Section */}
-        <div className="text-left order-2">
+        <div className="text-center">
           <h1 className="text-base sm:text-lg md:text-xl font-bold text-primary font-headline mb-2">
             BRAZIL EXTINTORES - SP
           </h1>

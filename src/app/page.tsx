@@ -105,7 +105,6 @@ export default function FireCheckPage() {
 
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
   const [isChecklistVisible, setIsChecklistVisible] = useState(false);
-  const [uploadedLogoDataUrl, setUploadedLogoDataUrl] = useState<string | null>(null);
 
   const fetchSavedInspectionsFromDb = useCallback(async () => {
     setIsLoadingDbInspections(true);
@@ -144,17 +143,6 @@ export default function FireCheckPage() {
     setIsClientInitialized(true);
   }, [clientInfo.inspectionDate, fetchSavedInspectionsFromDb]);
 
-
-  const handleLogoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedLogoDataUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prevClientInfo => {
@@ -450,7 +438,6 @@ export default function FireCheckPage() {
     setActiveTowersData([createNewTowerEntry()]);
     setIsChecklistVisible(false);
     setIsSavedInspectionsVisible(false); // Hide saved list on new inspection
-    setUploadedLogoDataUrl(null);
      if (clientInfo.clientLocation) { // Auto-generate new number only if location was set
         setClientInfo(prev => ({...prev, inspectionNumber: calculateNextInspectionNumber(prev.clientLocation)}));
     }
@@ -552,7 +539,6 @@ export default function FireCheckPage() {
       clientInfo: { ...clientInfo },
       towers: activeTowersData,
       timestamp: Date.now(),
-      uploadedLogoDataUrl: uploadedLogoDataUrl
     };
 
     try {
@@ -563,7 +549,7 @@ export default function FireCheckPage() {
       console.error('Erro ao salvar vistoria no IndexedDB:', err);
       toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria no banco de dados do navegador.", variant: "destructive" });
     }
-  }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast, fetchSavedInspectionsFromDb]);
+  }, [clientInfo, activeTowersData, toast, fetchSavedInspectionsFromDb]);
 
 
   const loadInspectionDataToForm = useCallback((inspectionToLoad: FullInspectionData) => {
@@ -575,7 +561,6 @@ export default function FireCheckPage() {
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
         inspectedBy: loadedClientInfo.inspectedBy || '',
     });
-    setUploadedLogoDataUrl(inspectionToLoad.uploadedLogoDataUrl || null);
 
     const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {
       const loadedTowerFloors = Array.isArray(loadedTower.floors) ? loadedTower.floors : [];
@@ -665,7 +650,7 @@ export default function FireCheckPage() {
     setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
     setIsChecklistVisible(true);
     setIsSavedInspectionsVisible(false); // Hide list after loading
-  }, [setActiveTowersData, setClientInfo, setUploadedLogoDataUrl, setIsChecklistVisible, setIsSavedInspectionsVisible]);
+  }, [setActiveTowersData, setClientInfo, setIsChecklistVisible, setIsSavedInspectionsVisible]);
 
   const handleLoadInspectionFromDBList = useCallback(async (inspectionId: string) => {
     try {
@@ -728,13 +713,12 @@ export default function FireCheckPage() {
       clientInfo: { ...clientInfo },
       towers: activeTowersData, 
       timestamp: Date.now(),
-      uploadedLogoDataUrl: uploadedLogoDataUrl,
     };
     const clientInfoForFilename = { inspectionNumber: inspectionToExport.id, clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria' };
     const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
     const fileName = initiateFileDownload(inspectionToExport, baseFileName);
     toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (incluindo fotos e observações da vistoria ativa).` });
-  }, [clientInfo, activeTowersData, uploadedLogoDataUrl, toast]);
+  }, [clientInfo, activeTowersData, toast]);
 
 
  const handleImportInspectionFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -779,15 +763,14 @@ export default function FireCheckPage() {
           
           loadInspectionDataToForm(inspectionToLoad);
           
-          const hasPhotosOrLogo = inspectionToLoad.uploadedLogoDataUrl ||
-                                 (inspectionToLoad.towers || []).some(t =>
+          const hasPhotos = (inspectionToLoad.towers || []).some(t =>
                                    (t.floors || []).some(f =>
                                      (f.categories || []).some(c =>
                                        (c.subItems || []).some(s => s.photoDataUri)
                                      )
                                    )
                                  );
-          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário${hasPhotosOrLogo ? ' com logo/fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
+          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário${hasPhotos ? ' com fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
         } else {
           console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspectionToLoad, null, 2).substring(0, 500));
           toast({ title: "Estrutura Inválida", description: `O arquivo ${file.name} não corresponde à estrutura de vistoria esperada.`, variant: "destructive" });
@@ -966,10 +949,10 @@ export default function FireCheckPage() {
     });
   }, []);
 
-  const handleGeneratePdf = useCallback(async () => { await generateInspectionPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
-  const handleGenerateRegisteredItemsReport = useCallback(async () => { await generateRegisteredItemsPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
-  const handleGenerateNCItemsReport = useCallback(async () => { await generateNCItemsPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
-  const handleGeneratePhotoReportPdf = useCallback(async () => { await generatePhotoReportPdf(clientInfo, activeTowersData, uploadedLogoDataUrl); }, [clientInfo, activeTowersData, uploadedLogoDataUrl]);
+  const handleGeneratePdf = useCallback(async () => { await generateInspectionPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
+  const handleGenerateRegisteredItemsReport = useCallback(async () => { await generateRegisteredItemsPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
+  const handleGenerateNCItemsReport = useCallback(async () => { await generateNCItemsPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
+  const handleGeneratePhotoReportPdf = useCallback(async () => { await generatePhotoReportPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
 
 
   if (!isClientInitialized) return <div className="flex justify-center items-center h-screen bg-background"><p className="text-foreground">Carregando formulário...</p></div>;
@@ -977,7 +960,7 @@ export default function FireCheckPage() {
   return (
     <ScrollArea className="h-screen bg-background">
       <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <AppHeader uploadedLogoDataUrl={uploadedLogoDataUrl} onLogoUpload={handleLogoUpload} />
+        <AppHeader />
         <ClientDataForm clientInfoData={clientInfo} onClientInfoChange={handleClientInfoChange} savedLocations={savedLocations} />
 
         <div className="my-6 p-4 bg-card shadow-lg rounded-lg">

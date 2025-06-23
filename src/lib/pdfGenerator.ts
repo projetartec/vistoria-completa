@@ -156,15 +156,10 @@ function openHtmlInNewWindow(htmlContent: string, reportTitle: string = "Relató
   }
 }
 
-function getHeaderHtml(clientInfo: ClientInfo, title: string, uploadedLogoDataUrl?: string | null): string {
-  const defaultLogoUrl = '/brazil-extintores-logo.png'; 
-  const logoToUse = uploadedLogoDataUrl || defaultLogoUrl;
-  const logoSrc = logoToUse;
-
+function getHeaderHtml(clientInfo: ClientInfo, title: string): string {
   return `
-    <header class="pdf-header-main">
-      <div class="pdf-logo-container"><img src="${logoSrc}" alt="Logo"/></div>
-      <div class="pdf-company-info-container">
+    <header class="pdf-header-main" style="justify-content: center;">
+      <div class="pdf-company-info-container" style="text-align: center;">
         <div class="company-name">BRAZIL EXTINTORES - SP</div>
         <div class="company-details">
           <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
@@ -191,7 +186,7 @@ function getHeaderHtml(clientInfo: ClientInfo, title: string, uploadedLogoDataUr
   `;
 }
 
-export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerData[], uploadedLogoDataUrl?: string | null): void {
+export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerData[]): void {
   const processedTowersData = towersData
     .filter(tower => tower && (tower.towerName?.trim() !== "" || tower.floors.some(f => f.floor?.trim() !== "")))
     .map(tower => ({
@@ -305,7 +300,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 
   // Page 1: Header & Client Data (Centered)
   htmlBodyContent += `<div class="first-page-center-container page-break-after">`;
-  htmlBodyContent += getHeaderHtml(clientInfo, "Relatório de Vistoria Técnica", uploadedLogoDataUrl);
+  htmlBodyContent += getHeaderHtml(clientInfo, "Relatório de Vistoria Técnica");
   htmlBodyContent += `</div>`;
 
   // Page 2: Verified Items
@@ -622,7 +617,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 }
 
 
-export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: TowerData[], uploadedLogoDataUrl?: string | null): void {
+export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: TowerData[]): void {
   let grandTotalExtinguishersCount = 0;
   const extinguisherTypeAndWeightTotals: { [type: string]: { [weight: string]: number } } = {};
   EXTINGUISHER_TYPES.forEach(t => { extinguisherTypeAndWeightTotals[t] = {}; EXTINGUISHER_WEIGHTS.forEach(w => extinguisherTypeAndWeightTotals[t][w] = 0); });
@@ -681,7 +676,7 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: T
     };
   });
 
-  let htmlBodyContent = getHeaderHtml(clientInfo, "Relatório de Itens Cadastrados", uploadedLogoDataUrl);
+  let htmlBodyContent = getHeaderHtml(clientInfo, "Relatório de Itens Cadastrados");
   htmlBodyContent += `<section class="pdf-items-by-floor"><h3 class="pdf-section-title">Itens Cadastrados por Torre/Andar</h3>`;
   let anyItemsOnFloors = false;
   processedTowersForReport.forEach(tower => {
@@ -749,9 +744,9 @@ export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: T
   openHtmlInNewWindow(htmlBodyContent, `ItensCadastrados_${clientInfo.inspectionNumber}`);
 }
 
-export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData[], uploadedLogoDataUrl?: string | null): void {
+export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData[]): void {
   let ncItemsFoundOverall = false;
-  let htmlBodyContent = getHeaderHtml(clientInfo, "Relatório de Itens Não Conformes (N/C)", uploadedLogoDataUrl);
+  let htmlBodyContent = getHeaderHtml(clientInfo, "Relatório de Itens Não Conformes (N/C)");
   htmlBodyContent += `<section class="pdf-nc-items-section nc-items-page-content"><h3 class="pdf-section-title">Detalhes dos Itens "Não Conforme"</h3>`;
   
   const relevantTowersData = towersData
@@ -816,7 +811,7 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData
   openHtmlInNewWindow(htmlBodyContent, `ItensNC_${clientInfo.inspectionNumber}`);
 }
 
-export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: TowerData[], uploadedLogoDataUrl?: string | null): void {
+export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: TowerData[]): void {
   const photosForReport: Array<{ towerName: string; floorName: string; categoryTitle: string; subItemName: string; photoDataUri: string; photoDescription: string; }> = [];
   
   const relevantTowersData = towersData
@@ -848,7 +843,7 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
     });
   });
   
-  let htmlBodyContent = getHeaderHtml(clientInfo, "Relatório Fotográfico", uploadedLogoDataUrl);
+  let htmlBodyContent = getHeaderHtml(clientInfo, "Relatório Fotográfico");
   htmlBodyContent += `<section class="pdf-photo-report-section-standalone"><h3 class="pdf-section-title">Registro Fotográfico</h3>`;
   if (photosForReport.length > 0) {
     htmlBodyContent += `<div class="pdf-photo-items-container">`;

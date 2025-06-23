@@ -76,9 +76,8 @@ export interface ClientInfo {
 export interface FullInspectionData {
   id: string;
   clientInfo: ClientInfo;
-  towers: TowerData[]; // Changed from floors: InspectionData[]
+  towers: TowerData[];
   timestamp: number;
-  uploadedLogoDataUrl?: string | null;
 }
 
 
@@ -114,4 +113,3 @@ export type CategoryUpdatePayload =
   | { field: 'renameSubItemName'; subItemId: string; newName: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';
-
