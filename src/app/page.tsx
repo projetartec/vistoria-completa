@@ -18,7 +18,7 @@ import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.co
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Layers, PanelTopClose } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Layers, PanelTopClose, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { saveInspectionToDB, getAllInspectionsFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { getCategoryOverallStatus } from '@/lib/inspection-helpers';
@@ -34,6 +34,7 @@ const createNewFloorEntry = (): FloorData => {
     floor: '', // Floor name will be set by user
     categories: JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false})),
     isFloorContentVisible: true, // New floors start visible
+    isTowerContentVisible: true,
   };
 };
 
@@ -42,6 +43,7 @@ const createNewTowerEntry = (): TowerData => {
     id: generateUniqueId(),
     towerName: '',
     floors: [createNewFloorEntry()],
+    isTowerContentVisible: true,
   };
 };
 
@@ -181,7 +183,6 @@ export default function FireCheckPage() {
         return prevTowers.map((currentTower, tIndex) => {
             if (tIndex !== towerIndex) return currentTower;
 
-            let floorOverallStateChanged = false;
             const currentTowerFloors = Array.isArray(currentTower.floors) ? currentTower.floors : [];
             const updatedFloors = currentTowerFloors.map((currentFloorData, fIndex) => {
                 if (fIndex !== floorIndex) return currentFloorData;
@@ -191,11 +192,7 @@ export default function FireCheckPage() {
 
                 let mutatedCategory = { ...originalCategory };
                 let actualModificationsMadeToCategory = false;
-                let categoryStructurallyModifiedForAutoCollapse = false;
-                const isExpansionChange = update.field === 'isExpanded';
-                let autoCollapsedCategoryIdHolder: { id: string | null } = { id: null };
-
-
+                
                 switch (update.field) {
                     case 'isExpanded':
                         if (mutatedCategory.isExpanded !== update.value) {
@@ -207,7 +204,6 @@ export default function FireCheckPage() {
                         if (mutatedCategory.status !== update.value) {
                             mutatedCategory.status = update.value as StatusOption | undefined;
                             actualModificationsMadeToCategory = true;
-                            if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                         }
                         if (mutatedCategory.status === 'N/C' && !mutatedCategory.showObservation) {
                             mutatedCategory.showObservation = true;
@@ -274,7 +270,6 @@ export default function FireCheckPage() {
                                 
                                 if (individualSubItemAltered) {
                                     actualModificationsMadeToCategory = true;
-                                    if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                                 }
                                 return individualSubItemAltered ? newSubState : sub;
                             });
@@ -290,15 +285,14 @@ export default function FireCheckPage() {
                             if (newSubItemsArray.length < initialSubItemsCount) {
                                 mutatedCategory.subItems = newSubItemsArray;
                                 actualModificationsMadeToCategory = true;
-                                if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
                             }
                         }
                         break;
                     default:
-                        if (update.field === 'observation' && mutatedCategory.observation !== update.value) { mutatedCategory.observation = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
-                        else if (update.field === 'showObservation' && mutatedCategory.showObservation !== update.value) { mutatedCategory.showObservation = update.value as boolean; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
-                        else if (update.field === 'pressureValue' && mutatedCategory.pressureValue !== update.value) { mutatedCategory.pressureValue = update.value as string; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
-                        else if (update.field === 'pressureUnit' && mutatedCategory.pressureUnit !== update.value) { mutatedCategory.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;}
+                        if (update.field === 'observation' && mutatedCategory.observation !== update.value) { mutatedCategory.observation = update.value as string; actualModificationsMadeToCategory = true; }
+                        else if (update.field === 'showObservation' && mutatedCategory.showObservation !== update.value) { mutatedCategory.showObservation = update.value as boolean; actualModificationsMadeToCategory = true; }
+                        else if (update.field === 'pressureValue' && mutatedCategory.pressureValue !== update.value) { mutatedCategory.pressureValue = update.value as string; actualModificationsMadeToCategory = true; }
+                        else if (update.field === 'pressureUnit' && mutatedCategory.pressureUnit !== update.value) { mutatedCategory.pressureUnit = update.value as InspectionCategoryState['pressureUnit']; actualModificationsMadeToCategory = true; }
                         else if (update.field === 'renameCategoryTitle' && update.newTitle && mutatedCategory.title !== update.newTitle) { mutatedCategory.title = update.newTitle as string; actualModificationsMadeToCategory = true; }
                         else if (update.field === 'addRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.value) {
                             const newExt: RegisteredExtinguisher = { ...(update.value as Omit<RegisteredExtinguisher, 'id'>), id: `ext-${generateUniqueId()}` };
@@ -306,7 +300,7 @@ export default function FireCheckPage() {
                                 sub.id === update.subItemId ? { ...sub, registeredExtinguishers: [...(sub.registeredExtinguishers || []), newExt] } : sub
                             );
                             if (mutatedCategory.subItems.some(sub => sub.id === update.subItemId && sub.registeredExtinguishers?.some(e => e.id === newExt.id))) {
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                actualModificationsMadeToCategory = true;
                             }
                         }
                         else if (update.field === 'removeRegisteredExtinguisher' && mutatedCategory.subItems && update.subItemId && update.extinguisherId) {
@@ -316,7 +310,7 @@ export default function FireCheckPage() {
                             );
                             const newExtCount = mutatedCategory.subItems.find(s => s.id === update.subItemId)?.registeredExtinguishers?.length || 0;
                             if (newExtCount < oldExtCount) {
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                actualModificationsMadeToCategory = true;
                             }
                         }
                         else if (update.field === 'addRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.value) {
@@ -325,7 +319,7 @@ export default function FireCheckPage() {
                                 sub.id === update.subItemId ? { ...sub, registeredHoses: [...(sub.registeredHoses || []), newHose] } : sub
                             );
                              if (mutatedCategory.subItems.some(sub => sub.id === update.subItemId && sub.registeredHoses?.some(h => h.id === newHose.id))) {
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                actualModificationsMadeToCategory = true;
                             }
                         }
                         else if (update.field === 'removeRegisteredHose' && mutatedCategory.subItems && update.subItemId && update.hoseId) {
@@ -335,7 +329,7 @@ export default function FireCheckPage() {
                             );
                             const newHoseCount = mutatedCategory.subItems.find(s => s.id === update.subItemId)?.registeredHoses?.length || 0;
                              if (newHoseCount < oldHoseCount) {
-                                actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                                actualModificationsMadeToCategory = true;
                             }
                         }
                         else if (update.field === 'markAllSubItemsNA' && mutatedCategory.subItems && mutatedCategory.type === 'standard') {
@@ -344,7 +338,7 @@ export default function FireCheckPage() {
                                 if (!sub.isRegistry && sub.status !== 'N/A') { markedAny = true; return { ...sub, status: 'N/A' as StatusOption }; }
                                 return sub;
                             });
-                            if (markedAny) { actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
+                            if (markedAny) { actualModificationsMadeToCategory = true; }
                         }
                          else if (update.field === 'markAllSubItemsOK' && mutatedCategory.subItems && mutatedCategory.type === 'standard') { 
                             let markedAny = false;
@@ -352,32 +346,19 @@ export default function FireCheckPage() {
                                 if (!sub.isRegistry && sub.status !== 'OK') { markedAny = true; return { ...sub, status: 'OK' as StatusOption }; }
                                 return sub;
                             });
-                            if (markedAny) { actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true; }
+                            if (markedAny) { actualModificationsMadeToCategory = true; }
                         }
                         else if (update.field === 'addSubItem' && mutatedCategory.type === 'standard' && typeof update.value === 'string' && (update.value as string).trim() !== '') {
                             const newId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
                             const newSub: SubItemState = { id: newId, name: (update.value as string).trim(), status: undefined, observation: '', showObservation: false, isRegistry: false, photoDataUri: null, photoDescription: '' };
                             mutatedCategory.subItems = [...(mutatedCategory.subItems || []), newSub];
-                            actualModificationsMadeToCategory = true; if (!isExpansionChange) categoryStructurallyModifiedForAutoCollapse = true;
+                            actualModificationsMadeToCategory = true;
                         }
                         break;
                 }
-
-                if (!isExpansionChange &&
-                    categoryStructurallyModifiedForAutoCollapse &&
-                    originalCategory.isExpanded &&
-                    getCategoryOverallStatus(originalCategory) !== 'all-items-selected' && // Only auto-collapse if it wasn't already complete
-                    getCategoryOverallStatus(mutatedCategory) === 'all-items-selected'
-                   ) {
-                    mutatedCategory.isExpanded = false;
-                    autoCollapsedCategoryIdHolder.id = originalCategory.id;
-                    actualModificationsMadeToCategory = true;
-                }
-
-
-                let finalCategoriesForFloor = [...currentFloorData.categories];
+                
+                let finalCategoriesForFloor = currentFloorData.categories;
                 if (actualModificationsMadeToCategory) {
-                    floorOverallStateChanged = true;
                     const categoryModifiedIndex = finalCategoriesForFloor.findIndex(c => c.id === originalCategory.id);
                     if (categoryModifiedIndex !== -1) {
                         finalCategoriesForFloor = [
@@ -387,24 +368,8 @@ export default function FireCheckPage() {
                         ];
                     }
                 }
-
-                if (autoCollapsedCategoryIdHolder.id && autoCollapsedCategoryIdHolder.id === originalCategory.id) {
-                    const collapsedIdx = finalCategoriesForFloor.findIndex(c => c.id === autoCollapsedCategoryIdHolder.id);
-                    if (collapsedIdx !== -1 && collapsedIdx + 1 < finalCategoriesForFloor.length) {
-                        const nextCatOriginal = finalCategoriesForFloor[collapsedIdx + 1];
-                        if (!nextCatOriginal.isExpanded) {
-                            const updatedNextCat = { ...nextCatOriginal, isExpanded: true };
-                             finalCategoriesForFloor = [
-                                ...finalCategoriesForFloor.slice(0, collapsedIdx + 1),
-                                updatedNextCat,
-                                ...finalCategoriesForFloor.slice(collapsedIdx + 2)
-                            ];
-                            floorOverallStateChanged = true;
-                        }
-                    }
-                }
-
-                return floorOverallStateChanged ? { ...currentFloorData, categories: finalCategoriesForFloor } : currentFloorData;
+                
+                return actualModificationsMadeToCategory ? { ...currentFloorData, categories: finalCategoriesForFloor } : currentFloorData;
             });
 
             return (updatedFloors.some((floor, idx) => floor !== currentTowerFloors[idx]))
@@ -805,39 +770,17 @@ export default function FireCheckPage() {
     }
   }, [areAnyGlobalCategoriesExpanded, handleCollapseAllGlobalCategories, handleExpandAllGlobalCategories]);
 
-  const _showAllFloorContentGlobally = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({
-      ...tower,
-      floors: (Array.isArray(tower.floors) ? tower.floors : []).map(floor => ({
-        ...floor,
-        isFloorContentVisible: true,
-      }))
-    })));
+  const handleToggleAllFloorsGlobally = useCallback(() => {
+    setActiveTowersData(prevTowers => {
+        const anyHidden = prevTowers.some(tower => !tower.isTowerContentVisible);
+        return prevTowers.map(tower => ({ ...tower, isTowerContentVisible: !anyHidden }));
+    });
   }, []);
 
-  const _hideAllFloorContentGlobally = useCallback(() => {
-    setActiveTowersData(prevTowers => prevTowers.map(tower => ({
-      ...tower,
-      floors: (Array.isArray(tower.floors) ? tower.floors : []).map(floor => ({
-        ...floor,
-        isFloorContentVisible: false,
-      }))
-    })));
-  }, []);
-
-  const areAnyFloorsGloballyHidden = useMemo(() => {
-    return activeTowersData.some(tower =>
-      (Array.isArray(tower.floors) ? tower.floors : []).some(floor => !floor.isFloorContentVisible)
-    );
+  const areAnyTowersGloballyHidden = useMemo(() => {
+      return activeTowersData.some(tower => !tower.isTowerContentVisible);
   }, [activeTowersData]);
 
-  const handleToggleAllFloorsGlobally = useCallback(() => {
-    if (areAnyFloorsGloballyHidden) {
-      _showAllFloorContentGlobally();
-    } else {
-      _hideAllFloorContentGlobally();
-    }
-  }, [areAnyFloorsGloballyHidden, _showAllFloorContentGlobally, _hideAllFloorContentGlobally]);
 
   const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
     setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
@@ -868,6 +811,13 @@ export default function FireCheckPage() {
       })
     );
   }, []);
+
+  const handleToggleTowerContent = useCallback((towerIndex: number) => {
+    setActiveTowersData(prev => prev.map((tower, index) => 
+      index === towerIndex ? { ...tower, isTowerContentVisible: !tower.isTowerContentVisible } : tower
+    ));
+  }, []);
+
 
   const handleRemoveCategoryFromFloor = useCallback((towerIndex: number, floorIndex: number, categoryIdToRemove: string) => {
     setActiveTowersData(prevTowers => {
@@ -917,35 +867,30 @@ export default function FireCheckPage() {
           {isChecklistVisible && (
             <>
               <div className="flex flex-wrap gap-2 mb-4">
-                <Button
-                  onClick={handleToggleAllGlobalCategories}
-                  size="icon"
-                  className={cn(
-                    "rounded-full",
-                    areAnyGlobalCategoriesExpanded
-                      ? "bg-red-500 hover:bg-red-600 text-white"
-                      : "bg-green-500 hover:bg-green-600 text-white"
-                  )}
-                  title={areAnyGlobalCategoriesExpanded ? "Recolher Todas as Categorias (Global)" : "Expandir Todas as Categorias (Global)"}
-                >
-                  {areAnyGlobalCategoriesExpanded ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </Button>
-                <Button
-                  onClick={handleToggleAllFloorsGlobally}
-                  size="icon"
-                  className={cn(
-                    "rounded-full",
-                    areAnyFloorsGloballyHidden
-                      ? "bg-green-500 hover:bg-green-600 text-white" 
-                      : "bg-red-500 hover:bg-red-600 text-white"
-                  )}
-                  title={areAnyFloorsGloballyHidden ? "Mostrar Conteúdo de Todos os Andares" : "Ocultar Conteúdo de Todos os Andares"}
-                >
-                  {areAnyFloorsGloballyHidden ? <Layers className="h-5 w-5" /> : <PanelTopClose className="h-5 w-5" />}
-                </Button>
+                 <Button
+                    onClick={handleToggleAllGlobalCategories}
+                    size="sm"
+                    variant="outline"
+                    className={cn(areAnyGlobalCategoriesExpanded ? "text-red-600 border-red-500 hover:bg-red-500/10 hover:text-red-700" : "text-green-600 border-green-500 hover:bg-green-500/10 hover:text-green-700")}
+                    title={areAnyGlobalCategoriesExpanded ? "Recolher Todas as Categorias (Global)" : "Expandir Todas as Categorias (Global)"}
+                  >
+                    {areAnyGlobalCategoriesExpanded ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                    Categorias
+                  </Button>
+                  <Button
+                    onClick={handleToggleAllFloorsGlobally}
+                    size="sm"
+                    variant="outline"
+                    className={cn(areAnyTowersGloballyHidden ? "text-green-600 border-green-500 hover:bg-green-500/10 hover:text-green-700" : "text-red-600 border-red-500 hover:bg-red-500/10 hover:text-red-700")}
+                    title={areAnyTowersGloballyHidden ? "Mostrar Conteúdo de Todas as Torres" : "Ocultar Conteúdo de Todas as Torres"}
+                  >
+                    {areAnyTowersGloballyHidden ? <Layers className="mr-2 h-4 w-4" /> : <PanelTopClose className="mr-2 h-4 w-4" />}
+                    Torres
+                  </Button>
               </div>
 
               {activeTowersData.map((tower, towerIndex) => {
+                const areAnyCategoriesInTowerExpanded = tower.floors.some(f => f.categories.some(c => c.isExpanded));
                 return (
                 <Card key={tower.id} className="mb-8 shadow-md border-primary/50">
                   <CardHeader className="bg-primary/5 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -955,24 +900,117 @@ export default function FireCheckPage() {
                         value={tower.towerName}
                         onChange={(e) => handleTowerNameChange(towerIndex, e.target.value)}
                         placeholder={`Nome da Torre ${towerIndex + 1}`}
-                        className="text-lg font-semibold w-[150px]"
+                        className="text-lg font-semibold w-auto flex-grow"
                       />
-                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setModalTowerState({ tower, index: towerIndex })}
-                        className="ml-auto"
-                       >
-                         <Layers className="mr-2 h-4 w-4"/>
-                         Ver Andares
-                       </Button>
+                    </div>
+                     <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleToggleTowerContent(towerIndex)}
+                          title={tower.isTowerContentVisible ? "Ocultar Conteúdo da Torre" : "Mostrar Conteúdo da Torre"}
+                          className={cn(
+                            'rounded-full h-9 w-9',
+                            tower.isTowerContentVisible
+                              ? 'border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700'
+                              : 'border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700'
+                          )}
+                        >
+                          {tower.isTowerContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </Button>
                        {activeTowersData.length > 1 && (
                          <Button variant="ghost" size="icon" onClick={() => handleRemoveTower(towerIndex)} className="text-destructive hover:bg-destructive/10 h-9 w-9" title="Remover esta torre">
                            <Trash2 className="h-5 w-5" />
                          </Button>
                        )}
-                    </div>
+                     </div>
                   </CardHeader>
+                  {tower.isTowerContentVisible && (
+                     <CardContent className="p-3 space-y-4">
+                       {(Array.isArray(tower.floors) ? tower.floors : []).map((floorData, floorIndex) => {
+                          const areAnyCategoriesExpanded = floorData.categories.some((cat) => cat.isExpanded);
+                          return (
+                            <Card key={floorData.id} className="mb-2 shadow-sm border">
+                              <CardContent className="p-3 space-y-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                  <div className="flex items-center gap-x-2 flex-grow">
+                                    <Label htmlFor={`floorName-${floorData.id}`} className="text-sm font-medium whitespace-nowrap">
+                                      ANDAR:
+                                    </Label>
+                                    <Input
+                                      id={`floorName-${floorData.id}`}
+                                      value={floorData.floor}
+                                      onChange={(e) => handleFloorSpecificFieldChange(towerIndex, floorIndex, 'floor', e.target.value)}
+                                      placeholder="Ex: Térreo, 1A"
+                                      className="w-[150px] h-9 text-sm"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-x-2 flex-shrink-0">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => handleToggleAllCategoriesForFloor(towerIndex, floorIndex)}
+                                      title={areAnyCategoriesExpanded ? 'Recolher itens do andar' : 'Expandir itens do andar'}
+                                      className={cn(
+                                        'rounded-full h-9 w-9',
+                                        areAnyCategoriesExpanded
+                                          ? 'border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700'
+                                          : 'border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700'
+                                      )}
+                                    >
+                                      {areAnyCategoriesExpanded ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => handleToggleFloorContent(towerIndex, floorIndex)}
+                                      title={floorData.isFloorContentVisible ? 'Ocultar conteúdo do andar' : 'Mostrar conteúdo do andar'}
+                                      className={cn(
+                                        'rounded-full h-9 w-9',
+                                        floorData.isFloorContentVisible
+                                          ? 'border-red-500 text-red-600 hover:bg-red-500/10 hover:text-red-700'
+                                          : 'border-green-500 text-green-600 hover:bg-green-500/10 hover:text-green-700'
+                                      )}
+                                    >
+                                      {floorData.isFloorContentVisible ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                                    </Button>
+                                    {(Array.isArray(tower.floors) ? tower.floors : []).length > 1 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleRemoveFloorFromTower(towerIndex, floorIndex)}
+                                        className="text-destructive hover:bg-destructive/10 h-9 w-9"
+                                        title="Remover este andar"
+                                      >
+                                        <Trash2 className="h-5 w-5" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                                {floorData.isFloorContentVisible && (
+                                  <>
+                                    {floorData.categories.map((category) => {
+                                      const overallStatus = getCategoryOverallStatus(category);
+                                      return (
+                                        <InspectionCategoryItem
+                                          key={`${floorData.id}-${category.id}`}
+                                          category={category}
+                                          overallStatus={overallStatus}
+                                          onCategoryItemUpdate={(catId, update) => handleCategoryItemUpdateForFloor(towerIndex, floorIndex, catId, update)}
+                                          isMobile={isMobile}
+                                        />
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </CardContent>
+                            </Card>
+                          )})}
+                           <Button onClick={() => handleAddFloorToTower(towerIndex)} variant="outline" size="sm" className="w-full mt-2 border-dashed">
+                            <Plus className="mr-2 h-4 w-4" /> Adicionar Andar
+                          </Button>
+                     </CardContent>
+                  )}
                 </Card>
               )})}
             </>
@@ -1055,3 +1093,6 @@ export default function FireCheckPage() {
 
     
 
+
+
+    
