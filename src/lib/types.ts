@@ -69,6 +69,7 @@ export interface ClientInfo {
   inspectionNumber: string;
   inspectionDate: string;
   inspectedBy?: string;
+  logoUrl?: string;
 }
 
 // Updated to use TowerData[]
@@ -112,5 +113,3 @@ export type CategoryUpdatePayload =
   | { field: 'renameSubItemName'; subItemId: string; newName: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';
-
-    

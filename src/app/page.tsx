@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -77,6 +78,7 @@ export default function FireCheckPage() {
     inspectionNumber: '',
     inspectionDate: '',
     inspectedBy: '',
+    logoUrl: undefined,
   });
 
   const [activeTowersData, setActiveTowersData] = useState<TowerData[]>([createNewTowerEntry()]);
@@ -130,12 +132,12 @@ export default function FireCheckPage() {
   }, [clientInfo.inspectionDate, fetchSavedInspectionsFromDb]);
 
 
-  const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
+  const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string | null) => {
     setClientInfo(prevClientInfo => {
       const newClientInfoState = { ...prevClientInfo, [field]: value };
-      if (field === 'clientLocation') {
-        if (!newClientInfoState.inspectionNumber || prevClientInfo.clientLocation !== newClientInfoState.clientLocation) {
-             newClientInfoState.inspectionNumber = calculateNextInspectionNumber(newClientInfoState.clientLocation);
+      if (field === 'clientLocation' && typeof value === 'string') {
+        if (!newClientInfoState.inspectionNumber || prevClientInfo.clientLocation !== value) {
+             newClientInfoState.inspectionNumber = calculateNextInspectionNumber(value);
         }
         if (value && field === 'clientLocation') {
             setSavedLocations(prevLocs => {
@@ -381,7 +383,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', clientCode: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: '',
+      inspectionDate: defaultInspectionDate, inspectedBy: '', logoUrl: undefined,
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -503,6 +505,7 @@ export default function FireCheckPage() {
         inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '', // Prioritize clientInfo.inspectionNumber, then inspectionToLoad.id
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
         inspectedBy: loadedClientInfo.inspectedBy || '',
+        logoUrl: loadedClientInfo.logoUrl || undefined,
     });
 
     const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {
@@ -713,6 +716,9 @@ export default function FireCheckPage() {
                                    )
                                  );
           toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário${hasPhotos ? ' com fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
+          if (inspectionToLoad.clientInfo.logoUrl) {
+            toast({ title: "Logo Importado", description: "O logo da empresa foi carregado do arquivo JSON." });
+          }
         } else {
           console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspectionToLoad, null, 2).substring(0, 500));
           toast({ title: "Estrutura Inválida", description: `O arquivo ${file.name} não corresponde à estrutura de vistoria esperada.`, variant: "destructive" });
@@ -769,19 +775,16 @@ export default function FireCheckPage() {
 
   const handleToggleAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
     setActiveTowersData(prevTowers => {
-      const tower = prevTowers[towerIndex];
-      if (!tower) return prevTowers;
-  
-      const floor = Array.isArray(tower.floors) ? tower.floors[floorIndex] : undefined;
-      if (!floor) return prevTowers;
-  
-      const areAnyExpanded = floor.categories.some(cat => cat.isExpanded);
-      const shouldExpand = !areAnyExpanded;
-  
       return prevTowers.map((t, tIdx) => {
         if (tIdx !== towerIndex) return t;
         
         const currentFloors = Array.isArray(t.floors) ? t.floors : [];
+        const floor = currentFloors[floorIndex];
+        if (!floor) return t;
+
+        const areAnyExpanded = floor.categories.some(cat => cat.isExpanded);
+        const shouldExpand = !areAnyExpanded;
+        
         return {
           ...t,
           floors: currentFloors.map((f, fIdx) => {
@@ -826,7 +829,7 @@ export default function FireCheckPage() {
   return (
     <ScrollArea className="h-screen bg-background">
       <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <AppHeader />
+        <AppHeader clientInfoData={clientInfo} onClientInfoChange={handleClientInfoChange} />
         <ClientDataForm clientInfoData={clientInfo} onClientInfoChange={handleClientInfoChange} savedLocations={savedLocations} />
 
         <div className="my-6 p-4 bg-card shadow-lg rounded-lg">
@@ -951,13 +954,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-    
-    
-
-    
-
-
-
-    
-
-    

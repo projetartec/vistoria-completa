@@ -1,16 +1,81 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Upload, Trash2 } from 'lucide-react';
+import type { ClientInfo } from '@/lib/types';
 
-// No props are needed anymore as the logo is no longer customizable.
-interface AppHeaderProps {}
+interface AppHeaderProps {
+  clientInfoData: ClientInfo;
+  onClientInfoChange: (field: keyof ClientInfo, value: string | null) => void;
+}
 
-export function AppHeader({}: AppHeaderProps) {
+export function AppHeader({ clientInfoData, onClientInfoChange }: AppHeaderProps) {
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onClientInfoChange('logoUrl', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerLogoUpload = () => {
+    logoInputRef.current?.click();
+  };
+
+  const removeLogo = () => {
+    onClientInfoChange('logoUrl', null);
+  };
+  
   return (
     <header className="bg-card p-4 shadow-md rounded-lg mb-6">
-      {/* Centering the company details since the logo upload is removed */}
-      <div className="container mx-auto flex flex-row items-center justify-center gap-x-4 md:gap-x-6">
+      <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Logo and Upload Section */}
+        <div className="flex flex-col items-center gap-2">
+          {clientInfoData.logoUrl ? (
+            <div className="relative group">
+              <Image
+                src={clientInfoData.logoUrl}
+                alt="Company Logo"
+                width={150}
+                height={150}
+                className="object-contain h-24 w-auto rounded-md border p-1"
+              />
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={removeLogo}
+                title="Remover Logo"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="h-24 w-40 flex items-center justify-center border-2 border-dashed rounded-md bg-muted/50">
+              <span className="text-sm text-muted-foreground">Logo</span>
+            </div>
+          )}
+          <input
+            type="file"
+            ref={logoInputRef}
+            onChange={handleLogoUpload}
+            accept="image/*"
+            className="hidden"
+          />
+          <Button onClick={triggerLogoUpload} variant="outline" size="sm">
+            <Upload className="mr-2 h-4 w-4" />
+            Carregar Logo
+          </Button>
+        </div>
+
         {/* Company Details Section */}
-        <div className="text-center">
+        <div className="text-center md:text-left">
           <h1 className="text-base sm:text-lg md:text-xl font-bold text-primary font-headline mb-2">
             BRAZIL EXTINTORES - SP
           </h1>

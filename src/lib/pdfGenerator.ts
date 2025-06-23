@@ -157,9 +157,14 @@ function openHtmlInNewWindow(htmlContent: string, reportTitle: string = "Relató
 }
 
 function getHeaderHtml(clientInfo: ClientInfo, title: string): string {
+  const logoHtml = clientInfo.logoUrl 
+    ? `<div class="pdf-logo-container"><img src="${clientInfo.logoUrl}" alt="Logo"></div>`
+    : '<div class="pdf-logo-container" style="width: 180px;"></div>'; // Placeholder for alignment
+
   return `
-    <header class="pdf-header-main" style="justify-content: center;">
-      <div class="pdf-company-info-container" style="text-align: center;">
+    <header class="pdf-header-main">
+      ${logoHtml}
+      <div class="pdf-company-info-container">
         <div class="company-name">BRAZIL EXTINTORES - SP</div>
         <div class="company-details">
           <p>Telefone: (19) 3884-6127 - (19) 9 8183-1813</p>
