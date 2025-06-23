@@ -61,7 +61,6 @@ export interface TowerData {
   id: string; // Unique ID for this tower entry
   towerName: string;
   floors: FloorData[];
-  isTowerContentVisible?: boolean; // Added to control visibility of the entire tower's content
 }
 
 export interface ClientInfo {
