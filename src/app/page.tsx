@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -768,16 +767,34 @@ export default function FireCheckPage() {
     }
   }, [areAnyGlobalCategoriesExpanded, handleCollapseAllGlobalCategories, handleExpandAllGlobalCategories]);
 
-  const handleExpandAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: true })) } : floor) } : tower));
-  }, []);
-  const handleCollapseAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    setActiveTowersData(prevTowers => prevTowers.map((tower, tIdx) => tIdx === towerIndex ? { ...tower, floors: (Array.isArray(tower.floors) ? tower.floors : []).map((floor, fIdx) => fIdx === floorIndex ? { ...floor, categories: floor.categories.map(cat => ({ ...cat, isExpanded: false })) } : floor) } : tower));
-  }, []);
   const handleToggleAllCategoriesForFloor = useCallback((towerIndex: number, floorIndex: number) => {
-    const tower = activeTowersData[towerIndex];
-    if (tower) { const currentFloors = Array.isArray(tower.floors) ? tower.floors : []; const floor = currentFloors[floorIndex]; if (floor) { const areAnyExpanded = floor.categories.some(cat => cat.isExpanded); if (areAnyExpanded) handleCollapseAllCategoriesForFloor(towerIndex, floorIndex); else handleExpandAllCategoriesForFloor(towerIndex, floorIndex); } }
-  }, [activeTowersData, handleCollapseAllCategoriesForFloor, handleExpandAllCategoriesForFloor]);
+    setActiveTowersData(prevTowers => {
+      const tower = prevTowers[towerIndex];
+      if (!tower) return prevTowers;
+  
+      const floor = Array.isArray(tower.floors) ? tower.floors[floorIndex] : undefined;
+      if (!floor) return prevTowers;
+  
+      const areAnyExpanded = floor.categories.some(cat => cat.isExpanded);
+      const shouldExpand = !areAnyExpanded;
+  
+      return prevTowers.map((t, tIdx) => {
+        if (tIdx !== towerIndex) return t;
+        
+        const currentFloors = Array.isArray(t.floors) ? t.floors : [];
+        return {
+          ...t,
+          floors: currentFloors.map((f, fIdx) => {
+            if (fIdx !== floorIndex) return f;
+            return {
+              ...f,
+              categories: f.categories.map(cat => ({ ...cat, isExpanded: shouldExpand })),
+            };
+          }),
+        };
+      });
+    });
+  }, []);
 
   const handleToggleFloorContent = useCallback((towerIndex: number, floorIndex: number) => {
     setActiveTowersData(prevTowers =>
