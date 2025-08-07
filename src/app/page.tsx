@@ -18,12 +18,15 @@ import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.co
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Layers, PanelTopClose, ChevronsUpDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Layers, PanelTopClose, ChevronsUpDown, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { saveInspectionToDB, getAllInspectionsFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
+import { saveInspectionToFirestore, getInspectionsFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
+import { saveInspectionToDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { getCategoryOverallStatus } from '@/lib/inspection-helpers';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/auth/context';
+import { useRouter } from 'next/navigation';
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -68,6 +71,8 @@ const initiateFileDownload = (dataToDownload: FullInspectionData | FullInspectio
 
 
 export default function FireCheckPage() {
+  const { user, loading, logout } = useAuth();
+  const router = useRouter();
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const jsonImportFileInputRef = useRef<HTMLInputElement>(null);
@@ -94,23 +99,36 @@ export default function FireCheckPage() {
   const [savedLocations, setSavedLocations] = useLocalStorage<string[]>('firecheck-saved-locations-v1', []);
   const [isChecklistVisible, setIsChecklistVisible] = useState(false);
 
-  const fetchSavedInspectionsFromDb = useCallback(async () => {
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user) {
+      setClientInfo(prev => ({ ...prev, inspectedBy: user }));
+    }
+  }, [user]);
+
+  const fetchSavedInspections = useCallback(async () => {
+    if (!user) return;
     setIsLoadingDbInspections(true);
     try {
-      const inspections = await getAllInspectionsFromDB();
+      const inspections = await getInspectionsFromFirestore(user);
       setDbInspections(inspections);
     } catch (error) {
-      console.error("Failed to fetch inspections from IndexedDB:", error);
+      console.error("Failed to fetch inspections from Firestore:", error);
       toast({
         title: "Erro ao Carregar Vistorias Salvas",
-        description: "Não foi possível buscar as vistorias do banco de dados do navegador.",
+        description: "Não foi possível buscar as vistorias da nuvem.",
         variant: "destructive",
       });
       setDbInspections([]);
     } finally {
       setIsLoadingDbInspections(false);
     }
-  }, [toast]);
+  }, [toast, user]);
 
  useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -126,24 +144,21 @@ export default function FireCheckPage() {
       if (!clientInfo.inspectionDate) {
         setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
       }
-      fetchSavedInspectionsFromDb();
+      if (user) {
+        fetchSavedInspections();
+      }
     }
     setIsClientInitialized(true);
-  }, [clientInfo.inspectionDate, fetchSavedInspectionsFromDb]);
+  }, [clientInfo.inspectionDate, fetchSavedInspections, user]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      // Show confirmation prompt only if there is unsaved data.
-      // We use a simple check on clientLocation as an indicator of entered data.
       if (clientInfo.clientLocation.trim()) {
         event.preventDefault();
-        // This is required for Chrome
         event.returnValue = '';
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
@@ -401,7 +416,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', clientCode: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: '', logoUrl: undefined,
+      inspectionDate: defaultInspectionDate, inspectedBy: user || '', logoUrl: undefined,
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -410,7 +425,7 @@ export default function FireCheckPage() {
      if (clientInfo.clientLocation) { // Auto-generate new number only if location was set
         setClientInfo(prev => ({...prev, inspectionNumber: calculateNextInspectionNumber(prev.clientLocation)}));
     }
-  }, [clientInfo.clientLocation]);
+  }, [clientInfo.clientLocation, user]);
 
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => {
@@ -492,27 +507,33 @@ export default function FireCheckPage() {
     );
   }, [toast]);
 
-  const handleSaveInspectionToDB = useCallback(async () => {
+  const handleSaveInspection = useCallback(async () => {
+    if (!user) {
+      toast({ title: "Usuário não autenticado", description: "Por favor, faça login para salvar a vistoria.", variant: "destructive" });
+      return;
+    }
     if (!clientInfo.inspectionNumber) {
        toast({ title: "ID da Vistoria Necessário", description: "Por favor, preencha o Local para gerar um Número de Vistoria ou insira manualmente.", variant: "destructive" });
        return;
     }
     const inspectionToSave: FullInspectionData = {
-      id: clientInfo.inspectionNumber, // Use inspectionNumber as the key for IndexedDB
-      clientInfo: { ...clientInfo },
+      id: clientInfo.inspectionNumber,
+      clientInfo: { ...clientInfo, inspectedBy: user },
       towers: activeTowersData,
       timestamp: Date.now(),
+      owner: user,
     };
 
     try {
-      await saveInspectionToDB(inspectionToSave);
-      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva no navegador (incluindo fotos e observações).` });
-      fetchSavedInspectionsFromDb(); // Refresh the list of saved inspections
+      await saveInspectionToFirestore(inspectionToSave);
+      await saveInspectionToDB(inspectionToSave); // Also save to local IndexedDB
+      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem e localmente.` });
+      fetchSavedInspections();
     } catch (err: any) {
-      console.error('Erro ao salvar vistoria no IndexedDB:', err);
-      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria no banco de dados do navegador.", variant: "destructive" });
+      console.error('Erro ao salvar vistoria:', err);
+      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria.", variant: "destructive" });
     }
-  }, [clientInfo, activeTowersData, toast, fetchSavedInspectionsFromDb]);
+  }, [clientInfo, activeTowersData, toast, fetchSavedInspections, user]);
 
 
   const loadInspectionDataToForm = useCallback((inspectionToLoad: FullInspectionData) => {
@@ -522,7 +543,7 @@ export default function FireCheckPage() {
         clientCode: loadedClientInfo.clientCode || '',
         inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '', // Prioritize clientInfo.inspectionNumber, then inspectionToLoad.id
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
-        inspectedBy: loadedClientInfo.inspectedBy || '',
+        inspectedBy: loadedClientInfo.inspectedBy || user || '',
         logoUrl: loadedClientInfo.logoUrl || undefined,
     });
 
@@ -613,37 +634,47 @@ export default function FireCheckPage() {
     setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
     setIsChecklistVisible(true);
     setIsSavedInspectionsVisible(false); // Hide list after loading
-  }, [setActiveTowersData, setClientInfo, setIsChecklistVisible, setIsSavedInspectionsVisible]);
+  }, [setActiveTowersData, setClientInfo, setIsChecklistVisible, setIsSavedInspectionsVisible, user]);
 
-  const handleLoadInspectionFromDBList = useCallback(async (inspectionId: string) => {
+  const handleLoadInspection = useCallback(async (inspectionId: string) => {
+    if (!user) {
+      toast({ title: "Usuário não autenticado", description: "Por favor, faça login para carregar a vistoria.", variant: "destructive" });
+      return;
+    }
     try {
-      const inspectionToLoad = await loadInspectionFromDB(inspectionId);
+      const inspectionToLoad = await loadInspectionFromFirestore(inspectionId, user);
       if (inspectionToLoad) {
         loadInspectionDataToForm(inspectionToLoad);
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada do armazenamento do navegador.` });
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada da nuvem.` });
       } else {
-        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada.`, variant: "destructive" });
+        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada na nuvem.`, variant: "destructive" });
       }
     } catch (error) {
       console.error("Error loading inspection from DB list:", error);
       toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria.", variant: "destructive" });
     }
-  }, [loadInspectionDataToForm, toast]);
+  }, [loadInspectionDataToForm, toast, user]);
 
-  const handleDeleteInspectionFromDBList = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
+  const handleDeleteInspection = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
+    if (!user) {
+        toast({ title: "Usuário não autenticado.", variant: "destructive" });
+        return;
+    }
     try {
-      await deleteInspectionFromDB(inspectionId);
-      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida com sucesso.` });
-      fetchSavedInspectionsFromDb(); // Refresh the list
+      await deleteInspectionFromFirestore(inspectionId, user);
+      await deleteInspectionFromDB(inspectionId); // Also delete from local
+      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem e localmente.` });
+      fetchSavedInspections();
     } catch (error) {
-      console.error("Error deleting inspection from DB list:", error);
+      console.error("Error deleting inspection:", error);
       toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria.", variant: "destructive" });
     }
-  }, [fetchSavedInspectionsFromDb, toast]);
+  }, [fetchSavedInspections, toast, user]);
 
   const handleDownloadJsonFromDBList = useCallback(async (inspectionId: string) => {
+    if (!user) return;
     try {
-      const inspectionData = await loadInspectionFromDB(inspectionId);
+      const inspectionData = await loadInspectionFromFirestore(inspectionId, user);
       if (inspectionData) {
         const clientInfoForFilename = { inspectionNumber: inspectionData.id, clientLocation: inspectionData.clientInfo.clientLocation || 'vistoria' };
         const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
@@ -656,14 +687,14 @@ export default function FireCheckPage() {
       console.error("Error downloading JSON from DB list:", error);
       toast({ title: "Erro no Download", description: "Não foi possível baixar o JSON da vistoria.", variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, user]);
 
   const handleToggleSavedInspections = useCallback(() => {
     setIsSavedInspectionsVisible(prev => !prev);
-    if (!isSavedInspectionsVisible) { // If opening, refresh the list
-      fetchSavedInspectionsFromDb();
+    if (!isSavedInspectionsVisible) {
+      fetchSavedInspections();
     }
-  }, [isSavedInspectionsVisible, fetchSavedInspectionsFromDb]);
+  }, [isSavedInspectionsVisible, fetchSavedInspections]);
 
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
@@ -676,12 +707,13 @@ export default function FireCheckPage() {
       clientInfo: { ...clientInfo },
       towers: activeTowersData, 
       timestamp: Date.now(),
+      owner: user || 'unknown'
     };
     const clientInfoForFilename = { inspectionNumber: inspectionToExport.id, clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria' };
     const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
     const fileName = initiateFileDownload(inspectionToExport, baseFileName);
     toast({ title: "Vistoria Exportada", description: `Arquivo ${fileName} salvo (incluindo fotos e observações da vistoria ativa).` });
-  }, [clientInfo, activeTowersData, toast]);
+  }, [clientInfo, activeTowersData, toast, user]);
 
 
  const handleImportInspectionFromJson = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -842,11 +874,24 @@ export default function FireCheckPage() {
   const handleGeneratePhotoReportPdf = useCallback(async () => { await generatePhotoReportPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
 
 
-  if (!isClientInitialized) return <div className="flex justify-center items-center h-screen bg-background"><p className="text-foreground">Carregando formulário...</p></div>;
+  if (loading || !user) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-background">
+        <p className="text-foreground">Carregando...</p>
+      </div>
+    );
+  }
 
   return (
     <ScrollArea className="h-screen bg-background">
       <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="flex justify-end mb-4">
+            <Button variant="ghost" onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+            </Button>
+        </div>
+
         <AppHeader clientInfoData={clientInfo} onClientInfoChange={handleClientInfoChange} />
         <ClientDataForm clientInfoData={clientInfo} onClientInfoChange={handleClientInfoChange} savedLocations={savedLocations} />
 
@@ -908,7 +953,7 @@ export default function FireCheckPage() {
         </div>
 
         <ActionButtonsPanel
-          onSave={handleSaveInspectionToDB}
+          onSave={handleSaveInspection}
           onNewInspection={resetInspectionForm}
           onAddNewTower={handleAddNewTower} 
           onToggleSavedInspections={handleToggleSavedInspections}
@@ -961,8 +1006,8 @@ export default function FireCheckPage() {
           <SavedInspectionsList
             inspections={dbInspections}
             isLoading={isLoadingDbInspections}
-            onLoadInspection={handleLoadInspectionFromDBList}
-            onDeleteInspection={handleDeleteInspectionFromDBList}
+            onLoadInspection={handleLoadInspection}
+            onDeleteInspection={handleDeleteInspection}
             onDownloadJson={handleDownloadJsonFromDBList}
           />
         )}

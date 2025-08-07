@@ -189,7 +189,7 @@ export function ActionButtonsPanel({
             <Button
               title="Nova Vistoria (Limpar Formulário)"
               onClick={() => handleFabAction(onNewInspection)}
-              className={cn(fabBaseClasses, "bg-destructive hover:bg-destructive/90 text-destructive-foreground")}
+              className={cn(fabBaseClasses, "bg-yellow-500 hover:bg-yellow-600 text-white")}
             >
               <PlusSquare className={iconSize} />
             </Button>
@@ -197,7 +197,7 @@ export function ActionButtonsPanel({
 
           {onSave && (
             <Button
-              title="Salvar Vistoria"
+              title="Salvar Vistoria na Nuvem"
               onClick={() => handleFabAction(onSave)}
               className={cn(fabBaseClasses, "bg-primary hover:bg-primary/90 text-primary-foreground")}
             >
@@ -224,4 +224,3 @@ export function ActionButtonsPanel({
     </>
   );
 }
-

@@ -27,7 +27,7 @@ export function SavedInspectionsList({
     return (
       <div className="my-6 p-4 bg-card shadow-lg rounded-lg text-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-        <p className="text-muted-foreground">Carregando vistorias salvas...</p>
+        <p className="text-muted-foreground">Carregando vistorias da nuvem...</p>
       </div>
     );
   }
@@ -35,8 +35,8 @@ export function SavedInspectionsList({
   if (!inspections || inspections.length === 0) {
     return (
       <div className="my-6 p-4 bg-card shadow-lg rounded-lg text-center">
-        <CardTitle className="text-lg font-semibold mb-2">Vistorias Salvas no Navegador</CardTitle>
-        <CardDescription>Nenhuma vistoria salva encontrada no armazenamento do navegador.</CardDescription>
+        <CardTitle className="text-lg font-semibold mb-2">Vistorias Salvas</CardTitle>
+        <CardDescription>Nenhuma vistoria salva encontrada na nuvem para este usuário.</CardDescription>
       </div>
     );
   }
@@ -44,8 +44,8 @@ export function SavedInspectionsList({
   return (
     <Card className="my-6 shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold font-headline text-primary">Vistorias Salvas no Navegador</CardTitle>
-        <CardDescription>Gerencie as vistorias armazenadas localmente no seu navegador.</CardDescription>
+        <CardTitle className="text-xl font-semibold font-headline text-primary">Vistorias Salvas</CardTitle>
+        <CardDescription>Gerencie as vistorias armazenadas na nuvem.</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[300px] w-full pr-3"> {/* Added pr-3 for scrollbar spacing */}

@@ -20,7 +20,7 @@ export function ClientDataForm({
   onClientInfoChange,
   // savedLocations prop is kept but not directly used in this version of the form
 }: ClientDataFormProps) {
-  const [isContentVisible, setIsContentVisible] = useState(false);
+  const [isContentVisible, setIsContentVisible] = useState(true);
 
   // allLocationSuggestions is no longer used for a Select component
   // const allLocationSuggestions = React.useMemo(() => {
@@ -116,6 +116,8 @@ export function ClientDataForm({
                 value={clientInfoData.inspectedBy || ''}
                 onChange={(e) => onClientInfoChange('inspectedBy', e.target.value)}
                 placeholder="Nome do técnico responsável"
+                readOnly
+                className="bg-muted cursor-not-allowed"
               />
             </div>
           </div>

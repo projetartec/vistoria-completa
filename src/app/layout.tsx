@@ -2,6 +2,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from '@/auth/context';
 
 export const metadata: Metadata = {
   title: 'FireCheck Brazil',
@@ -23,8 +24,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#64B5F6" />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
-        {children}
-        <Toaster />
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
