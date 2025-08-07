@@ -83,7 +83,7 @@ export default function FireCheckPage() {
     inspectionNumber: '',
     inspectionDate: '',
     inspectedBy: '',
-    logoUrl: undefined,
+    logoUrl: null,
   });
 
   const [activeTowersData, setActiveTowersData] = useState<TowerData[]>([createNewTowerEntry()]);
@@ -416,7 +416,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', clientCode: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: user || '', logoUrl: undefined,
+      inspectionDate: defaultInspectionDate, inspectedBy: user || '', logoUrl: null,
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -518,7 +518,11 @@ export default function FireCheckPage() {
     }
     const inspectionToSave: FullInspectionData = {
       id: clientInfo.inspectionNumber,
-      clientInfo: { ...clientInfo, inspectedBy: user },
+      clientInfo: { 
+        ...clientInfo, 
+        inspectedBy: user,
+        logoUrl: clientInfo.logoUrl || null, // Ensure logoUrl is null, not undefined
+      },
       towers: activeTowersData,
       timestamp: Date.now(),
       owner: user,
@@ -544,7 +548,7 @@ export default function FireCheckPage() {
         inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '', // Prioritize clientInfo.inspectionNumber, then inspectionToLoad.id
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
         inspectedBy: loadedClientInfo.inspectedBy || user || '',
-        logoUrl: loadedClientInfo.logoUrl || undefined,
+        logoUrl: loadedClientInfo.logoUrl || null,
     });
 
     const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {

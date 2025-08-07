@@ -69,7 +69,7 @@ export interface ClientInfo {
   inspectionNumber: string;
   inspectionDate: string;
   inspectedBy?: string;
-  logoUrl?: string;
+  logoUrl?: string | null;
 }
 
 // Updated to use TowerData[]
