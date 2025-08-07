@@ -708,7 +708,10 @@ export default function FireCheckPage() {
     }
     const inspectionToExport: FullInspectionData = {
       id: clientInfo.inspectionNumber,
-      clientInfo: { ...clientInfo },
+      clientInfo: { 
+        ...clientInfo,
+        logoUrl: clientInfo.logoUrl || null
+      },
       towers: activeTowersData, 
       timestamp: Date.now(),
       owner: user || 'unknown'
@@ -1021,3 +1024,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
