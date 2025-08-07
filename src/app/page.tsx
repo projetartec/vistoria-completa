@@ -131,6 +131,24 @@ export default function FireCheckPage() {
     setIsClientInitialized(true);
   }, [clientInfo.inspectionDate, fetchSavedInspectionsFromDb]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Show confirmation prompt only if there is unsaved data.
+      // We use a simple check on clientLocation as an indicator of entered data.
+      if (clientInfo.clientLocation.trim()) {
+        event.preventDefault();
+        // This is required for Chrome
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [clientInfo.clientLocation]);
+
 
   const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string | null) => {
     setClientInfo(prevClientInfo => {
