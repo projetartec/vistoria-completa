@@ -11,6 +11,9 @@ const INSPECTIONS_COLLECTION = 'inspections';
 // Save inspection to Firestore and local IndexedDB
 export async function saveInspectionToFirestore(inspectionData: FullInspectionData): Promise<void> {
   try {
+    if (!inspectionData.owner) {
+        throw new Error("Owner is not defined, cannot save inspection.");
+    }
     const docRef = doc(db, INSPECTIONS_COLLECTION, inspectionData.id);
     await setDoc(docRef, inspectionData);
     // Also save to local IndexedDB for offline capabilities/caching
@@ -24,6 +27,10 @@ export async function saveInspectionToFirestore(inspectionData: FullInspectionDa
 // Get all inspections for the logged-in user from Firestore
 export async function getInspectionsFromFirestore(owner: string): Promise<FullInspectionData[]> {
     try {
+        if (!owner) {
+            console.log("No owner specified, returning empty array.");
+            return [];
+        }
         const q = query(collection(db, INSPECTIONS_COLLECTION), where("owner", "==", owner));
         const querySnapshot = await getDocs(q);
         const inspections: FullInspectionData[] = [];
@@ -40,6 +47,10 @@ export async function getInspectionsFromFirestore(owner: string): Promise<FullIn
 // Load a single inspection from Firestore
 export async function loadInspectionFromFirestore(id: string, owner: string): Promise<FullInspectionData | null> {
     try {
+        if (!owner) {
+            console.warn("Attempted to load inspection without an owner.");
+            return null;
+        }
         const docRef = doc(db, INSPECTIONS_COLLECTION, id);
         const docSnap = await getDoc(docRef);
 
@@ -66,6 +77,9 @@ export async function loadInspectionFromFirestore(id: string, owner: string): Pr
 // Delete an inspection from Firestore and local IndexedDB
 export async function deleteInspectionFromFirestore(id: string, owner: string): Promise<void> {
     try {
+        if (!owner) {
+            throw new Error("Cannot delete without an owner.");
+        }
         // First, verify ownership before deleting
         const docRef = doc(db, INSPECTIONS_COLLECTION, id);
         const docSnap = await getDoc(docRef);

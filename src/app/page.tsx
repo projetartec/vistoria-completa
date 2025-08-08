@@ -530,7 +530,7 @@ export default function FireCheckPage() {
       await saveInspectionToFirestore(inspectionToSave);
       await saveInspectionToDB(inspectionToSave); // Also save to local IndexedDB
       toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem e localmente.` });
-      fetchSavedInspections();
+      await fetchSavedInspections(); // Refresh the list from Firestore
     } catch (err: any) {
       console.error('Erro ao salvar vistoria:', err);
       toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria.", variant: "destructive" });
@@ -668,7 +668,7 @@ export default function FireCheckPage() {
       await deleteInspectionFromFirestore(inspectionId, user);
       await deleteInspectionFromDB(inspectionId); // Also delete from local
       toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem e localmente.` });
-      fetchSavedInspections();
+      await fetchSavedInspections(); // Refresh the list from Firestore
     } catch (error) {
       console.error("Error deleting inspection:", error);
       toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria.", variant: "destructive" });
@@ -694,11 +694,14 @@ export default function FireCheckPage() {
   }, [toast, user]);
 
   const handleToggleSavedInspections = useCallback(() => {
-    setIsSavedInspectionsVisible(prev => !prev);
-    if (!isSavedInspectionsVisible) {
-      fetchSavedInspections();
-    }
-  }, [isSavedInspectionsVisible, fetchSavedInspections]);
+    setIsSavedInspectionsVisible(prev => {
+        const newVisibility = !prev;
+        if (newVisibility) { // If turning visible, fetch fresh data
+            fetchSavedInspections();
+        }
+        return newVisibility;
+    });
+  }, [fetchSavedInspections]);
 
 
   const handleExportCurrentInspectionToJson = useCallback(() => {
