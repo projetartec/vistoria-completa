@@ -164,7 +164,7 @@ export default function FireCheckPage() {
   }, [clientInfo.clientLocation]);
 
 
-  const handleClientInfoChange = useCallback((field: keyof Omit<ClientInfo, 'logoUrl'>, value: string) => {
+  const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string) => {
     setClientInfo(prevClientInfo => {
       const newClientInfoState = { ...prevClientInfo, [field]: value };
       if (field === 'clientLocation') {
@@ -632,6 +632,9 @@ export default function FireCheckPage() {
       };
     });
 
+    if (sanitizedTowersForForm.length > 0 && sanitizedTowersForForm[0].floors.length > 0) {
+      sanitizedTowersForForm[0].floors[0].isFloorContentVisible = true;
+    }
     setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
     setIsChecklistVisible(true);
     setIsSavedInspectionsVisible(false); // Hide list after loading
@@ -1017,9 +1020,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
-
-    
 
     

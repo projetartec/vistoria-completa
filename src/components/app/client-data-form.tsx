@@ -3,30 +3,20 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Select component is no longer used for clientLocation
 import type { ClientInfo } from '@/lib/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-// PREDEFINED_CLIENTS is not used here for a Select anymore
-// import { PREDEFINED_CLIENTS } from '@/constants/client.data'; 
 
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
-  onClientInfoChange: (field: keyof Omit<ClientInfo, 'logoUrl'>, value: string) => void;
-  savedLocations: string[]; // Kept for potential future use with suggestions, not for Select
+  onClientInfoChange: (field: keyof ClientInfo, value: string) => void;
+  savedLocations: string[]; 
 }
 
 export function ClientDataForm({ 
   clientInfoData, 
   onClientInfoChange,
-  // savedLocations prop is kept but not directly used in this version of the form
 }: ClientDataFormProps) {
   const [isContentVisible, setIsContentVisible] = useState(true);
-
-  // allLocationSuggestions is no longer used for a Select component
-  // const allLocationSuggestions = React.useMemo(() => {
-  //   const predefinedNames = PREDEFINED_CLIENTS.map(client => client.name);
-  //   return predefinedNames.sort((a, b) => a.localeCompare(b));
-  // }, []);
 
   return (
     <Card className="mb-6 shadow-lg">
@@ -54,7 +44,6 @@ export function ClientDataForm({
       {isContentVisible && (
         <CardContent id="client-data-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Changed from Select to Input */}
             <div className="md:col-span-2">
               <Label htmlFor="clientLocationInput">LOCAL (Nome do Cliente)</Label>
               <Input
@@ -65,26 +54,6 @@ export function ClientDataForm({
                 placeholder="Digite o nome do cliente/local"
               />
             </div>
-
-            {/* Código do Cliente field removed from UI */}
-            {/* 
-            <div>
-              <Label htmlFor="clientCode">CÓDIGO DO CLIENTE</Label>
-              <Input
-                id="clientCode"
-                value={clientInfoData.clientCode}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (/^\d{0,5}$/.test(val) || val === '') { 
-                    onClientInfoChange('clientCode', val);
-                  }
-                }}
-                placeholder="Ex: 12345 (ou será preenchido)"
-                maxLength={5}
-                pattern="\d*" 
-              />
-            </div>
-            */}
             
             <div className="md:col-span-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -126,3 +95,5 @@ export function ClientDataForm({
     </Card>
   );
 }
+
+    

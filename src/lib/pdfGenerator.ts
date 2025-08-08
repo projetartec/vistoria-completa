@@ -871,3 +871,5 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
 
   openHtmlInNewWindow(htmlBodyContent, `RelatorioFotografico_${clientInfo.inspectionNumber}`);
 }
+
+    
