@@ -11,7 +11,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ClientDataFormProps {
   clientInfoData: ClientInfo;
-  onClientInfoChange: (field: keyof ClientInfo, value: string | null) => void;
+  onClientInfoChange: (field: keyof Omit<ClientInfo, 'logoUrl'>, value: string) => void;
   savedLocations: string[]; // Kept for potential future use with suggestions, not for Select
 }
 

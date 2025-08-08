@@ -157,9 +157,8 @@ function openHtmlInNewWindow(htmlContent: string, reportTitle: string = "Relató
 }
 
 function getHeaderHtml(clientInfo: ClientInfo, title: string): string {
-  const logoHtml = clientInfo.logoUrl 
-    ? `<div class="pdf-logo-container"><img src="${clientInfo.logoUrl}" alt="Logo"></div>`
-    : '<div class="pdf-logo-container" style="width: 180px;"></div>'; // Placeholder for alignment
+  const appLogoUrl = '/LOGO-BRAZIL-FUNDOTRANSP.png'; // Path to the static logo
+  const logoHtml = `<div class="pdf-logo-container"><img src="${appLogoUrl}" alt="Logo"></div>`;
 
   return `
     <header class="pdf-header-main">

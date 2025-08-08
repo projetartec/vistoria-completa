@@ -83,7 +83,6 @@ export default function FireCheckPage() {
     inspectionNumber: '',
     inspectionDate: '',
     inspectedBy: '',
-    logoUrl: null,
   });
 
   const [activeTowersData, setActiveTowersData] = useState<TowerData[]>([createNewTowerEntry()]);
@@ -165,10 +164,10 @@ export default function FireCheckPage() {
   }, [clientInfo.clientLocation]);
 
 
-  const handleClientInfoChange = useCallback((field: keyof ClientInfo, value: string | null) => {
+  const handleClientInfoChange = useCallback((field: keyof Omit<ClientInfo, 'logoUrl'>, value: string) => {
     setClientInfo(prevClientInfo => {
       const newClientInfoState = { ...prevClientInfo, [field]: value };
-      if (field === 'clientLocation' && typeof value === 'string') {
+      if (field === 'clientLocation') {
         if (!newClientInfoState.inspectionNumber || prevClientInfo.clientLocation !== value) {
              newClientInfoState.inspectionNumber = calculateNextInspectionNumber(value);
         }
@@ -416,7 +415,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', clientCode: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: user || '', logoUrl: null,
+      inspectionDate: defaultInspectionDate, inspectedBy: user || '',
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -521,7 +520,6 @@ export default function FireCheckPage() {
       clientInfo: { 
         ...clientInfo, 
         inspectedBy: user,
-        logoUrl: clientInfo.logoUrl || null,
       },
       towers: activeTowersData,
       timestamp: Date.now(),
@@ -548,7 +546,6 @@ export default function FireCheckPage() {
         inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '',
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
         inspectedBy: loadedClientInfo.inspectedBy || user || '',
-        logoUrl: loadedClientInfo.logoUrl || null,
     });
 
     const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {
@@ -710,7 +707,6 @@ export default function FireCheckPage() {
       id: clientInfo.inspectionNumber,
       clientInfo: { 
         ...clientInfo,
-        logoUrl: clientInfo.logoUrl || null
       },
       towers: activeTowersData, 
       timestamp: Date.now(),
@@ -773,9 +769,6 @@ export default function FireCheckPage() {
                                    )
                                  );
           toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário${hasPhotos ? ' com fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
-          if (inspectionToLoad.clientInfo.logoUrl) {
-            toast({ title: "Logo Importado", description: "O logo da empresa foi carregado do arquivo JSON." });
-          }
         } else {
           console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspectionToLoad, null, 2).substring(0, 500));
           toast({ title: "Estrutura Inválida", description: `O arquivo ${file.name} não corresponde à estrutura de vistoria esperada.`, variant: "destructive" });
@@ -899,7 +892,7 @@ export default function FireCheckPage() {
             </Button>
         </div>
 
-        <AppHeader clientInfoData={clientInfo} onClientInfoChange={handleClientInfoChange} />
+        <AppHeader />
         <ClientDataForm clientInfoData={clientInfo} onClientInfoChange={handleClientInfoChange} savedLocations={savedLocations} />
 
         <div className="my-6 p-4 bg-card shadow-lg rounded-lg">
