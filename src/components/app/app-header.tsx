@@ -17,13 +17,6 @@ export function AppHeader() {
             priority
           />
         </div>
-
-        {/* Company Name Section */}
-        <div>
-          <h1 className="text-base sm:text-lg md:text-xl font-bold text-primary font-headline">
-            BRAZIL EXTINTORES - SP
-          </h1>
-        </div>
       </div>
     </header>
   );
