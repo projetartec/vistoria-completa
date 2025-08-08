@@ -521,7 +521,7 @@ export default function FireCheckPage() {
       clientInfo: { 
         ...clientInfo, 
         inspectedBy: user,
-        logoUrl: clientInfo.logoUrl || null, // Ensure logoUrl is null, not undefined
+        logoUrl: clientInfo.logoUrl || null,
       },
       towers: activeTowersData,
       timestamp: Date.now(),
@@ -1024,5 +1024,7 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
 
     
