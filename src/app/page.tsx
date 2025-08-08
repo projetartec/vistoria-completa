@@ -1020,7 +1020,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
-
-    
