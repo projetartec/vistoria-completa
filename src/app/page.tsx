@@ -545,7 +545,7 @@ export default function FireCheckPage() {
     setClientInfo({
         clientLocation: loadedClientInfo.clientLocation || '',
         clientCode: loadedClientInfo.clientCode || '',
-        inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '', // Prioritize clientInfo.inspectionNumber, then inspectionToLoad.id
+        inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '',
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
         inspectedBy: loadedClientInfo.inspectedBy || user || '',
         logoUrl: loadedClientInfo.logoUrl || null,
@@ -1024,6 +1024,8 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
 
     
 
