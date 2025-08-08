@@ -756,8 +756,7 @@ export default function FireCheckPage() {
         }
         
         const inspectionToLoad = importedData as FullInspectionData;
-        if (inspectionToLoad && typeof inspectionToLoad === 'object' &&
-            typeof inspectionToLoad.id === 'string' &&
+        if (inspectionToLoad && typeof inspectionToLoad.id === 'string' &&
             inspectionToLoad.clientInfo && typeof inspectionToLoad.clientInfo === 'object' &&
             Array.isArray(inspectionToLoad.towers) &&
             typeof inspectionToLoad.timestamp === 'number') {
