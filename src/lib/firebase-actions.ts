@@ -26,9 +26,10 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
         const inspectionsQuery = query(collection(db, INSPECTIONS_COLLECTION), orderBy("timestamp", "desc"));
         const querySnapshot = await getDocs(inspectionsQuery);
         
-        const summaries = querySnapshot.docs.map(doc => {
+        const summaries: InspectionSummary[] = [];
+        querySnapshot.forEach((doc) => {
             const data = doc.data() as FullInspectionData;
-            return {
+            summaries.push({
                 id: doc.id,
                 clientInfo: {
                     clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
@@ -39,7 +40,7 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
                 },
                 timestamp: data.timestamp,
                 owner: data.owner || 'Desconhecido',
-            };
+            });
         });
         
         return summaries;
