@@ -104,11 +104,6 @@ export default function FireCheckPage() {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    if (user) {
-      setClientInfo(prev => ({ ...prev, inspectedBy: user }));
-    }
-  }, [user]);
 
   const fetchSavedInspections = useCallback(async () => {
     if (!user) return; // Do not fetch if no user is logged in
@@ -413,7 +408,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', clientCode: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: user || '',
+      inspectionDate: defaultInspectionDate, inspectedBy: '',
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -422,7 +417,7 @@ export default function FireCheckPage() {
      if (clientInfo.clientLocation) { // Auto-generate new number only if location was set
         setClientInfo(prev => ({...prev, inspectionNumber: calculateNextInspectionNumber(prev.clientLocation)}));
     }
-  }, [clientInfo.clientLocation, user]);
+  }, [clientInfo.clientLocation]);
 
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => {
@@ -517,7 +512,6 @@ export default function FireCheckPage() {
       id: clientInfo.inspectionNumber,
       clientInfo: { 
         ...clientInfo, 
-        inspectedBy: user,
       },
       towers: activeTowersData,
       timestamp: Date.now(),
@@ -543,7 +537,7 @@ export default function FireCheckPage() {
         clientCode: loadedClientInfo.clientCode || '',
         inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '',
         inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
-        inspectedBy: loadedClientInfo.inspectedBy || user || '',
+        inspectedBy: loadedClientInfo.inspectedBy || '',
     });
 
     const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {
@@ -636,7 +630,7 @@ export default function FireCheckPage() {
     setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
     setIsChecklistVisible(true);
     setIsSavedInspectionsVisible(false); // Hide list after loading
-  }, [setActiveTowersData, setClientInfo, setIsChecklistVisible, setIsSavedInspectionsVisible, user]);
+  }, [setActiveTowersData, setClientInfo, setIsChecklistVisible, setIsSavedInspectionsVisible]);
 
   const handleLoadInspection = useCallback(async (inspectionId: string) => {
     try {

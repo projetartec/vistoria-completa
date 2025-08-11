@@ -85,8 +85,6 @@ export function ClientDataForm({
                 value={clientInfoData.inspectedBy || ''}
                 onChange={(e) => onClientInfoChange('inspectedBy', e.target.value)}
                 placeholder="Nome do técnico responsável"
-                readOnly
-                className="bg-muted cursor-not-allowed"
               />
             </div>
           </div>
