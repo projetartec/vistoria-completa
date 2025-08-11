@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from './firebase';
-import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, query } from "firebase/firestore";
 import type { FullInspectionData } from './types';
 import { saveInspectionToDB as saveToLocalDB, deleteInspectionFromDB as deleteFromLocalDB } from './indexedDB';
 
@@ -12,9 +12,11 @@ const INSPECTIONS_COLLECTION = 'inspections';
 export async function saveInspectionToFirestore(inspectionData: FullInspectionData): Promise<void> {
   try {
     const docRef = doc(db, INSPECTIONS_COLLECTION, inspectionData.id);
-    await setDoc(docRef, inspectionData);
+    // Ensure owner is set, even if it's just a generic value or the current user's name
+    const dataToSave = { ...inspectionData, owner: inspectionData.owner || 'system' };
+    await setDoc(docRef, dataToSave);
     // Also save to local IndexedDB for offline capabilities/caching
-    await saveToLocalDB(inspectionData);
+    await saveToLocalDB(dataToSave);
   } catch (error) {
     console.error("Error saving inspection to Firestore: ", error);
     throw new Error("Failed to save inspection to cloud.");
@@ -24,12 +26,10 @@ export async function saveInspectionToFirestore(inspectionData: FullInspectionDa
 // Get all inspections for all users from Firestore
 export async function getInspectionsFromFirestore(): Promise<FullInspectionData[]> {
     try {
-        const inspectionsRef = collection(db, INSPECTIONS_COLLECTION);
-        const querySnapshot = await getDocs(inspectionsRef);
-        const inspections: FullInspectionData[] = [];
-        querySnapshot.forEach((doc) => {
-            inspections.push(doc.data() as FullInspectionData);
-        });
+        const inspectionsQuery = query(collection(db, INSPECTIONS_COLLECTION));
+        const querySnapshot = await getDocs(inspectionsQuery);
+        const inspections = querySnapshot.docs.map(doc => doc.data() as FullInspectionData);
+        // Sort by timestamp descending (newest first)
         return inspections.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
         console.error("Error getting inspections from Firestore: ", error);
