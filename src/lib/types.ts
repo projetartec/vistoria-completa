@@ -77,7 +77,7 @@ export interface FullInspectionData {
   clientInfo: ClientInfo;
   towers: TowerData[];
   timestamp: number;
-  owner: string; // User who owns the inspection
+  owner?: string; // User who owns the inspection. Now optional.
 }
 
 

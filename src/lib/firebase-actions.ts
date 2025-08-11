@@ -11,10 +11,9 @@ const INSPECTIONS_COLLECTION = 'inspections';
 // Save inspection to Firestore and local IndexedDB
 export async function saveInspectionToFirestore(inspectionData: FullInspectionData): Promise<void> {
   try {
-    if (!inspectionData.owner) {
-        throw new Error("Owner is not defined, cannot save inspection.");
-    }
     const docRef = doc(db, INSPECTIONS_COLLECTION, inspectionData.id);
+    // The owner property is set on the object before calling this function.
+    // No need for a specific check here anymore if all users can see all inspections.
     await setDoc(docRef, inspectionData);
     // Also save to local IndexedDB for offline capabilities/caching
     await saveToLocalDB(inspectionData);
@@ -24,15 +23,10 @@ export async function saveInspectionToFirestore(inspectionData: FullInspectionDa
   }
 }
 
-// Get all inspections for the logged-in user from Firestore
-export async function getInspectionsFromFirestore(owner: string): Promise<FullInspectionData[]> {
+// Get all inspections for all users from Firestore
+export async function getInspectionsFromFirestore(): Promise<FullInspectionData[]> {
     try {
-        if (!owner) {
-            console.log("No owner specified, returning empty array.");
-            return [];
-        }
-        const q = query(collection(db, INSPECTIONS_COLLECTION), where("owner", "==", owner));
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(collection(db, INSPECTIONS_COLLECTION));
         const inspections: FullInspectionData[] = [];
         querySnapshot.forEach((doc) => {
             inspections.push(doc.data() as FullInspectionData);
@@ -44,25 +38,15 @@ export async function getInspectionsFromFirestore(owner: string): Promise<FullIn
     }
 }
 
-// Load a single inspection from Firestore
-export async function loadInspectionFromFirestore(id: string, owner: string): Promise<FullInspectionData | null> {
+// Load a single inspection from Firestore, accessible by any user
+export async function loadInspectionFromFirestore(id: string): Promise<FullInspectionData | null> {
     try {
-        if (!owner) {
-            console.warn("Attempted to load inspection without an owner.");
-            return null;
-        }
         const docRef = doc(db, INSPECTIONS_COLLECTION, id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
             const inspectionData = docSnap.data() as FullInspectionData;
-            // Basic security check
-            if (inspectionData.owner === owner) {
-                return inspectionData;
-            } else {
-                console.warn("User does not have permission to access this inspection.");
-                return null;
-            }
+            return inspectionData;
         } else {
             console.log("No such document in Firestore!");
             return null;
@@ -74,22 +58,16 @@ export async function loadInspectionFromFirestore(id: string, owner: string): Pr
 }
 
 
-// Delete an inspection from Firestore and local IndexedDB
-export async function deleteInspectionFromFirestore(id: string, owner: string): Promise<void> {
+// Delete an inspection from Firestore, able to be deleted by any authenticated user
+export async function deleteInspectionFromFirestore(id: string): Promise<void> {
     try {
-        if (!owner) {
-            throw new Error("Cannot delete without an owner.");
-        }
-        // First, verify ownership before deleting
         const docRef = doc(db, INSPECTIONS_COLLECTION, id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().owner === owner) {
-            await deleteDoc(docRef);
-            // Also delete from local DB
-            await deleteFromLocalDB(id);
-        } else {
-           throw new Error("Permission denied or document does not exist.");
-        }
+        // We're removing the ownership check to allow any user to delete.
+        // A check if the document exists is implicitly handled by Firestore permissions if needed,
+        // but for app logic, we proceed directly to delete.
+        await deleteDoc(docRef);
+        // Also delete from local DB
+        await deleteFromLocalDB(id);
     } catch (error) {
         console.error("Error deleting inspection from Firestore: ", error);
         throw new Error("Failed to delete inspection from cloud.");
