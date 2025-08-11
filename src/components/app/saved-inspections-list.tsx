@@ -11,9 +11,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Trash2, Download } from 'lucide-react';
+import { Loader2, Trash2, Download, CloudDownload } from 'lucide-react';
 
 interface SavedInspectionsListProps {
   inspections: InspectionSummary[];
@@ -61,10 +61,9 @@ export function SavedInspectionsList({
                 {inspections.map((inspection) => (
                   <Card
                     key={inspection.id}
-                    className="flex flex-col sm:flex-row sm:items-center p-3 gap-2 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
-                    onClick={() => handleLoadAndClose(inspection.id)}
+                    className="flex flex-col sm:flex-row sm:items-center p-3 gap-2 shadow-sm hover:shadow-md hover:border-primary/50 transition-all"
                   >
-                    <div className="flex-grow">
+                    <div className="flex-grow cursor-pointer" onClick={() => handleLoadAndClose(inspection.id)}>
                       <p className="font-semibold text-sm text-foreground truncate" title={inspection.clientInfo.clientLocation || 'Local não especificado'}>
                         {inspection.clientInfo.clientLocation || 'Local não especificado'}
                       </p>
@@ -75,7 +74,16 @@ export function SavedInspectionsList({
                         Salva em: {format(new Date(inspection.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por {inspection.owner || 'Desconhecido'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                       <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleLoadAndClose(inspection.id)}
+                        className="text-muted-foreground hover:text-primary h-8 w-8"
+                        title="Carregar Vistoria"
+                      >
+                        <CloudDownload className="h-4 w-4" />
+                      </Button>
                        <Button
                         variant="ghost"
                         size="icon"

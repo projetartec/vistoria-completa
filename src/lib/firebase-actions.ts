@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from './firebase';
-import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, writeBatch, collectionGroup } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, where, deleteDoc } from "firebase/firestore";
 import type { FullInspectionData, InspectionSummary } from './types';
 import { saveInspectionToDB as saveToLocalDB, deleteInspectionFromDB as deleteFromLocalDB } from './indexedDB';
 
@@ -26,8 +26,10 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
         const inspectionsQuery = query(collection(db, INSPECTIONS_COLLECTION), orderBy("timestamp", "desc"));
         const querySnapshot = await getDocs(inspectionsQuery);
         
+        // This is efficient because getDocs doesn't download subcollections, and we only process fields we need.
+        // For massive documents, a separate 'summaries' collection would be the next optimization step.
         const summaries = querySnapshot.docs.map(doc => {
-            const data = doc.data();
+            const data = doc.data() as FullInspectionData; // We get the full data, but only send summary back
             return {
                 id: doc.id,
                 clientInfo: {
@@ -49,6 +51,7 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
         throw new Error("Failed to get inspection summaries from cloud.");
     }
 }
+
 
 // Load a single inspection from Firestore, accessible by any user
 export async function loadInspectionFromFirestore(id: string): Promise<FullInspectionData | null> {
