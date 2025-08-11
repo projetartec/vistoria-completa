@@ -106,7 +106,6 @@ export default function FireCheckPage() {
 
 
   const fetchSavedInspections = useCallback(async () => {
-    if (!user) return; // Do not fetch if no user is logged in
     setIsLoadingDbInspections(true);
     try {
       const summaries = await getInspectionSummariesFromFirestore();
@@ -122,7 +121,7 @@ export default function FireCheckPage() {
     } finally {
       setIsLoadingDbInspections(false);
     }
-  }, [toast, user]);
+  }, [toast]);
 
  useEffect(() => {
     if (typeof window !== 'undefined' && user) {
@@ -408,7 +407,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', clientCode: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: user || '',
+      inspectionDate: defaultInspectionDate, inspectedBy: '',
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -417,7 +416,7 @@ export default function FireCheckPage() {
      if (clientInfo.clientLocation) { // Auto-generate new number only if location was set
         setClientInfo(prev => ({...prev, inspectionNumber: calculateNextInspectionNumber(prev.clientLocation)}));
     }
-  }, [clientInfo.clientLocation, user]);
+  }, [clientInfo.clientLocation]);
 
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => {
@@ -997,6 +996,7 @@ export default function FireCheckPage() {
             onLoadInspection={handleLoadInspection}
             onDeleteInspection={handleDeleteInspection}
             onDownloadJson={handleDownloadJsonFromDBList}
+            onOpenChange={setIsSavedInspectionsVisible}
           />
         )}
 

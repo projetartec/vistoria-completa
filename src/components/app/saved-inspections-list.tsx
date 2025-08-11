@@ -4,9 +4,16 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { InspectionSummary } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Trash2, Download, UploadCloud, ListChecks } from 'lucide-react'; // Added ListChecks for load
+import { Loader2, Trash2, Download } from 'lucide-react';
 
 interface SavedInspectionsListProps {
   inspections: InspectionSummary[];
@@ -14,6 +21,7 @@ interface SavedInspectionsListProps {
   onLoadInspection: (inspectionId: string) => void;
   onDeleteInspection: (inspectionId: string, inspectionLocation?: string) => void;
   onDownloadJson: (inspectionId: string) => void;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function SavedInspectionsList({
@@ -22,85 +30,82 @@ export function SavedInspectionsList({
   onLoadInspection,
   onDeleteInspection,
   onDownloadJson,
+  onOpenChange,
 }: SavedInspectionsListProps) {
-  if (isLoading) {
-    return (
-      <div className="my-6 p-4 bg-card shadow-lg rounded-lg text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-        <p className="text-muted-foreground">Carregando vistorias da nuvem...</p>
-      </div>
-    );
-  }
-
-  if (!inspections || inspections.length === 0) {
-    return (
-      <div className="my-6 p-4 bg-card shadow-lg rounded-lg text-center">
-        <CardTitle className="text-lg font-semibold mb-2">Vistorias Salvas</CardTitle>
-        <CardDescription>Nenhuma vistoria salva encontrada na nuvem.</CardDescription>
-      </div>
-    );
-  }
+  const handleLoadAndClose = (inspectionId: string) => {
+    onLoadInspection(inspectionId);
+    onOpenChange(false);
+  };
 
   return (
-    <Card className="my-6 shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold font-headline text-primary">Vistorias Salvas</CardTitle>
-        <CardDescription>Gerencie as vistorias armazenadas na nuvem.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px] w-full pr-3"> {/* Added pr-3 for scrollbar spacing */}
-          <div className="space-y-3">
-            {inspections.map((inspection) => (
-              <Card key={inspection.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 gap-2 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex-grow">
-                  <p className="font-semibold text-sm text-foreground truncate" title={inspection.clientInfo.clientLocation || 'Local não especificado'}>
-                    {inspection.clientInfo.clientLocation || 'Local não especificado'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Nº: {inspection.id}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Salva em: {format(new Date(inspection.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por {inspection.owner || 'Desconhecido'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onLoadInspection(inspection.id)}
-                    title="Carregar esta vistoria para o formulário"
-                    className="h-8 px-2"
+    <Dialog open={true} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl h-[70vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Vistorias Salvas</DialogTitle>
+          <DialogDescription>
+            Selecione uma vistoria para carregar ou gerenciar. As vistorias são sincronizadas da nuvem.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-grow overflow-hidden -mx-6 px-6">
+          <ScrollArea className="h-full pr-4 -mr-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : inspections.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">Nenhuma vistoria salva encontrada.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 py-2">
+                {inspections.map((inspection) => (
+                  <Card
+                    key={inspection.id}
+                    className="flex flex-col sm:flex-row sm:items-center p-3 gap-2 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                    onClick={() => handleLoadAndClose(inspection.id)}
                   >
-                    <ListChecks className="mr-1 h-3.5 w-3.5" /> <span className="hidden sm:inline">Carregar</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDownloadJson(inspection.id)}
-                    title="Baixar JSON desta vistoria"
-                    className="h-8 px-2"
-                  >
-                    <Download className="mr-1 h-3.5 w-3.5" /> <span className="hidden sm:inline">JSON</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (window.confirm(`Tem certeza que deseja remover a vistoria Nº ${inspection.id} (${inspection.clientInfo.clientLocation || 'Local não especificado'})? Esta ação não pode ser desfeita.`)) {
-                        onDeleteInspection(inspection.id, inspection.clientInfo.clientLocation);
-                      }
-                    }}
-                    className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                    title="Remover esta vistoria"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+                    <div className="flex-grow">
+                      <p className="font-semibold text-sm text-foreground truncate" title={inspection.clientInfo.clientLocation || 'Local não especificado'}>
+                        {inspection.clientInfo.clientLocation || 'Local não especificado'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Nº: {inspection.id}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Salva em: {format(new Date(inspection.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por {inspection.owner || 'Desconhecido'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                       <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDownloadJson(inspection.id)}
+                        className="text-muted-foreground hover:text-primary h-8 w-8"
+                        title="Baixar JSON desta vistoria"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (window.confirm(`Tem certeza que deseja remover a vistoria Nº ${inspection.id} (${inspection.clientInfo.clientLocation || 'Local não especificado'})? Esta ação não pode ser desfeita.`)) {
+                            onDeleteInspection(inspection.id, inspection.clientInfo.clientLocation);
+                          }
+                        }}
+                        className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                        title="Remover esta vistoria"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
