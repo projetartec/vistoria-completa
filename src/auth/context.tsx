@@ -6,8 +6,12 @@ import { useRouter } from 'next/navigation';
 
 const ALLOWED_USERS = ['Alexandre', 'Hiago', 'Clodoaldo'];
 
+interface User {
+  name: string;
+}
+
 interface AuthContextType {
-  user: string | null;
+  user: User | null;
   loading: boolean;
   login: (username: string) => boolean;
   logout: () => void;
@@ -16,18 +20,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('firecheck_user');
-      if (storedUser && ALLOWED_USERS.map(u => u.toLowerCase()).includes(storedUser.toLowerCase())) {
-        setUser(storedUser);
+      const storedUserJson = localStorage.getItem('firecheck_user');
+      if (storedUserJson) {
+        const storedUser = JSON.parse(storedUserJson) as User;
+        if (storedUser && typeof storedUser.name === 'string' && ALLOWED_USERS.map(u => u.toLowerCase()).includes(storedUser.name.toLowerCase())) {
+          setUser(storedUser);
+        }
       }
     } catch (error) {
-      console.error("Could not access localStorage:", error);
+      console.error("Could not access localStorage or parse user data:", error);
     } finally {
       setLoading(false);
     }
@@ -38,8 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const foundUser = ALLOWED_USERS.find(u => u.toLowerCase() === normalizedUsername.toLowerCase());
 
     if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('firecheck_user', foundUser);
+      const userObject: User = { name: foundUser };
+      setUser(userObject);
+      localStorage.setItem('firecheck_user', JSON.stringify(userObject));
       router.push('/');
       return true;
     }
@@ -66,3 +74,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from './firebase';
-import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, where, deleteDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, deleteDoc } from "firebase/firestore";
 import type { FullInspectionData, InspectionSummary } from './types';
 import { saveInspectionToDB as saveToLocalDB, deleteInspectionFromDB as deleteFromLocalDB } from './indexedDB';
 
@@ -83,5 +83,7 @@ export async function deleteInspectionFromFirestore(id: string): Promise<void> {
         throw new Error("Failed to delete inspection from cloud.");
     }
 }
+
+    
 
     

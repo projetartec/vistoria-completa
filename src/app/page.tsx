@@ -102,6 +102,7 @@ export default function FireCheckPage() {
 
 
   const fetchSavedInspections = useCallback(async () => {
+    if (!user) return;
     setIsLoadingDbInspections(true);
     try {
       const summaries = await getInspectionSummariesFromFirestore();
@@ -117,7 +118,7 @@ export default function FireCheckPage() {
     } finally {
       setIsLoadingDbInspections(false);
     }
-  }, [toast]);
+  }, [toast, user]);
 
  useEffect(() => {
     if (typeof window !== 'undefined' && user) {
@@ -510,7 +511,7 @@ export default function FireCheckPage() {
       },
       towers: activeTowersData,
       timestamp: Date.now(),
-      owner: user,
+      owner: user.name,
     };
 
     try {
@@ -694,7 +695,7 @@ export default function FireCheckPage() {
       },
       towers: activeTowersData, 
       timestamp: Date.now(),
-      owner: user || 'unknown'
+      owner: user?.name || 'unknown'
     };
     const clientInfoForFilename = { inspectionNumber: inspectionToExport.id, clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria' };
     const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
@@ -1001,5 +1002,7 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
 
     
