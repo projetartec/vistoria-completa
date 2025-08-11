@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from './firebase';
-import { collection, doc, setDoc, getDoc, getDocs, deleteDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
 import type { FullInspectionData } from './types';
 import { saveInspectionToDB as saveToLocalDB, deleteInspectionFromDB as deleteFromLocalDB } from './indexedDB';
 
@@ -24,7 +24,8 @@ export async function saveInspectionToFirestore(inspectionData: FullInspectionDa
 // Get all inspections for all users from Firestore
 export async function getInspectionsFromFirestore(): Promise<FullInspectionData[]> {
     try {
-        const querySnapshot = await getDocs(collection(db, INSPECTIONS_COLLECTION));
+        const inspectionsRef = collection(db, INSPECTIONS_COLLECTION);
+        const querySnapshot = await getDocs(inspectionsRef);
         const inspections: FullInspectionData[] = [];
         querySnapshot.forEach((doc) => {
             inspections.push(doc.data() as FullInspectionData);
