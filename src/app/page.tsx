@@ -13,14 +13,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { FullInspectionData, FloorData, TowerData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState } from '@/lib/types';
+import type { FullInspectionData, FloorData, TowerData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState, InspectionSummary } from '@/lib/types';
 import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Layers, PanelTopClose, ChevronsUpDown, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { saveInspectionToFirestore, getInspectionsFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
+import { saveInspectionToFirestore, getInspectionSummariesFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
 import { saveInspectionToDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { getCategoryOverallStatus } from '@/lib/inspection-helpers';
 import { format } from 'date-fns';
@@ -88,7 +88,7 @@ export default function FireCheckPage() {
   const [activeTowersData, setActiveTowersData] = useState<TowerData[]>([createNewTowerEntry()]);
   const [isClientInitialized, setIsClientInitialized] = useState(false);
 
-  const [dbInspections, setDbInspections] = useState<FullInspectionData[]>([]);
+  const [dbInspections, setDbInspections] = useState<InspectionSummary[]>([]);
   const [isSavedInspectionsVisible, setIsSavedInspectionsVisible] = useState(false);
   const [isLoadingDbInspections, setIsLoadingDbInspections] = useState(true);
   
@@ -109,10 +109,10 @@ export default function FireCheckPage() {
     if (!user) return; // Do not fetch if no user is logged in
     setIsLoadingDbInspections(true);
     try {
-      const inspections = await getInspectionsFromFirestore();
-      setDbInspections(inspections);
+      const summaries = await getInspectionSummariesFromFirestore();
+      setDbInspections(summaries);
     } catch (error) {
-      console.error("Failed to fetch inspections from Firestore:", error);
+      console.error("Failed to fetch inspection summaries from Firestore:", error);
       toast({
         title: "Erro ao Carregar Vistorias Salvas",
         description: "Não foi possível buscar as vistorias da nuvem.",
@@ -408,7 +408,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', clientCode: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: '',
+      inspectionDate: defaultInspectionDate, inspectedBy: user || '',
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -417,7 +417,7 @@ export default function FireCheckPage() {
      if (clientInfo.clientLocation) { // Auto-generate new number only if location was set
         setClientInfo(prev => ({...prev, inspectionNumber: calculateNextInspectionNumber(prev.clientLocation)}));
     }
-  }, [clientInfo.clientLocation]);
+  }, [clientInfo.clientLocation, user]);
 
   const handleAddNewTower = useCallback(() => {
     setActiveTowersData(prevTowers => {

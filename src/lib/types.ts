@@ -71,13 +71,19 @@ export interface ClientInfo {
   inspectedBy?: string;
 }
 
-// Updated to use TowerData[]
 export interface FullInspectionData {
   id: string;
   clientInfo: ClientInfo;
   towers: TowerData[];
   timestamp: number;
-  owner?: string; // User who owns the inspection. Now optional.
+  owner: string;
+}
+
+export interface InspectionSummary {
+  id: string;
+  clientInfo: ClientInfo;
+  timestamp: number;
+  owner: string;
 }
 
 

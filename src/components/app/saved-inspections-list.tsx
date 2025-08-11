@@ -2,14 +2,14 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { FullInspectionData } from '@/lib/types';
+import type { InspectionSummary } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Trash2, Download, UploadCloud, ListChecks } from 'lucide-react'; // Added ListChecks for load
 
 interface SavedInspectionsListProps {
-  inspections: FullInspectionData[];
+  inspections: InspectionSummary[];
   isLoading: boolean;
   onLoadInspection: (inspectionId: string) => void;
   onDeleteInspection: (inspectionId: string, inspectionLocation?: string) => void;

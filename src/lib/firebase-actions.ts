@@ -2,8 +2,8 @@
 'use client';
 
 import { db } from './firebase';
-import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, query } from "firebase/firestore";
-import type { FullInspectionData } from './types';
+import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, writeBatch, collectionGroup } from "firebase/firestore";
+import type { FullInspectionData, InspectionSummary } from './types';
 import { saveInspectionToDB as saveToLocalDB, deleteInspectionFromDB as deleteFromLocalDB } from './indexedDB';
 
 const INSPECTIONS_COLLECTION = 'inspections';
@@ -12,10 +12,8 @@ const INSPECTIONS_COLLECTION = 'inspections';
 export async function saveInspectionToFirestore(inspectionData: FullInspectionData): Promise<void> {
   try {
     const docRef = doc(db, INSPECTIONS_COLLECTION, inspectionData.id);
-    // Ensure owner is set, even if it's just a generic value or the current user's name
     const dataToSave = { ...inspectionData, owner: inspectionData.owner || 'system' };
     await setDoc(docRef, dataToSave);
-    // Also save to local IndexedDB for offline capabilities/caching
     await saveToLocalDB(dataToSave);
   } catch (error) {
     console.error("Error saving inspection to Firestore: ", error);
@@ -23,17 +21,32 @@ export async function saveInspectionToFirestore(inspectionData: FullInspectionDa
   }
 }
 
-// Get all inspections for all users from Firestore
-export async function getInspectionsFromFirestore(): Promise<FullInspectionData[]> {
+export async function getInspectionSummariesFromFirestore(): Promise<InspectionSummary[]> {
     try {
-        const inspectionsQuery = query(collection(db, INSPECTIONS_COLLECTION));
+        const inspectionsQuery = query(collection(db, INSPECTIONS_COLLECTION), orderBy("timestamp", "desc"));
         const querySnapshot = await getDocs(inspectionsQuery);
-        const inspections = querySnapshot.docs.map(doc => doc.data() as FullInspectionData);
-        // Sort by timestamp descending (newest first)
-        return inspections.sort((a, b) => b.timestamp - a.timestamp);
+        
+        const summaries = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                clientInfo: {
+                    clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
+                    clientCode: data.clientInfo?.clientCode || '',
+                    inspectionNumber: data.clientInfo?.inspectionNumber || doc.id,
+                    inspectionDate: data.clientInfo?.inspectionDate || '',
+                    inspectedBy: data.clientInfo?.inspectedBy || ''
+                },
+                timestamp: data.timestamp,
+                owner: data.owner || 'Desconhecido',
+            };
+        });
+        
+        return summaries;
+
     } catch (error) {
-        console.error("Error getting inspections from Firestore: ", error);
-        throw new Error("Failed to get inspections from cloud.");
+        console.error("Error getting inspection summaries from Firestore: ", error);
+        throw new Error("Failed to get inspection summaries from cloud.");
     }
 }
 
