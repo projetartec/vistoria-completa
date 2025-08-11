@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from './firebase';
-import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc } from "firebase/firestore";
 import type { FullInspectionData } from './types';
 import { saveInspectionToDB as saveToLocalDB, deleteInspectionFromDB as deleteFromLocalDB } from './indexedDB';
 
@@ -12,8 +12,6 @@ const INSPECTIONS_COLLECTION = 'inspections';
 export async function saveInspectionToFirestore(inspectionData: FullInspectionData): Promise<void> {
   try {
     const docRef = doc(db, INSPECTIONS_COLLECTION, inspectionData.id);
-    // The owner property is set on the object before calling this function.
-    // No need for a specific check here anymore if all users can see all inspections.
     await setDoc(docRef, inspectionData);
     // Also save to local IndexedDB for offline capabilities/caching
     await saveToLocalDB(inspectionData);
@@ -62,9 +60,6 @@ export async function loadInspectionFromFirestore(id: string): Promise<FullInspe
 export async function deleteInspectionFromFirestore(id: string): Promise<void> {
     try {
         const docRef = doc(db, INSPECTIONS_COLLECTION, id);
-        // We're removing the ownership check to allow any user to delete.
-        // A check if the document exists is implicitly handled by Firestore permissions if needed,
-        // but for app logic, we proceed directly to delete.
         await deleteDoc(docRef);
         // Also delete from local DB
         await deleteFromLocalDB(id);

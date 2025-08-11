@@ -111,9 +111,9 @@ export default function FireCheckPage() {
   }, [user]);
 
   const fetchSavedInspections = useCallback(async () => {
+    if (!user) return; // Do not fetch if no user is logged in
     setIsLoadingDbInspections(true);
     try {
-      // Fetching from Firestore which is now the single source of truth for the list
       const inspections = await getInspectionsFromFirestore();
       setDbInspections(inspections);
     } catch (error) {
@@ -127,10 +127,10 @@ export default function FireCheckPage() {
     } finally {
       setIsLoadingDbInspections(false);
     }
-  }, [toast]);
+  }, [toast, user]);
 
  useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && user) {
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').then(registration => {
@@ -143,12 +143,10 @@ export default function FireCheckPage() {
       if (!clientInfo.inspectionDate) {
         setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
       }
-      // Fetch inspections on initial load if a user is available.
-      // This will now fetch for ALL users.
       fetchSavedInspections();
     }
     setIsClientInitialized(true);
-  }, [clientInfo.inspectionDate, fetchSavedInspections]);
+  }, [user, clientInfo.inspectionDate, fetchSavedInspections]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -528,9 +526,9 @@ export default function FireCheckPage() {
 
     try {
       await saveInspectionToFirestore(inspectionToSave);
-      await saveInspectionToDB(inspectionToSave); // Also save to local IndexedDB
+      await saveInspectionToDB(inspectionToSave);
       toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem e localmente.` });
-      await fetchSavedInspections(); // Refresh the list from Firestore
+      await fetchSavedInspections();
     } catch (err: any) {
       console.error('Erro ao salvar vistoria:', err);
       toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria.", variant: "destructive" });
@@ -642,7 +640,6 @@ export default function FireCheckPage() {
 
   const handleLoadInspection = useCallback(async (inspectionId: string) => {
     try {
-      // No longer needs user param as all inspections are public
       const inspectionToLoad = await loadInspectionFromFirestore(inspectionId);
       if (inspectionToLoad) {
         loadInspectionDataToForm(inspectionToLoad);
@@ -658,11 +655,10 @@ export default function FireCheckPage() {
 
   const handleDeleteInspection = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
     try {
-      // No longer needs user param as any user can delete
       await deleteInspectionFromFirestore(inspectionId);
-      await deleteInspectionFromDB(inspectionId); // Also delete from local
+      await deleteInspectionFromDB(inspectionId);
       toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem e localmente.` });
-      await fetchSavedInspections(); // Refresh the list from Firestore
+      await fetchSavedInspections();
     } catch (error) {
       console.error("Error deleting inspection:", error);
       toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria.", variant: "destructive" });
@@ -689,7 +685,7 @@ export default function FireCheckPage() {
   const handleToggleSavedInspections = useCallback(() => {
     setIsSavedInspectionsVisible(prev => {
         const newVisibility = !prev;
-        if (newVisibility) { // If turning visible, fetch fresh data
+        if (newVisibility) {
             fetchSavedInspections();
         }
         return newVisibility;

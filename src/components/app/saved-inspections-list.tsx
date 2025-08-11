@@ -36,7 +36,7 @@ export function SavedInspectionsList({
     return (
       <div className="my-6 p-4 bg-card shadow-lg rounded-lg text-center">
         <CardTitle className="text-lg font-semibold mb-2">Vistorias Salvas</CardTitle>
-        <CardDescription>Nenhuma vistoria salva encontrada na nuvem para este usuário.</CardDescription>
+        <CardDescription>Nenhuma vistoria salva encontrada na nuvem.</CardDescription>
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function SavedInspectionsList({
                     Nº: {inspection.id}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Salva em: {format(new Date(inspection.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    Salva em: {format(new Date(inspection.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por {inspection.owner || 'Desconhecido'}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
