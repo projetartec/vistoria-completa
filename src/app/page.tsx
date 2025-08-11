@@ -4,26 +4,22 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AppHeader } from '@/components/app/app-header';
 import { ClientDataForm } from '@/components/app/client-data-form';
-import { InspectionCategoryItem } from '@/components/app/inspection-category-item';
 import { ActionButtonsPanel } from '@/components/app/action-buttons-panel';
 import { SavedInspectionsList } from '@/components/app/saved-inspections-list';
 import { FloorsDialog } from '@/components/app/floors-dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { FullInspectionData, FloorData, TowerData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, CategoryOverallStatus, RegisteredExtinguisher, RegisteredHose, SubItemState, InspectionSummary } from '@/lib/types';
+import { Card, CardHeader } from '@/components/ui/card';
+import type { FullInspectionData, FloorData, TowerData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, SubItemState, InspectionSummary, RegisteredExtinguisher, RegisteredHose } from '@/lib/types';
 import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
-import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Plus, Layers, PanelTopClose, ChevronsUpDown, LogOut } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Layers, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { saveInspectionToFirestore, getInspectionSummariesFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
 import { saveInspectionToDB, deleteInspectionFromDB } from '@/lib/indexedDB';
-import { getCategoryOverallStatus } from '@/lib/inspection-helpers';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/context';
 import { useRouter } from 'next/navigation';
@@ -137,10 +133,10 @@ export default function FireCheckPage() {
       if (!clientInfo.inspectionDate) {
         setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
       }
-      fetchSavedInspections();
+      fetchSavedInspections(); // This will now run in the background on page load
     }
     setIsClientInitialized(true);
-  }, [user, clientInfo.inspectionDate, fetchSavedInspections]);
+  }, [user, fetchSavedInspections]); // clientInfo.inspectionDate removed to avoid re-fetching on date change
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -629,7 +625,7 @@ export default function FireCheckPage() {
     setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
     setIsChecklistVisible(true);
     setIsSavedInspectionsVisible(false); // Hide list after loading
-  }, [setActiveTowersData, setClientInfo, setIsChecklistVisible, setIsSavedInspectionsVisible]);
+  }, []);
 
   const handleLoadInspection = useCallback(async (inspectionId: string) => {
     try {
@@ -1005,3 +1001,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    

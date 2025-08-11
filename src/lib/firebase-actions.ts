@@ -26,10 +26,8 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
         const inspectionsQuery = query(collection(db, INSPECTIONS_COLLECTION), orderBy("timestamp", "desc"));
         const querySnapshot = await getDocs(inspectionsQuery);
         
-        // This is efficient because getDocs doesn't download subcollections, and we only process fields we need.
-        // For massive documents, a separate 'summaries' collection would be the next optimization step.
         const summaries = querySnapshot.docs.map(doc => {
-            const data = doc.data() as FullInspectionData; // We get the full data, but only send summary back
+            const data = doc.data() as FullInspectionData;
             return {
                 id: doc.id,
                 clientInfo: {
@@ -85,3 +83,5 @@ export async function deleteInspectionFromFirestore(id: string): Promise<void> {
         throw new Error("Failed to delete inspection from cloud.");
     }
 }
+
+    
