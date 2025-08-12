@@ -1,15 +1,11 @@
 
-// Using 'use client' for files with browser-specific APIs like IndexedDB
-// when they might be imported by Server Components or 'use server' files.
-// However, for a pure lib utility like this, it's often not strictly needed if
-// it's only called from client-side code, but good for clarity.
 'use client';
 
-import type { FullInspectionData } from './types';
+import type { FullInspectionData, InspectionSummary } from './types';
 
 const DB_NAME = 'firecheckDB';
 const STORE_NAME = 'inspections';
-const DB_VERSION = 1; // Increment this to trigger onupgradeneeded
+const DB_VERSION = 2; // Version incremented to ensure schema updates if any are needed in future.
 
 interface IDBErrorEvent extends Event {
   target: IDBRequest & { error?: DOMException };
@@ -27,9 +23,7 @@ function openDB(): Promise<IDBDatabase> {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        // Example indexes if needed later:
-        // store.createIndex('clientLocation', 'clientInfo.clientLocation', { unique: false });
-        // store.createIndex('timestamp', 'timestamp', { unique: false });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
       }
     };
 
@@ -44,7 +38,25 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-// Local loading for offline access if needed in the future, but not for primary sync
+
+export async function saveInspectionToDB(inspectionData: FullInspectionData): Promise<string> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put(inspectionData); 
+
+    request.onsuccess = () => {
+      resolve(request.result as string);
+    };
+
+    request.onerror = (event) => {
+      console.error('Error saving inspection to DB:', (event as IDBErrorEvent).target?.error);
+      reject((event as IDBErrorEvent).target?.error || new DOMException('Save to DB error'));
+    };
+  });
+}
+
 export async function loadInspectionFromDB(id: string): Promise<FullInspectionData | undefined> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -63,25 +75,50 @@ export async function loadInspectionFromDB(id: string): Promise<FullInspectionDa
   });
 }
 
-// This function can be used to locally cache a copy of a cloud-fetched inspection
-export async function cacheInspectionLocally(inspectionData: FullInspectionData): Promise<string> {
+export async function deleteInspectionFromDB(id: string): Promise<void> {
   const db = await openDB();
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.put(inspectionData); // 'put' will add or update
-
+    const request = store.delete(id);
     request.onsuccess = () => {
-      resolve(request.result as string); // Returns the key of the stored item (inspectionData.id)
+      resolve();
     };
-
     request.onerror = (event) => {
-      console.error('Error caching inspection to DB:', (event as IDBErrorEvent).target?.error);
-      reject((event as IDBErrorEvent).target?.error || new DOMException('Save to DB error'));
+      reject((event as IDBErrorEvent).target?.error);
     };
   });
 }
 
+export async function getInspectionSummariesFromDB(): Promise<InspectionSummary[]> {
+  const db = await openDB();
+  return new Promise<InspectionSummary[]>((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const index = store.index('timestamp');
+    const request = index.getAll(); 
+
+    request.onsuccess = () => {
+      const allData: FullInspectionData[] = request.result.sort((a, b) => b.timestamp - a.timestamp);
+      const summaries: InspectionSummary[] = allData.map(data => ({
+        id: data.id,
+        clientInfo: {
+            clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
+            clientCode: data.clientInfo?.clientCode || '',
+            inspectionNumber: data.clientInfo?.inspectionNumber || data.id,
+            inspectionDate: data.clientInfo?.inspectionDate || '',
+            inspectedBy: data.clientInfo?.inspectedBy || ''
+        },
+        timestamp: data.timestamp,
+        owner: data.owner || 'Desconhecido',
+      }));
+      resolve(summaries);
+    };
+    request.onerror = (event) => {
+      reject((event as IDBErrorEvent).target?.error);
+    };
+  });
+}
 
 export async function clearAllInspectionsFromDB(): Promise<void> {
   const db = await openDB();

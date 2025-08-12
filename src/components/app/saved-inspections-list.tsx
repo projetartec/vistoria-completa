@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Trash2, Download, CloudDownload } from 'lucide-react';
+import { Loader2, Trash2, Download, HardDriveDownload } from 'lucide-react';
 
 interface SavedInspectionsListProps {
   inspections: InspectionSummary[];
@@ -43,7 +43,7 @@ export function SavedInspectionsList({
         <DialogHeader>
           <DialogTitle>Vistorias Salvas</DialogTitle>
           <DialogDescription>
-            Selecione uma vistoria para carregar ou gerenciar. As vistorias são sincronizadas da nuvem.
+            Selecione uma vistoria para carregar ou gerenciar. As vistorias são salvas neste dispositivo.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-hidden -mx-6 px-6">
@@ -54,7 +54,7 @@ export function SavedInspectionsList({
               </div>
             ) : inspections.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Nenhuma vistoria salva encontrada.</p>
+                <p className="text-muted-foreground">Nenhuma vistoria salva encontrada neste dispositivo.</p>
               </div>
             ) : (
               <div className="space-y-2 py-2">
@@ -82,7 +82,7 @@ export function SavedInspectionsList({
                         className="text-muted-foreground hover:text-primary h-8 w-8"
                         title="Carregar Vistoria"
                       >
-                        <CloudDownload className="h-4 w-4" />
+                        <HardDriveDownload className="h-4 w-4" />
                       </Button>
                        <Button
                         variant="ghost"

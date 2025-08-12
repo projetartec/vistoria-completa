@@ -18,20 +18,34 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Layers, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { saveInspectionToFirestore, getInspectionSummariesFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/context';
 import { useRouter } from 'next/navigation';
-import { cacheInspectionLocally } from '@/lib/indexedDB';
+import { saveInspectionToDB, getInspectionSummariesFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
+
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
 
 const createNewFloorEntry = (): FloorData => {
+  const newFloor = JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA));
+  newFloor.categories.forEach((cat: InspectionCategoryState) => {
+    cat.isExpanded = false;
+    if (cat.subItems) {
+      cat.subItems.forEach((sub: SubItemState) => {
+        sub.status = undefined;
+        sub.observation = '';
+        sub.showObservation = false;
+        sub.photoDataUri = null;
+        sub.photoDescription = '';
+        if (sub.registeredExtinguishers) sub.registeredExtinguishers = [];
+        if (sub.registeredHoses) sub.registeredHoses = [];
+      });
+    }
+  });
   return {
     id: generateUniqueId(),
-    ...JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA)), // Deep copy
+    ...newFloor,
     floor: '', // Floor name will be set by user
-    categories: JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false})),
     isFloorContentVisible: true, // New floors start visible
   };
 };
@@ -102,23 +116,22 @@ export default function FireCheckPage() {
 
 
   const fetchSavedInspections = useCallback(async () => {
-    if (!user) return;
     setIsLoadingDbInspections(true);
     try {
-      const summaries = await getInspectionSummariesFromFirestore();
+      const summaries = await getInspectionSummariesFromDB();
       setDbInspections(summaries);
     } catch (error) {
-      console.error("Failed to fetch inspection summaries from Firestore:", error);
+      console.error("Failed to fetch inspection summaries from local DB:", error);
       toast({
-        title: "Erro ao Carregar Vistorias Salvas",
-        description: "Não foi possível buscar as vistorias da nuvem.",
+        title: "Erro ao Carregar Vistorias Locais",
+        description: "Não foi possível buscar as vistorias salvas no seu dispositivo.",
         variant: "destructive",
       });
       setDbInspections([]);
     } finally {
       setIsLoadingDbInspections(false);
     }
-  }, [toast, user]);
+  }, [toast]);
 
  useEffect(() => {
     if (typeof window !== 'undefined' && user) {
@@ -443,10 +456,7 @@ export default function FireCheckPage() {
             return f;
           });
 
-          // Create a clean new floor entry. It will inherit the structure from INITIAL_FLOOR_DATA.
-          // This ensures no filled-in data is copied.
           const newFloorEntry = createNewFloorEntry();
-          // Set its visibility to true so it appears open.
           newFloorEntry.isFloorContentVisible = true;
 
           return {
@@ -479,37 +489,30 @@ export default function FireCheckPage() {
   }, [toast]);
 
   const handleSaveInspection = useCallback(async () => {
-    if (!user) {
-      toast({ title: "Usuário não autenticado", description: "Por favor, faça login para salvar a vistoria.", variant: "destructive" });
-      return;
-    }
     if (!clientInfo.clientLocation || !clientInfo.inspectionNumber) {
        toast({ title: "Dados Incompletos", description: "O Local do Cliente é obrigatório para salvar a vistoria.", variant: "destructive" });
        return;
     }
     const inspectionToSave: FullInspectionData = {
       id: clientInfo.inspectionNumber,
-      clientInfo: { 
-        ...clientInfo, 
-      },
+      clientInfo: { ...clientInfo },
       towers: activeTowersData,
       timestamp: Date.now(),
-      owner: user.name,
+      owner: user?.name || 'unknown',
     };
 
     try {
-      await saveInspectionToFirestore(inspectionToSave);
-      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem.` });
+      await saveInspectionToDB(inspectionToSave);
+      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva no dispositivo.` });
       await fetchSavedInspections();
     } catch (err: any) {
-      console.error('Erro ao salvar vistoria:', err);
-      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria.", variant: "destructive" });
+      console.error('Erro ao salvar vistoria localmente:', err);
+      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria localmente.", variant: "destructive" });
     }
   }, [clientInfo, activeTowersData, toast, fetchSavedInspections, user]);
 
 
   const loadInspectionDataToForm = useCallback((inspectionToLoad: FullInspectionData) => {
-    // 1. Load client info directly
     setClientInfo(inspectionToLoad.clientInfo || {
       clientLocation: '',
       clientCode: '',
@@ -518,60 +521,56 @@ export default function FireCheckPage() {
       inspectedBy: '',
     });
 
-    // 2. Load towers and floors, trusting the data from Firestore
     const loadedTowers = (inspectionToLoad.towers || []).map(tower => ({
       ...tower,
       id: tower.id || generateUniqueId(),
       floors: (tower.floors || []).map(floor => ({
         ...floor,
         id: floor.id || generateUniqueId(),
-        isFloorContentVisible: false, // Default to collapsed on load
+        isFloorContentVisible: false, 
       })),
     }));
 
     const finalTowers = loadedTowers.length > 0 ? loadedTowers : [createNewTowerEntry()];
 
-    // Make the very first floor visible for better UX
     if (finalTowers.length > 0 && finalTowers[0].floors.length > 0) {
       finalTowers[0].floors[0].isFloorContentVisible = true;
     }
     
-    // 3. Set the state
     setActiveTowersData(finalTowers);
     setIsChecklistVisible(true);
-    setIsSavedInspectionsVisible(false); // Hide list after loading
+    setIsSavedInspectionsVisible(false);
   }, []);
 
   const handleLoadInspection = useCallback(async (inspectionId: string) => {
     try {
-      const inspectionToLoad = await loadInspectionFromFirestore(inspectionId);
+      const inspectionToLoad = await loadInspectionFromDB(inspectionId);
       if (inspectionToLoad) {
         loadInspectionDataToForm(inspectionToLoad);
-        await cacheInspectionLocally(inspectionToLoad); // Cache for potential offline use
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada da nuvem.` });
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada do dispositivo.` });
       } else {
-        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada na nuvem.`, variant: "destructive" });
+        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada no dispositivo.`, variant: "destructive" });
       }
     } catch (error) {
       console.error("Error loading inspection from DB list:", error);
-      toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria.", variant: "destructive" });
+      toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria do dispositivo.", variant: "destructive" });
     }
   }, [loadInspectionDataToForm, toast]);
 
   const handleDeleteInspection = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
     try {
-      await deleteInspectionFromFirestore(inspectionId);
-      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem.` });
+      await deleteInspectionFromDB(inspectionId);
+      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida do dispositivo.` });
       await fetchSavedInspections();
     } catch (error) {
       console.error("Error deleting inspection:", error);
-      toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria.", variant: "destructive" });
+      toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria do dispositivo.", variant: "destructive" });
     }
   }, [fetchSavedInspections, toast]);
 
   const handleDownloadJsonFromDBList = useCallback(async (inspectionId: string) => {
     try {
-      const inspectionData = await loadInspectionFromFirestore(inspectionId);
+      const inspectionData = await loadInspectionFromDB(inspectionId);
       if (inspectionData) {
         const clientInfoForFilename = { inspectionNumber: inspectionData.id, clientLocation: inspectionData.clientInfo.clientLocation || 'vistoria' };
         const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
@@ -666,7 +665,7 @@ export default function FireCheckPage() {
                                      )
                                    )
                                  );
-          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário${hasPhotos ? ' com fotos' : ''}. Os dados importados podem ser salvos no navegador.`, duration: 7000 });
+          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário${hasPhotos ? ' com fotos' : ''}. Os dados importados podem ser salvos no dispositivo.`, duration: 7000 });
         } else {
           console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspectionToLoad, null, 2).substring(0, 500));
           toast({ title: "Estrutura Inválida", description: `O arquivo ${file.name} não corresponde à estrutura de vistoria esperada.`, variant: "destructive" });
