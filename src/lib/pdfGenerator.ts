@@ -182,7 +182,6 @@ function getHeaderHtml(clientInfo: ClientInfo, title: string): string {
         <div><strong>Nº Vistoria:</strong> ${clientInfo.inspectionNumber.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/A'}</div>
         <div><strong>Data:</strong> ${clientInfo.inspectionDate ? format(new Date(clientInfo.inspectionDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}</div>
         <div style="grid-column: 1 / -1;"><strong>Local:</strong> ${clientInfo.clientLocation.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/A'}</div>
-        <div><strong>Cód. Cliente:</strong> ${clientInfo.clientCode.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/A'}</div>
         <div><strong>Vistoriado por:</strong> ${clientInfo.inspectedBy?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || 'N/A'}</div>
         <div><strong>Gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
       </div>
