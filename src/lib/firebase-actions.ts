@@ -84,7 +84,3 @@ export async function deleteInspectionFromFirestore(id: string): Promise<void> {
         throw new Error("Failed to delete inspection from cloud.");
     }
 }
-
-    
-
-    
