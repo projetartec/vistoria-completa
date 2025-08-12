@@ -65,7 +65,7 @@ export const INSPECTION_CONFIG: InspectionCategoryConfig[] = [
     subItems: [
       { id: 'hidrantes_chaves', name: 'Chaves' },
       { id: 'hidrantes_esguichos', name: 'Esguichos' },
-      { id: 'hidrantes_mangueiras_verificacao', name: 'Mangueiras (Verificação Status)', isRegistry: false }, // Updated name for clarity
+      { id: 'hidrantes_mangueiras_verificacao', name: 'Mangueiras (Verificação Status)', isRegistry: false },
       { id: 'hidrantes_caixa_abrigo', name: 'Caixa Abrigo' },
       { id: 'hidrantes_sinalizacao_solo', name: 'Sinalização De Solo' },
       { id: 'hidrantes_placa_sinalizacao', name: 'Placa De Sinalização' },

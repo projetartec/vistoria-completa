@@ -12,14 +12,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader } from '@/components/ui/card';
 import type { FullInspectionData, FloorData, TowerData, CategoryUpdatePayload, ClientInfo, StatusOption, InspectionCategoryState, SubItemState, InspectionSummary, RegisteredExtinguisher, RegisteredHose } from '@/lib/types';
-import { INITIAL_FLOOR_DATA, INSPECTION_CONFIG } from '@/constants/inspection.config';
+import { INITIAL_FLOOR_DATA } from '@/constants/inspection.config';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generateInspectionPdf, generateRegisteredItemsPdf, generateNCItemsPdf, generatePhotoReportPdf } from '@/lib/pdfGenerator';
 import { ChevronDown, ChevronUp, Trash2, Eye, EyeOff, Building, Layers, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { saveInspectionToFirestore, getInspectionSummariesFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
-import { saveInspectionToDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/context';
 import { useRouter } from 'next/navigation';
@@ -443,28 +442,11 @@ export default function FireCheckPage() {
             return f;
           });
 
-          let newFloorCategories: InspectionCategoryState[];
-          const sourceFloorForCategories = currentFloors.length > 0 ? currentFloors[currentFloors.length - 1] : null;
-
-          if (sourceFloorForCategories) {
-             newFloorCategories = JSON.parse(JSON.stringify(sourceFloorForCategories.categories)).map((cat: InspectionCategoryState) => ({
-                ...cat,
-                isExpanded: false, status: undefined, observation: '', showObservation: false, pressureValue: '', pressureUnit: '',
-                subItems: cat.subItems ? JSON.parse(JSON.stringify(cat.subItems)).map((sub: SubItemState) => ({
-                    ...sub, status: undefined, observation: '', showObservation: false, photoDataUri: null, photoDescription: '',
-                    registeredExtinguishers: sub.isRegistry && sub.id === 'extintor_cadastro' ? [] : undefined,
-                    registeredHoses: sub.isRegistry && sub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined,
-                })) : undefined,
-            }));
-          } else {
-            newFloorCategories = JSON.parse(JSON.stringify(INITIAL_FLOOR_DATA.categories)).map((cat: InspectionCategoryState) => ({...cat, isExpanded: false}));
-          }
-          
-          const newFloorEntry = { 
-            ...createNewFloorEntry(), 
-            categories: newFloorCategories,
-            isFloorContentVisible: true 
-          };
+          // Create a clean new floor entry. It will inherit the structure from INITIAL_FLOOR_DATA.
+          // This ensures no filled-in data is copied.
+          const newFloorEntry = createNewFloorEntry();
+          // Set its visibility to true so it appears open.
+          newFloorEntry.isFloorContentVisible = true;
 
           return {
             ...tower,
@@ -516,7 +498,6 @@ export default function FireCheckPage() {
 
     try {
       await saveInspectionToFirestore(inspectionToSave);
-      await saveInspectionToDB(inspectionToSave);
       toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem e localmente.` });
       await fetchSavedInspections();
     } catch (err: any) {
@@ -587,7 +568,6 @@ export default function FireCheckPage() {
   const handleDeleteInspection = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
     try {
       await deleteInspectionFromFirestore(inspectionId);
-      await deleteInspectionFromDB(inspectionId);
       toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem e localmente.` });
       await fetchSavedInspections();
     } catch (error) {
