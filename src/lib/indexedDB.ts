@@ -63,27 +63,6 @@ export async function loadInspectionFromDB(id: string): Promise<FullInspectionDa
   });
 }
 
-// Local loading for offline access if needed in the future, but not for primary sync
-export async function getAllInspectionsFromDB(): Promise<FullInspectionData[]> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      // Sort by timestamp descending (newest first)
-      const sortedResults = (request.result as FullInspectionData[]).sort((a, b) => b.timestamp - a.timestamp);
-      resolve(sortedResults);
-    };
-
-    request.onerror = (event) => {
-      console.error('Error getting all inspections from DB:', (event as IDBErrorEvent).target?.error);
-      reject((event as IDBErrorEvent).target?.error || new DOMException('Get all from DB error'));
-    };
-  });
-}
-
 // This function can be used to locally cache a copy of a cloud-fetched inspection
 export async function cacheInspectionLocally(inspectionData: FullInspectionData): Promise<string> {
   const db = await openDB();
