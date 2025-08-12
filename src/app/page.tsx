@@ -22,6 +22,7 @@ import { saveInspectionToFirestore, getInspectionSummariesFromFirestore, loadIns
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/context';
 import { useRouter } from 'next/navigation';
+import { cacheInspectionLocally } from '@/lib/indexedDB';
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -498,7 +499,7 @@ export default function FireCheckPage() {
 
     try {
       await saveInspectionToFirestore(inspectionToSave);
-      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem e localmente.` });
+      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem.` });
       await fetchSavedInspections();
     } catch (err: any) {
       console.error('Erro ao salvar vistoria:', err);
@@ -517,27 +518,18 @@ export default function FireCheckPage() {
       inspectedBy: '',
     });
 
-    // 2. Load towers and floors, providing defaults for any missing properties
-    const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
-      ...createNewTowerEntry(), // Start with a clean default tower structure
-      ...tower, // Overwrite with loaded data
+    // 2. Load towers and floors, trusting the data from Firestore
+    const loadedTowers = (inspectionToLoad.towers || []).map(tower => ({
+      ...tower,
       id: tower.id || generateUniqueId(),
-      towerName: tower.towerName || '',
       floors: (tower.floors || []).map(floor => ({
-        ...createNewFloorEntry(), // Start with a clean default floor structure
-        ...floor, // Overwrite with loaded data
+        ...floor,
         id: floor.id || generateUniqueId(),
-        floor: floor.floor || '',
-        isFloorContentVisible: false, // Default to collapsed
-        categories: (floor.categories || []).map(category => ({
-          ...INITIAL_FLOOR_DATA.categories.find(c => c.id === category.id)!, // Get defaults for the category
-          ...category, // Overwrite with loaded category data
-        })),
+        isFloorContentVisible: false, // Default to collapsed on load
       })),
     }));
 
-    // Ensure at least one tower exists
-    const finalTowers = sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()];
+    const finalTowers = loadedTowers.length > 0 ? loadedTowers : [createNewTowerEntry()];
 
     // Make the very first floor visible for better UX
     if (finalTowers.length > 0 && finalTowers[0].floors.length > 0) {
@@ -555,6 +547,7 @@ export default function FireCheckPage() {
       const inspectionToLoad = await loadInspectionFromFirestore(inspectionId);
       if (inspectionToLoad) {
         loadInspectionDataToForm(inspectionToLoad);
+        await cacheInspectionLocally(inspectionToLoad); // Cache for potential offline use
         toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada da nuvem.` });
       } else {
         toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada na nuvem.`, variant: "destructive" });
@@ -568,7 +561,7 @@ export default function FireCheckPage() {
   const handleDeleteInspection = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
     try {
       await deleteInspectionFromFirestore(inspectionId);
-      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem e localmente.` });
+      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem.` });
       await fetchSavedInspections();
     } catch (error) {
       console.error("Error deleting inspection:", error);

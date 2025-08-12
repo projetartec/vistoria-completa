@@ -44,24 +44,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function saveInspectionToDB(inspectionData: FullInspectionData): Promise<string> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.put(inspectionData); // 'put' will add or update
-
-    request.onsuccess = () => {
-      resolve(request.result as string); // Returns the key of the stored item (inspectionData.id)
-    };
-
-    request.onerror = (event) => {
-      console.error('Error saving inspection to DB:', (event as IDBErrorEvent).target?.error);
-      reject((event as IDBErrorEvent).target?.error || new DOMException('Save to DB error'));
-    };
-  });
-}
-
+// Local loading for offline access if needed in the future, but not for primary sync
 export async function loadInspectionFromDB(id: string): Promise<FullInspectionData | undefined> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -80,6 +63,7 @@ export async function loadInspectionFromDB(id: string): Promise<FullInspectionDa
   });
 }
 
+// Local loading for offline access if needed in the future, but not for primary sync
 export async function getAllInspectionsFromDB(): Promise<FullInspectionData[]> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -100,23 +84,25 @@ export async function getAllInspectionsFromDB(): Promise<FullInspectionData[]> {
   });
 }
 
-export async function deleteInspectionFromDB(id: string): Promise<void> {
+// This function can be used to locally cache a copy of a cloud-fetched inspection
+export async function cacheInspectionLocally(inspectionData: FullInspectionData): Promise<string> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(id);
+    const request = store.put(inspectionData); // 'put' will add or update
 
     request.onsuccess = () => {
-      resolve();
+      resolve(request.result as string); // Returns the key of the stored item (inspectionData.id)
     };
 
     request.onerror = (event) => {
-      console.error('Error deleting inspection from DB:', (event as IDBErrorEvent).target?.error);
-      reject((event as IDBErrorEvent).target?.error || new DOMException('Delete from DB error'));
+      console.error('Error caching inspection to DB:', (event as IDBErrorEvent).target?.error);
+      reject((event as IDBErrorEvent).target?.error || new DOMException('Save to DB error'));
     };
   });
 }
+
 
 export async function clearAllInspectionsFromDB(): Promise<void> {
   const db = await openDB();

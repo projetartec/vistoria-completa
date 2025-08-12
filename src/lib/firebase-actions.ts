@@ -4,37 +4,36 @@
 import { db } from './firebase';
 import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, deleteDoc } from "firebase/firestore";
 import type { FullInspectionData, InspectionSummary } from './types';
-import { saveInspectionToDB as saveToLocalDB, deleteInspectionFromDB as deleteFromLocalDB } from './indexedDB';
 
 const INSPECTIONS_COLLECTION = 'inspections';
 
-// Save inspection to Firestore and local IndexedDB
+// Save inspection to Firestore ONLY.
 export async function saveInspectionToFirestore(inspectionData: FullInspectionData): Promise<void> {
   try {
     const docRef = doc(db, INSPECTIONS_COLLECTION, inspectionData.id);
     const dataToSave = { ...inspectionData, owner: inspectionData.owner || 'system' };
     await setDoc(docRef, dataToSave);
-    await saveToLocalDB(dataToSave);
   } catch (error) {
     console.error("Error saving inspection to Firestore: ", error);
     throw new Error("Failed to save inspection to cloud.");
   }
 }
 
+// Get summaries from Firestore ONLY.
 export async function getInspectionSummariesFromFirestore(): Promise<InspectionSummary[]> {
     try {
         const inspectionsQuery = query(collection(db, INSPECTIONS_COLLECTION), orderBy("timestamp", "desc"));
         const querySnapshot = await getDocs(inspectionsQuery);
         
         const summaries: InspectionSummary[] = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data() as FullInspectionData;
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data() as FullInspectionData;
             summaries.push({
-                id: doc.id,
+                id: docSnap.id,
                 clientInfo: {
                     clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
                     clientCode: data.clientInfo?.clientCode || '',
-                    inspectionNumber: data.clientInfo?.inspectionNumber || doc.id,
+                    inspectionNumber: data.clientInfo?.inspectionNumber || docSnap.id,
                     inspectionDate: data.clientInfo?.inspectionDate || '',
                     inspectedBy: data.clientInfo?.inspectedBy || ''
                 },
@@ -72,13 +71,11 @@ export async function loadInspectionFromFirestore(id: string): Promise<FullInspe
 }
 
 
-// Delete an inspection from Firestore, able to be deleted by any authenticated user
+// Delete an inspection from Firestore ONLY.
 export async function deleteInspectionFromFirestore(id: string): Promise<void> {
     try {
         const docRef = doc(db, INSPECTIONS_COLLECTION, id);
         await deleteDoc(docRef);
-        // Also delete from local DB
-        await deleteFromLocalDB(id);
     } catch (error) {
         console.error("Error deleting inspection from Firestore: ", error);
         throw new Error("Failed to delete inspection from cloud.");
