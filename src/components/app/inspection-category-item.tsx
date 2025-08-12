@@ -372,6 +372,15 @@ const InspectionCategoryItemComponent = ({
               >
                 OK
               </Button>
+               <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => handleUpdate('markAllSubItemsNA')} 
+                className="rounded-full text-yellow-600 border-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-700 w-10 h-10"
+                title="Marcar Todos N/A"
+              >
+                N/A
+              </Button>
             </div>
           )}
 
@@ -457,4 +466,3 @@ const InspectionCategoryItemComponent = ({
 };
 
 export const InspectionCategoryItem = React.memo(InspectionCategoryItemComponent);
-

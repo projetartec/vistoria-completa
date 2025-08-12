@@ -28,13 +28,14 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             // This robust check ensures that only valid documents are processed.
-            if (data && data.id && data.timestamp) {
+            // The document ID from Firestore is on `docSnap.id`, not inside `data`.
+            if (data && typeof data.timestamp === 'number') {
                 summaries.push({
-                    id: data.id,
+                    id: docSnap.id, // Correctly use the document snapshot ID
                     clientInfo: {
                         clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
                         clientCode: data.clientInfo?.clientCode || '',
-                        inspectionNumber: data.clientInfo?.inspectionNumber || data.id,
+                        inspectionNumber: data.clientInfo?.inspectionNumber || docSnap.id,
                         inspectionDate: data.clientInfo?.inspectionDate || '',
                         inspectedBy: data.clientInfo?.inspectedBy || ''
                     },
