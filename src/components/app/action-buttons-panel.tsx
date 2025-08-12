@@ -31,6 +31,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ActionButtonsPanelProps {
   onSave?: () => void;
+  isSaveDisabled?: boolean;
   onNewInspection?: () => void;
   onAddNewTower?: () => void;
   onToggleSavedInspections?: () => void;
@@ -46,6 +47,7 @@ interface ActionButtonsPanelProps {
 
 export function ActionButtonsPanel({
   onSave,
+  isSaveDisabled,
   onNewInspection,
   onAddNewTower,
   onToggleSavedInspections,
@@ -200,6 +202,7 @@ export function ActionButtonsPanel({
               title="Salvar Vistoria na Nuvem"
               onClick={() => handleFabAction(onSave)}
               className={cn(fabBaseClasses, "bg-primary hover:bg-primary/90 text-primary-foreground")}
+              disabled={isSaveDisabled}
             >
               <Save className={iconSize} />
             </Button>

@@ -31,10 +31,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedUser = JSON.parse(storedUserJson) as User;
         if (storedUser && typeof storedUser.name === 'string' && ALLOWED_USERS.map(u => u.toLowerCase()).includes(storedUser.name.toLowerCase())) {
           setUser(storedUser);
+        } else {
+          // Clear invalid user from storage
+          localStorage.removeItem('firecheck_user');
         }
       }
     } catch (error) {
       console.error("Could not access localStorage or parse user data:", error);
+      // Clear potentially corrupt data
+      localStorage.removeItem('firecheck_user');
     } finally {
       setLoading(false);
     }
@@ -74,5 +79,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    

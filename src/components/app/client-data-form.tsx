@@ -56,7 +56,7 @@ export function ClientDataForm({
             </div>
             
             <div className="md:col-span-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
                   <Label htmlFor="inspectionNumber">Número da Vistoria</Label>
                   <Input
@@ -64,7 +64,16 @@ export function ClientDataForm({
                     value={clientInfoData.inspectionNumber}
                     readOnly
                     className="bg-muted cursor-not-allowed"
-                    placeholder="Será gerado ao digitar o Local"
+                    placeholder="Gerado com o Local"
+                  />
+                </div>
+                 <div>
+                  <Label htmlFor="clientCode">Cód. Cliente</Label>
+                  <Input
+                    id="clientCode"
+                    value={clientInfoData.clientCode}
+                    onChange={(e) => onClientInfoChange('clientCode', e.target.value)}
+                    placeholder="Opcional"
                   />
                 </div>
                 <div>
@@ -93,5 +102,3 @@ export function ClientDataForm({
     </Card>
   );
 }
-
-    

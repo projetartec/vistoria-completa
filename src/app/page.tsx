@@ -500,8 +500,8 @@ export default function FireCheckPage() {
       toast({ title: "Usuário não autenticado", description: "Por favor, faça login para salvar a vistoria.", variant: "destructive" });
       return;
     }
-    if (!clientInfo.inspectionNumber) {
-       toast({ title: "ID da Vistoria Necessário", description: "Por favor, preencha o Local para gerar um Número de Vistoria ou insira manualmente.", variant: "destructive" });
+    if (!clientInfo.clientLocation || !clientInfo.inspectionNumber) {
+       toast({ title: "Dados Incompletos", description: "O Local do Cliente é obrigatório para salvar a vistoria.", variant: "destructive" });
        return;
     }
     const inspectionToSave: FullInspectionData = {
@@ -527,103 +527,44 @@ export default function FireCheckPage() {
 
 
   const loadInspectionDataToForm = useCallback((inspectionToLoad: FullInspectionData) => {
-    const loadedClientInfo = inspectionToLoad.clientInfo || {};
-    setClientInfo({
-        clientLocation: loadedClientInfo.clientLocation || '',
-        clientCode: loadedClientInfo.clientCode || '',
-        inspectionNumber: loadedClientInfo.inspectionNumber || inspectionToLoad.id || '',
-        inspectionDate: loadedClientInfo.inspectionDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : ''),
-        inspectedBy: loadedClientInfo.inspectedBy || '',
+    // 1. Load client info directly
+    setClientInfo(inspectionToLoad.clientInfo || {
+      clientLocation: '',
+      clientCode: '',
+      inspectionNumber: inspectionToLoad.id || '',
+      inspectionDate: new Date().toISOString().split('T')[0],
+      inspectedBy: '',
     });
 
-    const sanitizedTowersForForm = (inspectionToLoad.towers || []).map(loadedTower => {
-      const loadedTowerFloors = Array.isArray(loadedTower.floors) ? loadedTower.floors : [];
-      const sanitizedFloorsForForm = loadedTowerFloors.map(loadedFloor => {
-        const sanitizedCategoriesForForm = INSPECTION_CONFIG.map(cfgCategory => {
-          const jsonCategory = (loadedFloor.categories || []).find(cat => cat.id === cfgCategory.id);
-          let finalSubItems: SubItemState[] = [];
+    // 2. Load towers and floors, providing defaults for any missing properties
+    const sanitizedTowers = (inspectionToLoad.towers || []).map(tower => ({
+      ...createNewTowerEntry(), // Start with a clean default tower structure
+      ...tower, // Overwrite with loaded data
+      id: tower.id || generateUniqueId(),
+      towerName: tower.towerName || '',
+      floors: (tower.floors || []).map(floor => ({
+        ...createNewFloorEntry(), // Start with a clean default floor structure
+        ...floor, // Overwrite with loaded data
+        id: floor.id || generateUniqueId(),
+        floor: floor.floor || '',
+        isFloorContentVisible: false, // Default to collapsed
+        categories: (floor.categories || []).map(category => ({
+          ...INITIAL_FLOOR_DATA.categories.find(c => c.id === category.id)!, // Get defaults for the category
+          ...category, // Overwrite with loaded category data
+        })),
+      })),
+    }));
 
-          if (cfgCategory.type === 'standard') {
-            const configSubItems = cfgCategory.subItems || [];
-            if (jsonCategory && Array.isArray(jsonCategory.subItems)) {
-              const jsonSubItemsMap = new Map(jsonCategory.subItems.map(js => [js.id, js]));
-              
-              finalSubItems = configSubItems.map(cfgSub => {
-                const jsonSub = jsonSubItemsMap.get(cfgSub.id);
-                return {
-                  id: cfgSub.id,
-                  name: jsonSub?.name || cfgSub.name,
-                  status: jsonSub?.status,
-                  observation: jsonSub?.observation || '',
-                  showObservation: jsonSub?.showObservation || false,
-                  isRegistry: cfgSub.isRegistry || false,
-                  photoDataUri: jsonSub?.photoDataUri || null,
-                  photoDescription: jsonSub?.photoDescription || '',
-                  registeredExtinguishers: (jsonSub?.registeredExtinguishers || (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined))?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `loaded-${generateUniqueId()}-ext` })),
-                  registeredHoses: (jsonSub?.registeredHoses || (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined))?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `loaded-${generateUniqueId()}-hose` })),
-                };
-              });
+    // Ensure at least one tower exists
+    const finalTowers = sanitizedTowers.length > 0 ? sanitizedTowers : [createNewTowerEntry()];
 
-              jsonCategory.subItems.forEach(jsonSub => {
-                if (!configSubItems.some(cfgSub => cfgSub.id === jsonSub.id)) { // Custom sub-item from JSON/DB
-                  finalSubItems.push({
-                    ...jsonSub, 
-                    id: (jsonSub.id && typeof jsonSub.id === 'string' && !jsonSub.id.includes('NaN') && !jsonSub.id.startsWith('server-temp-id-') && (!jsonSub.id.startsWith('custom-') || jsonSub.id.length > 20)) ? jsonSub.id : jsonSub.id.startsWith('custom-') ? jsonSub.id : `loaded-custom-sub-${generateUniqueId()}`,
-                    name: jsonSub.name || 'Subitem Carregado',
-                    photoDataUri: jsonSub.photoDataUri || null,
-                    photoDescription: jsonSub.photoDescription || '',
-                    status: jsonSub.status,
-                    observation: jsonSub.observation || '',
-                    showObservation: jsonSub.showObservation || false,
-                    isRegistry: jsonSub.isRegistry || false,
-                    registeredExtinguishers: (jsonSub.registeredExtinguishers || undefined)?.map(ext => ({ ...ext, id: (ext.id && typeof ext.id === 'string' && !ext.id.includes('NaN') && !ext.id.startsWith('server-temp-id-')) ? ext.id : `loaded-custom-${generateUniqueId()}-ext` })),
-                    registeredHoses: (jsonSub.registeredHoses || undefined)?.map(hose => ({ ...hose, id: (hose.id && typeof hose.id === 'string' && !hose.id.includes('NaN') && !hose.id.startsWith('server-temp-id-')) ? hose.id : `loaded-custom-${generateUniqueId()}-hose` })),
-                  });
-                }
-              });
-            } else { 
-              finalSubItems = configSubItems.map(cfgSub => ({
-                id: cfgSub.id, name: cfgSub.name, status: undefined, observation: '', showObservation: false,
-                isRegistry: cfgSub.isRegistry || false, photoDataUri: null, photoDescription: '',
-                registeredExtinguishers: (cfgSub.isRegistry && cfgSub.id === 'extintor_cadastro' ? [] : undefined),
-                registeredHoses: (cfgSub.isRegistry && cfgSub.id === 'hidrantes_cadastro_mangueiras' ? [] : undefined),
-              }));
-            }
-          }
-          
-          return {
-            id: cfgCategory.id,
-            title: jsonCategory?.title || cfgCategory.title,
-            type: cfgCategory.type,
-            isExpanded: false, 
-            status: jsonCategory?.status,
-            observation: jsonCategory?.observation || '',
-            showObservation: jsonCategory?.showObservation || false,
-            pressureValue: jsonCategory?.pressureValue || '',
-            pressureUnit: jsonCategory?.pressureUnit || '',
-            subItems: cfgCategory.type === 'standard' ? finalSubItems : undefined,
-          };
-        });
-        return {
-          ...loadedFloor, 
-          id: (loadedFloor.id && typeof loadedFloor.id === 'string' && !loadedFloor.id.startsWith('server-temp-id-')) ? loadedFloor.id : generateUniqueId(),
-          floor: loadedFloor.floor || '', 
-          categories: sanitizedCategoriesForForm,
-          isFloorContentVisible: false, // Start hidden when loading from DB/JSON
-        };
-      });
-      return {
-        ...loadedTower, 
-        id: (loadedTower.id && typeof loadedTower.id === 'string' && !loadedTower.id.startsWith('server-temp-id-')) ? loadedTower.id : generateUniqueId(),
-        towerName: loadedTower.towerName || '', 
-        floors: sanitizedFloorsForForm,
-      };
-    });
-
-    if (sanitizedTowersForForm.length > 0 && sanitizedTowersForForm[0].floors.length > 0) {
-      sanitizedTowersForForm[0].floors[0].isFloorContentVisible = true;
+    // Make the very first floor visible for better UX
+    if (finalTowers.length > 0 && finalTowers[0].floors.length > 0) {
+      finalTowers[0].floors[0].isFloorContentVisible = true;
     }
-    setActiveTowersData(sanitizedTowersForForm.length > 0 ? sanitizedTowersForForm : [createNewTowerEntry()]);
+    
+    // 3. Set the state
+    setActiveTowersData(finalTowers);
     setIsChecklistVisible(true);
     setIsSavedInspectionsVisible(false); // Hide list after loading
   }, []);
@@ -857,6 +798,7 @@ export default function FireCheckPage() {
   const handleGenerateNCItemsReport = useCallback(async () => { await generateNCItemsPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
   const handleGeneratePhotoReportPdf = useCallback(async () => { await generatePhotoReportPdf(clientInfo, activeTowersData); }, [clientInfo, activeTowersData]);
 
+  const isSaveDisabled = !clientInfo.clientLocation || !clientInfo.inspectionNumber;
 
   if (loading || !user) {
     return (
@@ -938,6 +880,7 @@ export default function FireCheckPage() {
 
         <ActionButtonsPanel
           onSave={handleSaveInspection}
+          isSaveDisabled={isSaveDisabled}
           onNewInspection={resetInspectionForm}
           onAddNewTower={handleAddNewTower} 
           onToggleSavedInspections={handleToggleSavedInspections}
@@ -1002,7 +945,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
-
-    
