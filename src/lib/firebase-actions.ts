@@ -26,19 +26,24 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
         
         const summaries: InspectionSummary[] = [];
         querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data() as FullInspectionData;
-            summaries.push({
-                id: docSnap.id,
-                clientInfo: {
-                    clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
-                    clientCode: data.clientInfo?.clientCode || '',
-                    inspectionNumber: data.clientInfo?.inspectionNumber || docSnap.id,
-                    inspectionDate: data.clientInfo?.inspectionDate || '',
-                    inspectedBy: data.clientInfo?.inspectedBy || ''
-                },
-                timestamp: data.timestamp,
-                owner: data.owner || 'Desconhecido',
-            });
+            const data = docSnap.data();
+            // This robust check ensures that only valid documents are processed.
+            if (data && data.clientInfo && typeof data.timestamp === 'number') {
+                summaries.push({
+                    id: docSnap.id,
+                    clientInfo: {
+                        clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
+                        clientCode: data.clientInfo?.clientCode || '',
+                        inspectionNumber: data.clientInfo?.inspectionNumber || docSnap.id,
+                        inspectionDate: data.clientInfo?.inspectionDate || '',
+                        inspectedBy: data.clientInfo?.inspectedBy || ''
+                    },
+                    timestamp: data.timestamp,
+                    owner: data.owner || 'Desconhecido',
+                });
+            } else {
+                console.warn(`Skipping invalid inspection document in Firestore with ID: ${docSnap.id}`);
+            }
         });
         
         return summaries;
@@ -57,13 +62,15 @@ export async function loadInspectionFromFirestore(id: string): Promise<FullInspe
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
+            // No need to cast here, we can validate the data structure if needed
             const inspectionData = docSnap.data() as FullInspectionData;
             return inspectionData;
         } else {
             console.log("No such document in Firestore!");
             return null;
         }
-    } catch (error) {
+    } catch (error)
+        {
         console.error("Error loading inspection from Firestore: ", error);
         throw new Error("Failed to load inspection from cloud.");
     }
