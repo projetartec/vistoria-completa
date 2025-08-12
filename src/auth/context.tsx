@@ -25,21 +25,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    let storedUser: User | null = null;
     try {
       const storedUserJson = localStorage.getItem('firecheck_user');
       if (storedUserJson) {
-        const storedUser = JSON.parse(storedUserJson) as User;
-        if (storedUser && typeof storedUser.name === 'string' && ALLOWED_USERS.map(u => u.toLowerCase()).includes(storedUser.name.toLowerCase())) {
-          setUser(storedUser);
-        } else {
-          // Clear invalid user from storage
+        // This try-catch block specifically handles JSON parsing errors.
+        try {
+            storedUser = JSON.parse(storedUserJson) as User;
+        } catch (e) {
+            console.error("Failed to parse user from localStorage:", e);
+            localStorage.removeItem('firecheck_user'); // Clear corrupted data
+        }
+      }
+
+      if (storedUser && typeof storedUser.name === 'string' && ALLOWED_USERS.map(u => u.toLowerCase()).includes(storedUser.name.toLowerCase())) {
+        setUser(storedUser);
+      } else {
+        // Clear invalid or missing user from storage
+        if (storedUser) { // only remove if it was invalid, not if it was absent
           localStorage.removeItem('firecheck_user');
         }
       }
     } catch (error) {
-      console.error("Could not access localStorage or parse user data:", error);
-      // Clear potentially corrupt data
-      localStorage.removeItem('firecheck_user');
+      console.error("Could not access localStorage:", error);
     } finally {
       setLoading(false);
     }
@@ -52,7 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (foundUser) {
       const userObject: User = { name: foundUser };
       setUser(userObject);
-      localStorage.setItem('firecheck_user', JSON.stringify(userObject));
+      try {
+        localStorage.setItem('firecheck_user', JSON.stringify(userObject));
+      } catch (error) {
+        console.error("Could not save user to localStorage:", error);
+      }
       router.push('/');
       return true;
     }
@@ -61,7 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('firecheck_user');
+    try {
+      localStorage.removeItem('firecheck_user');
+    } catch (error) {
+        console.error("Could not remove user from localStorage:", error);
+    }
     router.push('/login');
   };
 
