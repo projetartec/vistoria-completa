@@ -28,13 +28,13 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             // This robust check ensures that only valid documents are processed.
-            if (data && data.clientInfo && typeof data.timestamp === 'number') {
+            if (data && data.id && data.timestamp) {
                 summaries.push({
-                    id: docSnap.id,
+                    id: data.id,
                     clientInfo: {
                         clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
                         clientCode: data.clientInfo?.clientCode || '',
-                        inspectionNumber: data.clientInfo?.inspectionNumber || docSnap.id,
+                        inspectionNumber: data.clientInfo?.inspectionNumber || data.id,
                         inspectionDate: data.clientInfo?.inspectionDate || '',
                         inspectedBy: data.clientInfo?.inspectedBy || ''
                     },
@@ -42,7 +42,7 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
                     owner: data.owner || 'Desconhecido',
                 });
             } else {
-                console.warn(`Skipping invalid inspection document in Firestore with ID: ${docSnap.id}`);
+                console.warn(`Skipping invalid/incomplete inspection document in Firestore with ID: ${docSnap.id}`);
             }
         });
         
