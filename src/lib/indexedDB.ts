@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { FullInspectionData, InspectionSummary } from './types';
