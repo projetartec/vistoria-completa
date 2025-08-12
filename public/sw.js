@@ -1,95 +1,88 @@
-
-// public/sw.js
+// Define um nome e versão para o cache. Mudar a versão invalida o cache antigo.
 const CACHE_NAME = 'firecheck-brazil-cache-v1';
-// Adicione caminhos para os assets que devem ser cacheados.
-// Para uma exportação estática do Next.js, isso incluiria:
-// - Os arquivos HTML raiz para cada página (ex: '/', '/about/index.html')
-// - Chunks JS/CSS do diretório _next/static
-// - manifest.json, ícones e quaisquer outros assets públicos chave
-const PRECACHE_ASSETS = [
-  '/', // A raiz do app
+
+// Lista de URLs essenciais para o funcionamento offline do app (app shell).
+const urlsToCache = [
+  '/',
   '/manifest.json',
-  // O usuário deve adicionar seus ícones reais aqui. Exemplo:
-  // '/icons/icon-192x192.png',
-  // '/icons/icon-512x512.png',
-  '/brazil-extintores-logo.png', // Da pasta public, usado no AppHeader
-  // Outros assets importantes da pasta public podem ser adicionados aqui.
-  // ATENÇÃO: Arquivos gerados pelo Next.js em _next/static têm hashes em seus nomes
-  // e são melhor gerenciados por bibliotecas como next-pwa ou Workbox para um cache robusto.
-  // Este service worker básico é um ponto de partida.
+  '/favicon.ico',
+  '/globals.css',
+  // Adicione aqui outros assets estáticos importantes se necessário, como o logo.
+  '/LOGO-BRAZIL-FUNDOTRANSP.png'
 ];
 
-// No install, cacheia os assets predefinidos
+// Evento de Instalação: Ocorre quando o Service Worker é instalado pela primeira vez.
 self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    try {
-      const cache = await caches.open(CACHE_NAME);
-      // Filtra para evitar erros com URLs que podem não existir (como ícones ainda não adicionados)
-      const existingAssetsToCache = PRECACHE_ASSETS.filter(url => {
-        // Uma verificação simples; idealmente, você teria uma lista precisa de assets do build.
-        // Para este exemplo, apenas garantimos que não estamos tentando cachear caminhos de ícones inexistentes explicitamente.
-        if (url.startsWith('/icons/')) return false; // Não pré-cacheia ícones específicos aqui, o usuário os adicionará.
-        return true;
-      });
-      await cache.addAll(existingAssetsToCache);
-      console.log('Service Worker: Assets pré-cacheados com sucesso (exceto ícones a serem adicionados pelo usuário)');
-    } catch (error) {
-      console.error('Service Worker: Falha no pré-cache:', error);
-    }
-  })());
-});
-
-// No activate, limpa caches antigos
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const cacheNames = await caches.keys();
-    await Promise.all(
-      cacheNames.map((cacheName) => {
-        if (cacheName !== CACHE_NAME) {
-          return caches.delete(cacheName);
-        }
+  // O Service Worker espera até que o cache seja preenchido com os arquivos essenciais.
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Cache aberto. Adicionando URLs ao cache.');
+        return cache.addAll(urlsToCache);
       })
-    );
-    self.clients.claim(); // Torna o service worker ativo o controlador para todos os clientes imediatamente.
-    console.log('Service Worker: Ativado e caches antigos limpos');
-  })());
+      .catch(err => {
+        console.error('Falha ao adicionar URLs ao cache durante a instalação.', err);
+      })
+  );
+  // Força o novo Service Worker a se tornar ativo imediatamente.
+  self.skipWaiting();
 });
 
-// No fetch, serve do cache primeiro, depois da rede
+// Evento de Ativação: Ocorre quando o novo Service Worker é ativado.
+// É aqui que limpamos os caches antigos.
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          // Se o nome do cache não for o atual, ele é deletado.
+          // Isso garante que a versão antiga do app seja removida.
+          if (cacheName !== CACHE_NAME) {
+            console.log('Service Worker: Limpando cache antigo:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  // Garante que o Service Worker ativado tome controle da página imediatamente.
+  return self.clients.claim();
+});
+
+// Evento de Fetch: Intercepta todas as requisições de rede da página.
 self.addEventListener('fetch', (event) => {
-  // Pula requisições não-GET e requisições para extensões do Chrome
-  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
+  // Ignora requisições que não são do tipo GET.
+  if (event.request.method !== 'GET') {
     return;
   }
 
-  // Estratégia: Cache first, fallback to network
-  event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    
-    const cachedResponse = await cache.match(event.request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    try {
-      const networkResponse = await fetch(event.request);
-      if (networkResponse && networkResponse.status === 200) {
-        // Clona a resposta para poder ser usada pelo browser e pelo cache
-        await cache.put(event.request, networkResponse.clone());
-      }
-      return networkResponse;
-    } catch (error) {
-      console.warn('Service Worker: Requisição de rede falhou, servindo fallback ou erro:', event.request.url, error);
-      // Opcional: servir uma página offline para requisições de navegação
-      // if (event.request.mode === 'navigate') {
-      //   const offlinePage = await cache.match('/offline.html'); // Você precisaria de um offline.html
-      //   if (offlinePage) return offlinePage;
-      // }
-      // Para outros assets, apenas permite que o navegador lide com o erro ou retorna um erro específico
-      return new Response(JSON.stringify({ error: "Network error and no cache match" }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-  })());
+  // Estratégia: Network First, com fallback para o Cache.
+  // Tenta buscar da rede primeiro para obter os dados mais recentes.
+  // Se a rede falhar (offline), serve a partir do cache.
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Se a requisição foi bem-sucedida, clona a resposta para o cache.
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME)
+          .then((cache) => {
+            // O cache é atualizado com a nova versão da rede.
+            cache.put(event.request, responseToCache);
+          });
+        return networkResponse;
+      })
+      .catch(() => {
+        // Se a rede falhou, tenta servir a partir do cache.
+        console.log('Rede falhou. Servindo do cache para:', event.request.url);
+        return caches.match(event.request)
+          .then((cachedResponse) => {
+            // Se houver uma resposta no cache, retorna ela.
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // Se não houver nada na rede nem no cache, pode-se retornar uma página de fallback offline.
+            // Para este caso, apenas deixamos o erro padrão do navegador ocorrer.
+          });
+      })
+  );
 });
