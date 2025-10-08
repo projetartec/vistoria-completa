@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/context';
 import { useRouter } from 'next/navigation';
-import { saveInspectionToDB, getInspectionSummariesFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
+import { saveInspectionToFirestore, getInspectionSummariesFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
 
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -89,7 +89,6 @@ export default function FireCheckPage() {
 
   const [clientInfo, setClientInfo] = useState<ClientInfo>({
     clientLocation: '',
-    clientCode: '',
     inspectionNumber: '',
     inspectionDate: '',
     inspectedBy: '',
@@ -118,13 +117,13 @@ export default function FireCheckPage() {
   const fetchSavedInspections = useCallback(async () => {
     setIsLoadingDbInspections(true);
     try {
-      const summaries = await getInspectionSummariesFromDB();
+      const summaries = await getInspectionSummariesFromFirestore();
       setDbInspections(summaries);
     } catch (error) {
-      console.error("Failed to fetch inspection summaries from local DB:", error);
+      console.error("Failed to fetch inspection summaries from Firestore:", error);
       toast({
-        title: "Erro ao Carregar Vistorias Locais",
-        description: "Não foi possível buscar as vistorias salvas no seu dispositivo.",
+        title: "Erro ao Carregar Vistorias da Nuvem",
+        description: "Não foi possível buscar as vistorias salvas na nuvem.",
         variant: "destructive",
       });
       setDbInspections([]);
@@ -416,7 +415,7 @@ export default function FireCheckPage() {
   const resetInspectionForm = useCallback(() => {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
-      clientLocation: '', clientCode: '', inspectionNumber: '',
+      clientLocation: '', inspectionNumber: '',
       inspectionDate: defaultInspectionDate, inspectedBy: '',
     };
     setClientInfo(defaultClientInfo);
@@ -502,12 +501,12 @@ export default function FireCheckPage() {
     };
 
     try {
-      await saveInspectionToDB(inspectionToSave);
-      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva no dispositivo.` });
+      await saveInspectionToFirestore(inspectionToSave);
+      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem.` });
       await fetchSavedInspections();
     } catch (err: any) {
-      console.error('Erro ao salvar vistoria localmente:', err);
-      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria localmente.", variant: "destructive" });
+      console.error('Erro ao salvar vistoria na nuvem:', err);
+      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria na nuvem.", variant: "destructive" });
     }
   }, [clientInfo, activeTowersData, toast, fetchSavedInspections, user]);
 
@@ -515,7 +514,6 @@ export default function FireCheckPage() {
   const loadInspectionDataToForm = useCallback((inspectionToLoad: FullInspectionData) => {
     setClientInfo(inspectionToLoad.clientInfo || {
       clientLocation: '',
-      clientCode: '',
       inspectionNumber: inspectionToLoad.id || '',
       inspectionDate: new Date().toISOString().split('T')[0],
       inspectedBy: '',
@@ -544,33 +542,33 @@ export default function FireCheckPage() {
 
   const handleLoadInspection = useCallback(async (inspectionId: string) => {
     try {
-      const inspectionToLoad = await loadInspectionFromDB(inspectionId);
+      const inspectionToLoad = await loadInspectionFromFirestore(inspectionId);
       if (inspectionToLoad) {
         loadInspectionDataToForm(inspectionToLoad);
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada do dispositivo.` });
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada da nuvem.` });
       } else {
-        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada no dispositivo.`, variant: "destructive" });
+        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada na nuvem.`, variant: "destructive" });
       }
     } catch (error) {
-      console.error("Error loading inspection from DB list:", error);
-      toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria do dispositivo.", variant: "destructive" });
+      console.error("Error loading inspection from Firestore list:", error);
+      toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria da nuvem.", variant: "destructive" });
     }
   }, [loadInspectionDataToForm, toast]);
 
   const handleDeleteInspection = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
     try {
-      await deleteInspectionFromDB(inspectionId);
-      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida do dispositivo.` });
+      await deleteInspectionFromFirestore(inspectionId);
+      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem.` });
       await fetchSavedInspections();
     } catch (error) {
       console.error("Error deleting inspection:", error);
-      toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria do dispositivo.", variant: "destructive" });
+      toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria da nuvem.", variant: "destructive" });
     }
   }, [fetchSavedInspections, toast]);
 
   const handleDownloadJsonFromDBList = useCallback(async (inspectionId: string) => {
     try {
-      const inspectionData = await loadInspectionFromDB(inspectionId);
+      const inspectionData = await loadInspectionFromFirestore(inspectionId);
       if (inspectionData) {
         const clientInfoForFilename = { inspectionNumber: inspectionData.id, clientLocation: inspectionData.clientInfo.clientLocation || 'vistoria' };
         const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
@@ -917,3 +915,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    

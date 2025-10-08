@@ -872,5 +872,3 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
 }
 
     
-
-    

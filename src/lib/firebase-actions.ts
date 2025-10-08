@@ -1,3 +1,4 @@
+
 'use client';
 
 import { db } from './firebase';
@@ -11,7 +12,7 @@ export async function saveInspectionToFirestore(inspectionData: FullInspectionDa
   try {
     const docRef = doc(db, INSPECTIONS_COLLECTION, inspectionData.id);
     const dataToSave = { ...inspectionData, owner: inspectionData.owner || 'system' };
-    await setDoc(docRef, dataToSave);
+    await setDoc(docRef, dataToSave, { merge: true });
   } catch (error) {
     console.error("Error saving inspection to Firestore: ", error);
     throw new Error("Failed to save inspection to cloud.");
@@ -34,7 +35,6 @@ export async function getInspectionSummariesFromFirestore(): Promise<InspectionS
                     id: docSnap.id, // Correctly use the document snapshot ID
                     clientInfo: {
                         clientLocation: data.clientInfo?.clientLocation || 'Local não especificado',
-                        clientCode: data.clientInfo?.clientCode || '',
                         inspectionNumber: data.clientInfo?.inspectionNumber || docSnap.id,
                         inspectionDate: data.clientInfo?.inspectionDate || '',
                         inspectedBy: data.clientInfo?.inspectedBy || ''
@@ -88,3 +88,5 @@ export async function deleteInspectionFromFirestore(id: string): Promise<void> {
         throw new Error("Failed to delete inspection from cloud.");
     }
 }
+
+    

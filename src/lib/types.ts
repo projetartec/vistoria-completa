@@ -65,7 +65,6 @@ export interface TowerData {
 
 export interface ClientInfo {
   clientLocation: string;
-  clientCode: string;
   inspectionNumber: string;
   inspectionDate: string;
   inspectedBy?: string;
@@ -119,7 +118,5 @@ export type CategoryUpdatePayload =
   | { field: 'renameSubItemName'; subItemId: string; newName: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';
-
-    
 
     
