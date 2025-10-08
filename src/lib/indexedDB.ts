@@ -42,4 +42,5 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-    
+// All data-handling functions (save, load, delete) for inspections have been removed from this file.
+// The app now uses lib/firebase-actions.ts to interact with Firestore for all inspection data.
