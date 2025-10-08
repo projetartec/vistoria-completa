@@ -1,33 +1,38 @@
 
 'use client';
 
-// NOTE: This file is currently only used for Service Worker caching purposes.
-// All inspection data is now handled via Firestore.
+import type { FullInspectionData, InspectionSummary } from './types';
 
 const DB_NAME = 'firecheckDB';
-const DB_VERSION = 2; // Version incremented to ensure schema updates if any are needed in future.
+const DB_VERSION = 3;
+const STORE_NAME = 'inspections';
 
 interface IDBErrorEvent extends Event {
   target: IDBRequest & { error?: DOMException };
 }
 
-// This function is kept for potential future use or for other offline capabilities
-// but is NOT used for storing the primary inspection data anymore.
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
-      reject(new Error('IndexedDB is not supported in this environment.'));
-      return;
+      return reject(new Error('IndexedDB is not supported.'));
     }
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('inspections_legacy')) {
-        // You can create stores here if needed for other purposes
-        // For now, we can leave this empty or create a placeholder
-         const store = db.createObjectStore('inspections_legacy', { keyPath: 'id' });
-         store.createIndex('timestamp', 'timestamp', { unique: false });
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      } else {
+        // If the store exists, check for the index
+        const transaction = (event.target as IDBOpenDBRequest).transaction;
+        if (transaction) {
+            const store = transaction.objectStore(STORE_NAME);
+            if (!store.indexNames.contains('timestamp')) {
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+            }
+        }
       }
     };
 
@@ -37,10 +42,82 @@ function openDB(): Promise<IDBDatabase> {
 
     request.onerror = (event) => {
       console.error('IndexedDB error:', (event as IDBErrorEvent).target?.error);
-      reject((event as IDBErrorEvent).target?.error || new DOMException('IndexedDB open error'));
+      reject(new DOMException('IndexedDB open error'));
     };
   });
 }
 
-// All data-handling functions (save, load, delete) for inspections have been removed from this file.
-// The app now uses lib/firebase-actions.ts to interact with Firestore for all inspection data.
+export async function saveInspectionToDB(inspectionData: FullInspectionData): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.put(inspectionData);
+
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => {
+            console.error('Error saving inspection to DB:', (event as IDBErrorEvent).target?.error);
+            reject((event as IDBErrorEvent).target?.error);
+        };
+    });
+}
+
+export async function getInspectionSummariesFromDB(): Promise<InspectionSummary[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const index = store.index('timestamp');
+    const request = index.getAll(); 
+
+    request.onsuccess = () => {
+      const allInspections = request.result as FullInspectionData[];
+      const summaries: InspectionSummary[] = allInspections
+        .map(full => ({
+          id: full.id,
+          clientInfo: full.clientInfo,
+          timestamp: full.timestamp,
+          owner: full.owner,
+        }))
+        .sort((a, b) => b.timestamp - a.timestamp); // Sort descending
+      resolve(summaries);
+    };
+
+    request.onerror = (event) => {
+      console.error('Error getting inspection summaries from DB:', (event as IDBErrorEvent).target?.error);
+      reject((event as IDBErrorEvent).target?.error);
+    };
+  });
+}
+
+export async function loadInspectionFromDB(id: string): Promise<FullInspectionData | null> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.get(id);
+
+        request.onsuccess = () => {
+            resolve(request.result || null);
+        };
+        request.onerror = (event) => {
+            console.error(`Error loading inspection ${id} from DB:`, (event as IDBErrorEvent).target?.error);
+            reject((event as IDBErrorEvent).target?.error);
+        };
+    });
+}
+
+export async function deleteInspectionFromDB(id: string): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => {
+            console.error(`Error deleting inspection ${id} from DB:`, (event as IDBErrorEvent).target?.error);
+            reject((event as IDBErrorEvent).target?.error);
+        };
+    });
+}

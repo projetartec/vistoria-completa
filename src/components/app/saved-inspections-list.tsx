@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Trash2, Download, HardDriveDownload, Cloud } from 'lucide-react';
+import { Loader2, Trash2, Download, HardDriveDownload, Server } from 'lucide-react';
 
 interface SavedInspectionsListProps {
   inspections: InspectionSummary[];
@@ -42,11 +42,11 @@ export function SavedInspectionsList({
       <DialogContent className="max-w-xl h-[70vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Cloud className="h-6 w-6 text-primary" />
-            Vistorias Salvas na Nuvem
+            <Server className="h-6 w-6 text-primary" />
+            Vistorias Salvas no Dispositivo
           </DialogTitle>
           <DialogDescription>
-            Selecione uma vistoria para carregar, gerenciar ou gerar um relatório. As vistorias são sincronizadas entre todos os seus dispositivos.
+            Selecione uma vistoria para carregar, gerenciar ou gerar um relatório. As vistorias são salvas apenas neste dispositivo.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-hidden -mx-6 px-6">
@@ -57,7 +57,7 @@ export function SavedInspectionsList({
               </div>
             ) : inspections.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground text-center">Nenhuma vistoria salva na nuvem encontrada.<br/>Salvo uma vistoria para vê-la aqui.</p>
+                <p className="text-muted-foreground text-center">Nenhuma vistoria salva neste dispositivo encontrada.<br/>Salve uma vistoria para vê-la aqui.</p>
               </div>
             ) : (
               <div className="space-y-2 py-2">
@@ -100,12 +100,12 @@ export function SavedInspectionsList({
                         variant="ghost"
                         size="icon"
                         onClick={() => {
-                          if (window.confirm(`Tem certeza que deseja remover a vistoria Nº ${inspection.id} (${inspection.clientInfo.clientLocation || 'Local não especificado'}) da nuvem? Esta ação não pode ser desfeita.`)) {
+                          if (window.confirm(`Tem certeza que deseja remover a vistoria Nº ${inspection.id} (${inspection.clientInfo.clientLocation || 'Local não especificado'}) deste dispositivo? Esta ação não pode ser desfeita.`)) {
                             onDeleteInspection(inspection.id, inspection.clientInfo.clientLocation);
                           }
                         }}
                         className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                        title="Remover esta vistoria da nuvem"
+                        title="Remover esta vistoria do dispositivo"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
