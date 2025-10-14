@@ -229,19 +229,19 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
   }));
 
 
-  const photosForReport: Array<{ towerName: string; floorName: string; categoryTitle: string; subItemName: string; photoDataUri: string; photoDescription: string; }> = [];
+  const photosForReport: Array<{ towerName: string; floorName: string; categoryTitle: string; subItemName: string; photoURL: string; photoDescription: string; }> = [];
   towersToActuallyPrint.forEach(tower => {
     tower.floors.forEach(floor => {
       floor.categories.forEach(category => {
         if (category.type === 'standard' && category.subItems) {
           category.subItems.forEach(subItem => {
-            if (!subItem.isRegistry && subItem.photoDataUri) {
+            if (!subItem.isRegistry && subItem.photoURL) {
               photosForReport.push({
                 towerName: tower.towerName || 'Torre Não Especificada',
                 floorName: floor.floor || 'Andar Não Especificado',
                 categoryTitle: category.title,
                 subItemName: subItem.name,
-                photoDataUri: subItem.photoDataUri,
+                photoURL: subItem.photoURL,
                 photoDescription: subItem.photoDescription || ''
               });
             }
@@ -596,7 +596,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
     htmlBodyContent += `<div class="pdf-photo-items-container">`;
     photosForReport.forEach(p => {
       htmlBodyContent += `<div class="pdf-photo-item page-break-inside-avoid">`; // Added page-break-inside-avoid to photo item
-      htmlBodyContent += `<img src="${p.photoDataUri}" alt="Foto ${p.subItemName.replace(/"/g, "'")}"/>`;
+      htmlBodyContent += `<img src="${p.photoURL}" alt="Foto ${p.subItemName.replace(/"/g, "'")}"/>`;
       htmlBodyContent += `<p><strong>Torre:</strong> ${p.towerName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Andar:</strong> ${p.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Categoria:</strong> ${p.categoryTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
@@ -623,7 +623,7 @@ export function generateInspectionPdf(clientInfo: ClientInfo, towersData: TowerD
 export function generateRegisteredItemsPdf(clientInfo: ClientInfo, towersData: TowerData[]): void {
   let grandTotalExtinguishersCount = 0;
   const extinguisherTypeAndWeightTotals: { [type: string]: { [weight: string]: number } } = {};
-  EXTINGUISHER_TYPES.forEach(t => { extinguisherTypeAndWeightTotals[t] = {}; EXTINGUISHER_WEIGHTS.forEach(w => extinguisherTypeAndWeightTotals[t][w] = 0); });
+  EXTINGUISHER_TYPES.forEach(t => { extinguisherTypeAndWeightTotals[t] = {}; EXTINGUISHER_WEIGHTS.forEach(w => extinguisherTypeAndWeightTotals[t] = 0); });
   
   let grandTotalHosesCount = 0;
   const hoseCombinationTotals: { [key: string]: { quantity: number; length: HoseLengthOption; diameter: HoseDiameterOption; type: HoseTypeOption } } = {};
@@ -815,7 +815,7 @@ export function generateNCItemsPdf(clientInfo: ClientInfo, towersData: TowerData
 }
 
 export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: TowerData[]): void {
-  const photosForReport: Array<{ towerName: string; floorName: string; categoryTitle: string; subItemName: string; photoDataUri: string; photoDescription: string; }> = [];
+  const photosForReport: Array<{ towerName: string; floorName: string; categoryTitle: string; subItemName: string; photoURL: string; photoDescription: string; }> = [];
   
   const relevantTowersData = towersData
     .filter(tower => tower && (tower.towerName?.trim() !== "" || tower.floors.some(f => f.floor?.trim() !== "")))
@@ -830,13 +830,13 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
       floor.categories.forEach(cat => {
         if (cat.type === 'standard' && cat.subItems) {
           cat.subItems.forEach(sub => {
-            if (!sub.isRegistry && sub.photoDataUri) {
+            if (!sub.isRegistry && sub.photoURL) {
               photosForReport.push({
                 towerName: tower.towerName || 'Torre N/E',
                 floorName: floor.floor || 'Andar N/E',
                 categoryTitle: cat.title,
                 subItemName: sub.name,
-                photoDataUri: sub.photoDataUri,
+                photoURL: sub.photoURL,
                 photoDescription: sub.photoDescription || ''
               });
             }
@@ -852,7 +852,7 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
     htmlBodyContent += `<div class="pdf-photo-items-container">`;
     photosForReport.forEach(p => {
       htmlBodyContent += `<div class="pdf-photo-item page-break-inside-avoid">`;
-      htmlBodyContent += `<img src="${p.photoDataUri}" alt="Foto ${p.subItemName.replace(/"/g, "'")}"/>`;
+      htmlBodyContent += `<img src="${p.photoURL}" alt="Foto ${p.subItemName.replace(/"/g, "'")}"/>`;
       htmlBodyContent += `<p><strong>Torre:</strong> ${p.towerName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Andar:</strong> ${p.floorName.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
       htmlBodyContent += `<p><strong>Categoria:</strong> ${p.categoryTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
@@ -870,5 +870,3 @@ export function generatePhotoReportPdf(clientInfo: ClientInfo, towersData: Tower
 
   openHtmlInNewWindow(htmlBodyContent, `RelatorioFotografico_${clientInfo.inspectionNumber}`);
 }
-
-    

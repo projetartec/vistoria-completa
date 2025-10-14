@@ -101,7 +101,7 @@ export const INITIAL_FLOOR_DATA: Omit<FloorData, 'id'> = {
         observation: '',
         showObservation: false,
         isRegistry: subItem.isRegistry || false,
-        photoDataUri: null,
+        photoURL: null,
         photoDescription: '',
         ...(subItem.isRegistry && subItem.id === 'extintor_cadastro' && { registeredExtinguishers: [] }),
         ...(subItem.isRegistry && subItem.id === 'hidrantes_cadastro_mangueiras' && { registeredHoses: [] }),

@@ -9,11 +9,13 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, Save, X, Camera, CheckSquare } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, XCircle, PlusCircle, Trash2, ListX, Save, X, Camera, Loader2 } from 'lucide-react';
 import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, CategoryOverallStatus, SubItemState, RegisteredExtinguisher, ExtinguisherTypeOption, ExtinguisherWeightOption, RegisteredHose, HoseLengthOption, HoseDiameterOption, HoseTypeOption } from '@/lib/types';
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { uploadImageAndGetURL } from '@/lib/firebase-storage';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface InspectionCategoryItemProps {
@@ -246,7 +248,8 @@ const InspectionCategoryItemComponent = ({
   const [editingSubItemNameValue, setEditingSubItemNameValue] = useState('');
   
   const fileInputRefs = useRef<{[key: string]: HTMLInputElement | null}>({});
-
+  const [uploadingPhotoSubItemId, setUploadingPhotoSubItemId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleUpdate = useCallback((field: CategoryUpdatePayload['field'], value?: any, subItemId?: string, itemId?: string) => {
     let payload: CategoryUpdatePayload;
@@ -260,7 +263,7 @@ const InspectionCategoryItemComponent = ({
       if (field === 'subItemStatus') payload = { field, subItemId, value: value as StatusOption | undefined };
       else if (field === 'subItemObservation') payload = { field, subItemId, value: value as string };
       else if (field === 'subItemShowObservation') payload = { field, subItemId, value: value as boolean };
-      else if (field === 'subItemPhotoDataUri') payload = { field, subItemId, value: value as string | null };
+      else if (field === 'subItemPhotoURL') payload = { field, subItemId, value: value as string | null };
       else if (field === 'subItemPhotoDescription') payload = { field, subItemId, value: value as string };
       else if (field === 'removeSubItemPhoto') payload = { field, subItemId };
       else if (field === 'addRegisteredExtinguisher') payload = { field, subItemId, value: value as Omit<RegisteredExtinguisher, 'id'> };
@@ -282,17 +285,23 @@ const InspectionCategoryItemComponent = ({
     [category.id, onCategoryItemUpdate]
   );
 
-  const handlePhotoChange = useCallback((event: React.ChangeEvent<HTMLInputElement>, subItemId: string) => {
+  const handlePhotoChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>, subItemId: string) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        handleUpdate('subItemPhotoDataUri', reader.result as string, subItemId);
-      };
-      reader.readAsDataURL(file);
+      setUploadingPhotoSubItemId(subItemId);
+      try {
+        const photoURL = await uploadImageAndGetURL(file);
+        handleUpdate('subItemPhotoURL', photoURL, subItemId);
+        toast({ title: 'Foto Adicionada', description: 'Sua foto foi salva na nuvem com sucesso.' });
+      } catch (error) {
+        console.error("Photo upload failed:", error);
+        toast({ title: 'Erro no Upload', description: 'Não foi possível salvar a foto. Tente novamente.', variant: 'destructive' });
+      } finally {
+        setUploadingPhotoSubItemId(null);
+      }
     }
     if (event.target) event.target.value = '';
-  }, [handleUpdate]);
+  }, [handleUpdate, toast]);
 
   const handleRemovePhoto = useCallback((subItemId: string) => {
     handleUpdate('removeSubItemPhoto', undefined, subItemId);
@@ -408,7 +417,11 @@ const InspectionCategoryItemComponent = ({
                     </RadioGroup>
                     <Button variant="ghost" size="icon" onClick={() => handleUpdate('subItemShowObservation', !subItem.showObservation, subItem.id)} className="h-9 w-9 text-muted-foreground hover:text-foreground" title={subItem.showObservation ? 'Esconder Obs.' : 'Mostrar Obs.'}>{subItem.showObservation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</Button>
                     <Button variant="ghost" size="icon" onClick={() => handleUpdate('removeSubItem', undefined, subItem.id)} className="h-9 w-9 text-destructive hover:bg-destructive/10" title="Remover subitem"><Trash2 className="h-5 w-5" /></Button>
-                    {!subItem.photoDataUri && (
+                    {uploadingPhotoSubItemId === subItem.id ? (
+                      <Button variant="outline" size="icon" className="rounded-full h-9 w-9" disabled>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                      </Button>
+                    ) : !subItem.photoURL && (
                       <>
                         <input
                           type="file"
@@ -433,11 +446,11 @@ const InspectionCategoryItemComponent = ({
                   </div>
                 </div>
                 {subItem.showObservation && ( <div className="mt-1"><Textarea value={subItem.observation} onChange={(e) => handleUpdate('subItemObservation', e.target.value, subItem.id)} placeholder="Observações..." className="w-full text-sm"/></div> )}
-                {subItem.photoDataUri && (
+                {subItem.photoURL && (
                   <div className="mt-2 space-y-2 p-2 border rounded-md bg-muted/20">
                     <div className="space-y-2">
                       <Label className="text-xs font-medium">Foto:</Label>
-                      <Image src={subItem.photoDataUri} alt={`Foto de ${subItem.name}`} width={150} height={150} className="rounded-md object-contain max-h-[150px] w-auto border" />
+                      <Image src={subItem.photoURL} alt={`Foto de ${subItem.name}`} width={150} height={150} className="rounded-md object-contain max-h-[150px] w-auto border" />
                       <Textarea value={subItem.photoDescription || ''} onChange={(e) => handleUpdate('subItemPhotoDescription', e.target.value, subItem.id)} placeholder="Obs. da foto..." className="w-full text-sm" rows={2}/>
                       <Button onClick={() => handleRemovePhoto(subItem.id)} variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 border-destructive/50"><Trash2 className="mr-1 h-4 w-4" /> Remover Foto</Button>
                     </div>

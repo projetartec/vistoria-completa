@@ -3,13 +3,14 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   "projectId": "em-andamento-ys2c7",
   "appId": "1:704112085147:web:94ae1521b9d1c866ac9e3e",
-  "storageBucket": "em-andamento-ys2c7.firebasestorage.app",
+  "storageBucket": "em-andamento-ys2c7.appspot.com",
   "apiKey": "AIzaSyBjLgEJpSiC3ERVZqeMVdHXCpdVQWk1aN4",
   "authDomain": "em-andamento-ys2c7.firebaseapp.com",
   "measurementId": "",
@@ -21,6 +22,7 @@ const firebaseConfig = {
 let app: FirebaseApp;
 let auth;
 let db;
+let storage;
 
 try {
   if (!firebaseConfig.apiKey) {
@@ -30,6 +32,7 @@ try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   auth = getAuth(app);
   db = getFirestore(app);
+  storage = getStorage(app);
 
 } catch (error) {
   console.error("Firebase initialization error:", error);
@@ -37,4 +40,4 @@ try {
 }
 
 
-export { app, auth, db };
+export { app, auth, db, storage };

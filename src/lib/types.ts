@@ -32,7 +32,7 @@ export interface SubItemState {
   isRegistry?: boolean;
   registeredExtinguishers?: RegisteredExtinguisher[];
   registeredHoses?: RegisteredHose[];
-  photoDataUri?: string | null;
+  photoURL?: string | null;
   photoDescription?: string;
 }
 
@@ -103,7 +103,7 @@ export type CategoryUpdatePayload =
   | { field: 'subItemStatus'; subItemId: string; value: StatusOption | undefined }
   | { field: 'subItemObservation'; subItemId: string; value: string }
   | { field: 'subItemShowObservation'; subItemId: string; value: boolean }
-  | { field: 'subItemPhotoDataUri'; subItemId: string; value: string | null }
+  | { field: 'subItemPhotoURL'; subItemId: string; value: string | null }
   | { field: 'subItemPhotoDescription'; subItemId: string; value: string }
   | { field: 'removeSubItemPhoto'; subItemId: string }
   | { field: 'addRegisteredExtinguisher'; subItemId: string; value: Omit<RegisteredExtinguisher, 'id'> }
@@ -118,5 +118,3 @@ export type CategoryUpdatePayload =
   | { field: 'renameSubItemName'; subItemId: string; newName: string };
 
 export type CategoryOverallStatus = 'all-items-selected' | 'some-items-pending';
-
-    
