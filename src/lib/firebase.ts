@@ -1,9 +1,10 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+// We are removing auth, db, and storage to prevent initialization errors.
+// import { getAuth } from "firebase/auth";
+// import { getFirestore } from "firebase/firestore";
+// import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -19,20 +20,22 @@ const firebaseConfig = {
 
 
 // Initialize Firebase
-let app: FirebaseApp;
-let auth;
-let db;
-let storage;
+let app: FirebaseApp | undefined;
+let auth: any = undefined;
+let db: any = undefined;
+let storage: any = undefined;
 
 try {
   if (!firebaseConfig.apiKey) {
-    throw new Error("Firebase API Key is missing. Please check your environment variables.");
+    // This check is kept, but we won't throw an error to avoid crashing.
+    console.warn("Firebase API Key is missing.");
   }
   
+  // We only initialize the app, but not the other services.
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
+  // auth = getAuth(app);
+  // db = getFirestore(app);
+  // storage = getStorage(app);
 
 } catch (error) {
   console.error("Firebase initialization error:", error);

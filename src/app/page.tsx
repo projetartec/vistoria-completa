@@ -22,7 +22,18 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/context';
 import { useRouter } from 'next/navigation';
 import { saveInspectionToDB, getInspectionSummariesFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
-import { uploadImageAndGetURL } from '@/lib/firebase-storage';
+
+// The uploadImageAndGetURL is now a dummy function, so we need to handle images locally.
+// We'll convert images to data URIs to store them in IndexedDB.
+
+const fileToDataUri = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -650,41 +661,11 @@ export default function FireCheckPage() {
         
         let inspectionToLoad = importedData as FullInspectionData;
 
-        // Legacy check for old photoDataUri format
+        // Legacy check for old photoDataUri format (now standard for local storage)
         if (JSON.stringify(inspectionToLoad).includes('photoDataUri')) {
-          toast({ title: 'Atenção', description: 'Vistoria antiga detectada. Convertendo fotos para a nuvem. Isso pode levar um momento...', duration: 5000});
-          const conversionPromises: Promise<any>[] = [];
-          
-          inspectionToLoad.towers.forEach(tower => {
-            tower.floors.forEach(floor => {
-              floor.categories.forEach(category => {
-                if (category.subItems) {
-                  category.subItems.forEach(subItem => {
-                    const photoDataUri = (subItem as any).photoDataUri;
-                    if (photoDataUri && typeof photoDataUri === 'string' && photoDataUri.startsWith('data:image')) {
-                      const uploadPromise = uploadImageAndGetURL(photoDataUri)
-                        .then(url => {
-                          subItem.photoURL = url;
-                          delete (subItem as any).photoDataUri;
-                        })
-                        .catch(err => {
-                          console.error('Failed to upload legacy image during import', err);
-                        });
-                      conversionPromises.push(uploadPromise);
-                    }
-                  });
-                }
-              });
-            });
-          });
-          
-          Promise.all(conversionPromises).then(() => {
-            loadInspectionDataToForm(inspectionToLoad);
-            toast({ title: "Importação e Conversão Concluídas", description: `Vistoria do arquivo ${file.name} carregada e fotos migradas para a nuvem.`, duration: 7000 });
-          }).catch(() => {
-            toast({ title: "Erro na Conversão", description: `Falha ao migrar algumas fotos do arquivo ${file.name}. Verifique a vistoria carregada.`, variant: 'destructive', duration: 8000 });
-            loadInspectionDataToForm(inspectionToLoad); // Load with whatever was successful
-          });
+          // This format is expected for local storage, so we just load it.
+          loadInspectionDataToForm(inspectionToLoad);
+          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário.`, duration: 7000 });
 
         } else if (inspectionToLoad && typeof inspectionToLoad.id === 'string' &&
             inspectionToLoad.clientInfo && typeof inspectionToLoad.clientInfo === 'object' &&
@@ -944,5 +925,3 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
-
-    
