@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/auth/context';
 import { useRouter } from 'next/navigation';
-import { saveInspectionToFirestore, getInspectionSummariesFromFirestore, loadInspectionFromFirestore, deleteInspectionFromFirestore } from '@/lib/firebase-actions';
+import { saveInspectionToDB, getInspectionSummariesFromDB, loadInspectionFromDB, deleteInspectionFromDB } from '@/lib/indexedDB';
 import { uploadImageAndGetURL } from '@/lib/firebase-storage';
 
 const generateUniqueId = () => `${Date.now().toString()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -117,13 +117,13 @@ export default function FireCheckPage() {
   const fetchSavedInspections = useCallback(async () => {
     setIsLoadingDbInspections(true);
     try {
-      const summaries = await getInspectionSummariesFromFirestore();
+      const summaries = await getInspectionSummariesFromDB();
       setDbInspections(summaries);
     } catch (error) {
-      console.error("Failed to fetch inspection summaries from Firestore:", error);
+      console.error("Failed to fetch inspection summaries from IndexedDB:", error);
       toast({
-        title: "Erro ao Carregar Vistorias da Nuvem",
-        description: "Não foi possível buscar as vistorias salvas na nuvem.",
+        title: "Erro ao Carregar Vistorias Locais",
+        description: "Não foi possível buscar as vistorias salvas no dispositivo.",
         variant: "destructive",
       });
       setDbInspections([]);
@@ -501,12 +501,12 @@ export default function FireCheckPage() {
     };
 
     try {
-      await saveInspectionToFirestore(inspectionToSave);
-      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva na nuvem.` });
+      await saveInspectionToDB(inspectionToSave);
+      toast({ title: "Vistoria Salva", description: `Vistoria Nº ${inspectionToSave.id} salva no dispositivo.` });
       await fetchSavedInspections();
     } catch (err: any) {
-      console.error('Erro ao salvar vistoria na nuvem:', err);
-      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria na nuvem.", variant: "destructive" });
+      console.error('Erro ao salvar vistoria no dispositivo:', err);
+      toast({ title: "Erro ao Salvar", description: err.message || "Não foi possível salvar a vistoria no dispositivo.", variant: "destructive" });
     }
   }, [clientInfo, activeTowersData, toast, fetchSavedInspections, user]);
 
@@ -542,33 +542,33 @@ export default function FireCheckPage() {
 
   const handleLoadInspection = useCallback(async (inspectionId: string) => {
     try {
-      const inspectionToLoad = await loadInspectionFromFirestore(inspectionId);
+      const inspectionToLoad = await loadInspectionFromDB(inspectionId);
       if (inspectionToLoad) {
         loadInspectionDataToForm(inspectionToLoad);
-        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada da nuvem.` });
+        toast({ title: "Vistoria Carregada", description: `Vistoria Nº ${inspectionToLoad.id} carregada do dispositivo.` });
       } else {
-        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada na nuvem.`, variant: "destructive" });
+        toast({ title: "Erro ao Carregar", description: `Vistoria Nº ${inspectionId} não encontrada no dispositivo.`, variant: "destructive" });
       }
     } catch (error) {
-      console.error("Error loading inspection from Firestore list:", error);
-      toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria da nuvem.", variant: "destructive" });
+      console.error("Error loading inspection from DB list:", error);
+      toast({ title: "Erro ao Carregar", description: "Não foi possível carregar a vistoria do dispositivo.", variant: "destructive" });
     }
   }, [loadInspectionDataToForm, toast]);
 
   const handleDeleteInspection = useCallback(async (inspectionId: string, inspectionLocation?: string) => {
     try {
-      await deleteInspectionFromFirestore(inspectionId);
-      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida da nuvem.` });
+      await deleteInspectionFromDB(inspectionId);
+      toast({ title: "Vistoria Removida", description: `Vistoria Nº ${inspectionId} (${inspectionLocation || 'Local não especificado'}) removida do dispositivo.` });
       await fetchSavedInspections();
     } catch (error) {
       console.error("Error deleting inspection:", error);
-      toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria da nuvem.", variant: "destructive" });
+      toast({ title: "Erro ao Remover", description: "Não foi possível remover a vistoria do dispositivo.", variant: "destructive" });
     }
   }, [fetchSavedInspections, toast]);
 
   const handleDownloadJsonFromDBList = useCallback(async (inspectionId: string) => {
     try {
-      const inspectionData = await loadInspectionFromFirestore(inspectionId);
+      const inspectionData = await loadInspectionFromDB(inspectionId);
       if (inspectionData) {
         const clientInfoForFilename = { inspectionNumber: inspectionData.id, clientLocation: inspectionData.clientInfo.clientLocation || 'vistoria' };
         const baseFileName = `vistoria_${clientInfoForFilename.inspectionNumber}_${clientInfoForFilename.clientLocation.replace(/\s+/g, '_')}`;
@@ -692,7 +692,7 @@ export default function FireCheckPage() {
             typeof inspectionToLoad.timestamp === 'number') {
           
           loadInspectionDataToForm(inspectionToLoad);
-          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário. Os dados importados podem ser salvos na nuvem.`, duration: 7000 });
+          toast({ title: "Importação Concluída", description: `Vistoria do arquivo ${file.name} carregada no formulário. Os dados importados podem ser salvos no dispositivo.`, duration: 7000 });
         } else {
           console.warn(`Vistoria inválida ou incompleta no arquivo ${file.name} pulada. Conteúdo parcial:`, JSON.stringify(inspectionToLoad, null, 2).substring(0, 500));
           toast({ title: "Estrutura Inválida", description: `O arquivo ${file.name} não corresponde à estrutura de vistoria esperada.`, variant: "destructive" });
@@ -944,3 +944,5 @@ export default function FireCheckPage() {
     </ScrollArea>
   );
 }
+
+    
