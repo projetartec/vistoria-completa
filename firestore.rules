@@ -1,22 +1,18 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Inspections collection
     match /inspections/{inspectionId} {
-      // Only authenticated users can read inspections.
-      // The query in the app filters by owner, so this is secure.
-      allow read: if request.auth != null;
-
-      // Users can create an inspection if they are authenticated and the 'owner' field
-      // in the new document matches their username from the auth token.
-      allow create: if request.auth != null && request.resource.data.owner == request.auth.token.name;
-
-      // Users can update or delete an inspection if they are authenticated and
-      // were the original owner of the document.
-      allow update, delete: if request.auth != null && resource.data.owner == request.auth.token.name;
+      // Allow reading a single document only if the user is the owner
+      allow get: if request.auth != null && resource.data.owner == request.auth.token.name;
+      
+      // Allow creating, updating, deleting only if the user is the owner
+      allow write: if request.auth != null && request.resource.data.owner == request.auth.token.name;
+    }
+    
+    // Allow listing documents if the user is authenticated. 
+    // The client-side query MUST enforce that the user only sees their own documents.
+    match /inspections {
+      allow list: if request.auth != null;
     }
   }
 }
