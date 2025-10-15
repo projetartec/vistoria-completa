@@ -43,10 +43,10 @@ export function SavedInspectionsList({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Server className="h-6 w-6 text-primary" />
-            Vistorias Salvas no Dispositivo
+            Vistorias Salvas na Nuvem
           </DialogTitle>
           <DialogDescription>
-            Selecione uma vistoria para carregar, gerenciar ou gerar um relatório. As vistorias são salvas apenas neste dispositivo.
+            Selecione uma vistoria para carregar, gerenciar ou gerar um relatório. As vistorias são sincronizadas na nuvem.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-hidden -mx-6 px-6">
@@ -57,7 +57,7 @@ export function SavedInspectionsList({
               </div>
             ) : inspections.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground text-center">Nenhuma vistoria salva neste dispositivo encontrada.<br/>Salve uma vistoria para vê-la aqui.</p>
+                <p className="text-muted-foreground text-center">Nenhuma vistoria salva na nuvem encontrada.<br/>Salve uma vistoria para vê-la aqui.</p>
               </div>
             ) : (
               <div className="space-y-2 py-2">
@@ -100,12 +100,12 @@ export function SavedInspectionsList({
                         variant="ghost"
                         size="icon"
                         onClick={() => {
-                          if (window.confirm(`Tem certeza que deseja remover a vistoria Nº ${inspection.id} (${inspection.clientInfo.clientLocation || 'Local não especificado'}) deste dispositivo? Esta ação não pode ser desfeita.`)) {
+                          if (window.confirm(`Tem certeza que deseja remover a vistoria Nº ${inspection.id} (${inspection.clientInfo.clientLocation || 'Local não especificado'}) da nuvem? Esta ação não pode ser desfeita.`)) {
                             onDeleteInspection(inspection.id, inspection.clientInfo.clientLocation);
                           }
                         }}
                         className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                        title="Remover esta vistoria do dispositivo"
+                        title="Remover esta vistoria da nuvem"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

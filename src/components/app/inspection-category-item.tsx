@@ -14,9 +14,17 @@ import type { InspectionCategoryState, StatusOption, CategoryUpdatePayload, Cate
 import { PRESSURE_UNITS, STATUS_OPTIONS, EXTINGUISHER_TYPES, EXTINGUISHER_WEIGHTS, HOSE_LENGTHS, HOSE_DIAMETERS, HOSE_TYPES } from '@/constants/inspection.config';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { uploadImageAndGetURL } from '@/lib/firebase-storage';
 import { useToast } from '@/hooks/use-toast';
+import { uploadImageAndGetURL } from '@/lib/firebase-storage';
 
+const fileToDataUri = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 interface InspectionCategoryItemProps {
   category: InspectionCategoryState;
@@ -290,22 +298,27 @@ const InspectionCategoryItemComponent = ({
     if (file) {
       setUploadingPhotoSubItemId(subItemId);
       try {
-        const photoURL = await uploadImageAndGetURL(file);
-        handleUpdate('subItemPhotoURL', photoURL, subItemId);
-        toast({ title: 'Foto Adicionada', description: 'Sua foto foi salva na nuvem com sucesso.' });
-      } catch (error) {
+        const dataUri = await fileToDataUri(file);
+        const imagePath = `inspections/${category.id}/${subItemId}-${Date.now()}`;
+        const downloadURL = await uploadImageAndGetURL(dataUri, imagePath);
+        handleUpdate('subItemPhotoURL', downloadURL, subItemId);
+        toast({ title: 'Foto Adicionada', description: 'Sua foto foi salva na nuvem.' });
+      } catch (error: any) {
         console.error("Photo upload failed:", error);
-        toast({ title: 'Erro no Upload', description: 'Não foi possível salvar a foto. Tente novamente.', variant: 'destructive' });
+        toast({ title: 'Erro no Upload', description: error.message || 'Não foi possível salvar a foto na nuvem.', variant: 'destructive' });
       } finally {
         setUploadingPhotoSubItemId(null);
       }
     }
     if (event.target) event.target.value = '';
-  }, [handleUpdate, toast]);
+  }, [handleUpdate, toast, category.id]);
 
   const handleRemovePhoto = useCallback((subItemId: string) => {
+    // Note: This only removes the URL from Firestore. It does not delete the file from Storage.
+    // Implementing file deletion would require a more complex setup, possibly with security rules or backend functions.
     handleUpdate('removeSubItemPhoto', undefined, subItemId);
-  }, [handleUpdate]);
+    toast({ title: 'Foto Removida', description: 'A referência da foto foi removida da vistoria.' });
+  }, [handleUpdate, toast]);
 
   const handleAccordionValueChange = useCallback((openItemId: string) => {
     const newIsExpanded = openItemId === category.id;

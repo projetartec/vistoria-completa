@@ -1,18 +1,31 @@
-
 'use client';
 
-// This file's content is cleared because Firebase Storage is no longer being used
-// to prevent connection errors. Photos will be handled differently.
-// Keeping the file to prevent import errors.
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { app } from './firebase';
 
-// Dummy implementation to prevent crashes
-export async function uploadImageAndGetURL(fileOrDataUri: File | string): Promise<string> {
-  console.warn("Firebase Storage is disabled. Returning a placeholder for image URL.");
-  // If it's a data URI, we can just return it for local display if needed,
-  // but it won't be a cloud URL.
-  if (typeof fileOrDataUri === 'string') {
-    return fileOrDataUri;
+const storage = getStorage(app);
+
+/**
+ * Uploads a data URI (e.g., from a file input or canvas) to Firebase Storage.
+ * @param dataUri The data URI of the image to upload.
+ * @param path The path in Firebase Storage where the image should be saved.
+ * @returns A promise that resolves with the public download URL of the uploaded image.
+ */
+export async function uploadImageAndGetURL(dataUri: string, path: string): Promise<string> {
+  try {
+    const storageRef = ref(storage, path);
+    
+    // Upload the data URI string. The 'data_url' format handles Base64 decoding.
+    const snapshot = await uploadString(storageRef, dataUri, 'data_url');
+    
+    // Get the public URL of the uploaded file.
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading image to Firebase Storage: ", error);
+    // It's better to let the caller handle the error UI,
+    // so we re-throw the error or a more specific one.
+    throw new Error("Falha no upload da imagem. Verifique a conexão e as permissões do Firebase Storage.");
   }
-  // For a file object, we would need to create a temporary blob URL.
-  return URL.createObjectURL(fileOrDataUri);
 }
