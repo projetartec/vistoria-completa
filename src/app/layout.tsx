@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/auth/context';
+import FirebaseErrorListener from '@/components/FirebaseErrorListener';
 
 export const metadata: Metadata = {
   title: 'FireCheck Brazil',
@@ -27,6 +28,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground">
         <AuthProvider>
+          <FirebaseErrorListener />
           {children}
           <Toaster />
         </AuthProvider>
