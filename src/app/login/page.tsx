@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,19 +8,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { login } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleLogin = () => {
-    if (login(username)) {
+  const handleLogin = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    const success = await login(username);
+    if (success) {
       toast({
         title: 'Login bem-sucedido',
-        description: `Bem-vindo, ${username}!`,
+        description: `Bem-vindo, ${username}! Sincronizando com a nuvem...`,
       });
+      // No need to router.push here, AuthProvider handles it
     } else {
       toast({
         title: 'Erro de Login',
@@ -29,6 +34,7 @@ export default function LoginPage() {
         variant: 'destructive',
       });
     }
+    setIsLoggingIn(false);
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -57,12 +63,14 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               onKeyPress={handleKeyPress}
+              disabled={isLoggingIn}
             />
           </div>
         </CardContent>
         <CardFooter>
-          <Button className="w-full" onClick={handleLogin}>
-            Entrar
+          <Button className="w-full" onClick={handleLogin} disabled={isLoggingIn}>
+            {isLoggingIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoggingIn ? 'Entrando...' : 'Entrar'}
           </Button>
         </CardFooter>
       </Card>

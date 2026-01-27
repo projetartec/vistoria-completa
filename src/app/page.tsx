@@ -101,10 +101,10 @@ export default function FireCheckPage() {
 
 
   const fetchSavedInspections = useCallback(async () => {
-    if (!user) return;
+    if (!user?.displayName) return;
     setIsLoadingCloudInspections(true);
     try {
-      const summaries = await getInspectionSummariesFromFirestore(user.name);
+      const summaries = await getInspectionSummariesFromFirestore(user.displayName);
       setCloudInspections(summaries);
     } catch (error: any) {
       console.error("Failed to fetch inspection summaries from Firestore:", error);
@@ -123,6 +123,9 @@ export default function FireCheckPage() {
     if (typeof window !== 'undefined' && user) {
       if (!clientInfo.inspectionDate) {
         setClientInfo(prev => ({...prev, inspectionDate: new Date().toISOString().split('T')[0]}));
+      }
+      if (user.displayName && !clientInfo.inspectedBy) {
+          setClientInfo(prev => ({...prev, inspectedBy: user.displayName!}));
       }
       fetchSavedInspections();
     }
@@ -394,7 +397,7 @@ export default function FireCheckPage() {
     const defaultInspectionDate = typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '';
     const defaultClientInfo: ClientInfo = {
       clientLocation: '', inspectionNumber: '',
-      inspectionDate: defaultInspectionDate, inspectedBy: user?.name || '',
+      inspectionDate: defaultInspectionDate, inspectedBy: user?.displayName || '',
     };
     setClientInfo(defaultClientInfo);
     setActiveTowersData([createNewTowerEntry()]);
@@ -475,7 +478,7 @@ export default function FireCheckPage() {
       clientInfo: { ...clientInfo },
       towers: activeTowersData,
       timestamp: Date.now(),
-      owner: user?.name || 'unknown',
+      owner: user?.displayName || 'unknown',
     };
 
     try {
@@ -596,7 +599,7 @@ export default function FireCheckPage() {
       },
       towers: activeTowersData, 
       timestamp: Date.now(),
-      owner: user?.name || 'unknown'
+      owner: user?.displayName || 'unknown'
     };
 
     const clientInfoForFilename = { inspectionNumber: inspectionToExport.id, clientLocation: inspectionToExport.clientInfo.clientLocation || 'vistoria' };
