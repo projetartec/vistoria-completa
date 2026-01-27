@@ -28,21 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        // Check if display name is one of the allowed users
-        if (firebaseUser.displayName && ALLOWED_USERS.map(u => u.toLowerCase()).includes(firebaseUser.displayName.toLowerCase())) {
-          setUser(firebaseUser);
-        } else if (!firebaseUser.displayName) {
-          // This can happen on the first anonymous sign-in before updateProfile completes.
-          // We don't log them out immediately, the login function will handle the user object.
-        }
-        else {
-          // This case can happen if an anonymous user exists but without a valid displayName
-          // or if the list of allowed users changes. We log them out.
-          signOut(auth);
-          setUser(null);
-        }
+      // User is considered valid only if they have an allowed display name.
+      if (firebaseUser?.displayName && ALLOWED_USERS.map(u => u.toLowerCase()).includes(firebaseUser.displayName.toLowerCase())) {
+        setUser(firebaseUser);
       } else {
+        // Any other case (not logged in, anonymous without a display name, wrong display name),
+        // we treat them as logged out. If they have a session, it will be cleaned up on next login attempt.
         setUser(null);
       }
       setLoading(false);
@@ -55,38 +46,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const normalizedUsername = username.trim();
     const foundUser = ALLOWED_USERS.find(u => u.toLowerCase() === normalizedUsername.toLowerCase());
 
-    if (foundUser) {
-      try {
-        setLoading(true);
-        const userCredential = await signInAnonymously(auth);
-        await updateProfile(userCredential.user, { displayName: foundUser });
-        
-        // The onAuthStateChanged listener will eventually pick this up,
-        // but we can set the user manually to speed up UI changes and routing.
-        await userCredential.user.reload();
-        const updatedUser = auth.currentUser;
-        setUser(updatedUser); 
-
-        router.push('/');
-        return true;
-      } catch (error) {
-        console.error("Firebase login error:", error);
-        toast({
-          title: 'Erro de Login no Firebase',
-          description: 'Não foi possível conectar ao serviço de autenticação.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return false;
-      }
+    if (!foundUser) {
+      return false; // Let UI handle "invalid user" message
     }
-    return false;
+
+    try {
+      // Firebase automatically handles existing anonymous sessions.
+      const userCredential = await signInAnonymously(auth);
+      await updateProfile(userCredential.user, { displayName: foundUser });
+      // The `onAuthStateChanged` listener will now handle setting the user state correctly.
+      return true;
+    } catch (error) {
+      console.error("Firebase login error:", error);
+      toast({
+        title: 'Erro de Conexão',
+        description: 'Não foi possível conectar ao serviço de autenticação. Verifique sua conexão e tente novamente.',
+        variant: 'destructive',
+      });
+      // Re-throw so the UI knows an error happened
+      throw error;
+    }
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
-      setUser(null);
+      // onAuthStateChanged will set user to null
       router.push('/login');
     } catch (error) {
       console.error("Firebase logout error:", error);

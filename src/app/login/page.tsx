@@ -20,21 +20,29 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
-    const success = await login(username);
-    if (success) {
-      toast({
-        title: 'Login bem-sucedido',
-        description: `Bem-vindo, ${username}! Sincronizando com a nuvem...`,
-      });
-      // No need to router.push here, AuthProvider handles it
-    } else {
-      toast({
-        title: 'Erro de Login',
-        description: 'Nome de usuário inválido.',
-        variant: 'destructive',
-      });
+
+    try {
+      const success = await login(username);
+      if (success) {
+        toast({
+          title: 'Login bem-sucedido',
+          description: `Bem-vindo, ${username}! Sincronizando com a nuvem...`,
+        });
+        router.push('/');
+      } else {
+        toast({
+          title: 'Erro de Login',
+          description: 'Nome de usuário inválido.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      // This catch block handles connection errors thrown from the login function.
+      // The toast is already displayed within the login function itself.
+      // We just need to ensure the loading state is correct.
+    } finally {
+      setIsLoggingIn(false);
     }
-    setIsLoggingIn(false);
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
